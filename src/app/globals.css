@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+:root {
+  --bg-main: #08040f;
+  --bg-panel: #13081f;
+  --bg-panel-soft: #1a0f2b;
+  --ink-primary: #f3ecff;
+  --ink-dim: #c8b8e4;
+  --neon-edge: #d717ff;
+  --neon-soft: #7e2d9f;
+  --accent-lime: #97ff4c;
+  --danger: #ff5e94;
+  --grid-line: rgba(255, 255, 255, 0.06);
+}
+
+@theme inline {
+  --font-sans: var(--font-orbitron);
+  --font-mono: var(--font-share-tech-mono);
+}
+
+body {
+  background:
+    radial-gradient(circle at 10% 10%, rgba(151, 255, 76, 0.08), transparent 35%),
+    radial-gradient(circle at 85% 15%, rgba(215, 23, 255, 0.15), transparent 40%),
+    linear-gradient(135deg, #06030c, #120920 55%, #09040f);
+  color: var(--ink-primary);
+  font-family: var(--font-share-tech-mono), monospace;
+}
+
+body::before {
+  content: "";
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px),
+    repeating-linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.02),
+      rgba(255, 255, 255, 0.02) 2px,
+      transparent 2px,
+      transparent 4px
+    );
+  background-size: 40px 40px, 40px 40px, 100% 4px;
+  opacity: 0.35;
+  z-index: -1;
+}
+
+.neon-panel {
+  background: linear-gradient(160deg, rgba(18, 9, 32, 0.92), rgba(8, 4, 15, 0.9));
+  border: 1px solid color-mix(in srgb, var(--neon-edge) 65%, transparent);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 0 24px rgba(215, 23, 255, 0.22);
+}
+
+.metric-glow {
+  text-shadow: 0 0 18px rgba(151, 255, 76, 0.45);
+}
+
+.chip {
+  border: 1px solid rgba(151, 255, 76, 0.45);
+  color: var(--accent-lime);
+  background: rgba(151, 255, 76, 0.08);
+}
