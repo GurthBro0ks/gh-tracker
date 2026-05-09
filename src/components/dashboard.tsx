@@ -17,20 +17,8 @@ import {
   YAxis,
 } from "recharts";
 import { useMemo, useState } from "react";
-import {
-  activityEvents,
-  commitsPerDay,
-  heatmapWeeks,
-  lastDemoRefresh,
-  machines,
-  repoCommitDistribution,
-  repoLocations,
-  repos,
-  type ActivityType,
-  type MachineId,
-} from "@/lib/demo-data";
+import type { DashboardData, DashboardDataMode } from "@/lib/dashboard-adapter";
 
-const APP_VERSION = "0.1.0-phase0";
 const PIE_COLORS = ["#d717ff", "#97ff4c", "#53b4ff", "#ff74ae", "#ffc44d", "#a98dff"];
 
 function formatAgo(timestamp: string) {
@@ -41,47 +29,47 @@ function formatAgo(timestamp: string) {
   return `${Math.floor(hours / 24)}d ago`;
 }
 
-export default function Dashboard() {
+type DashboardProps = {
+  demoData: DashboardData;
+  localData: DashboardData | null;
+};
+
+export default function Dashboard({ demoData, localData }: DashboardProps) {
+  const [mode, setMode] = useState<DashboardDataMode>("demo");
   const [dateRange, setDateRange] = useState("14d");
-  const [machineFilter, setMachineFilter] = useState<MachineId | "all">("all");
+  const [machineFilter, setMachineFilter] = useState<string>("all");
   const [repoFilter, setRepoFilter] = useState("all");
   const [viewMode, setViewMode] = useState<"combined" | "split">("combined");
-  const [activityFilter, setActivityFilter] = useState<ActivityType | "all">("all");
+  const [activityFilter, setActivityFilter] = useState<"all" | "commit" | "push" | "status">("all");
+
+  const activeData = mode === "local_snapshot" && localData ? localData : demoData;
 
   const activeLocations = useMemo(
     () =>
-      repoLocations.filter(
+      activeData.repoRows.filter(
         (location) =>
           (machineFilter === "all" || location.machineId === machineFilter) &&
           (repoFilter === "all" || location.repoId === repoFilter),
       ),
-    [machineFilter, repoFilter],
+    [activeData.repoRows, machineFilter, repoFilter],
   );
 
   const events = useMemo(
     () =>
-      activityEvents.filter(
+      activeData.timeline.filter(
         (event) =>
           (machineFilter === "all" || event.machineId === machineFilter) &&
           (repoFilter === "all" || event.repoId === repoFilter) &&
           (activityFilter === "all" || event.type === activityFilter),
       ),
-    [machineFilter, repoFilter, activityFilter],
+    [activeData.timeline, machineFilter, repoFilter, activityFilter],
   );
 
-  const dailySlice = dateRange === "7d" ? commitsPerDay.slice(-7) : dateRange === "30d" ? commitsPerDay : commitsPerDay;
-  const machineTotals = machines.reduce(
-    (acc, machine) => {
-      acc.commits += machine.commitsToday;
-      acc.pushes += machine.pushesToday;
-      acc.repos += machine.activeRepos;
-      return acc;
-    },
-    { commits: 0, pushes: 0, repos: 0 },
-  );
-
-  const mostActiveRepo = [...repoCommitDistribution].sort((a, b) => b.commits - a.commits)[0];
-  const mostActiveMachine = [...machines].sort((a, b) => b.commitsToday - a.commitsToday)[0];
+  const trend = useMemo(() => {
+    if (dateRange === "7d") return activeData.commitTrend.slice(-7);
+    if (dateRange === "30d") return activeData.commitTrend.slice(-30);
+    return activeData.commitTrend;
+  }, [activeData.commitTrend, dateRange]);
 
   return (
     <main className="mx-auto w-full max-w-[1500px] px-4 py-6 md:px-8">
@@ -92,7 +80,23 @@ export default function Dashboard() {
             <h1 className="font-sans text-3xl uppercase tracking-[0.08em] text-white md:text-4xl">gh-tracker dashboard</h1>
             <p className="mt-1 text-sm text-violet-100/80">Local-first Git/GitHub activity view for Laptop, NUC1, and NUC2</p>
           </div>
-          <span className="chip rounded-full px-3 py-1 font-mono text-xs uppercase tracking-[0.2em]">demo mode</span>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              className={`rounded border px-3 py-1 text-xs uppercase tracking-[0.15em] ${mode === "demo" ? "border-lime-300 bg-lime-300/20 text-lime-200" : "border-fuchsia-400/50 bg-black/30 text-violet-200"}`}
+              onClick={() => setMode("demo")}
+            >
+              Demo Data
+            </button>
+            <button
+              type="button"
+              disabled={!localData}
+              className={`rounded border px-3 py-1 text-xs uppercase tracking-[0.15em] ${mode === "local_snapshot" ? "border-lime-300 bg-lime-300/20 text-lime-200" : "border-fuchsia-400/50 bg-black/30 text-violet-200"} ${!localData ? "cursor-not-allowed opacity-50" : ""}`}
+              onClick={() => setMode("local_snapshot")}
+            >
+              NUC2 Local Snapshot
+            </button>
+          </div>
         </div>
       </header>
 
@@ -109,9 +113,9 @@ export default function Dashboard() {
           </label>
           <label className="text-xs uppercase tracking-[0.15em] text-violet-200">
             Machine
-            <select value={machineFilter} onChange={(e) => setMachineFilter(e.target.value as MachineId | "all")} className="mt-2 w-full rounded border border-fuchsia-400/50 bg-black/40 px-2 py-2 text-sm">
+            <select value={machineFilter} onChange={(e) => setMachineFilter(e.target.value)} className="mt-2 w-full rounded border border-fuchsia-400/50 bg-black/40 px-2 py-2 text-sm">
               <option value="all">All machines</option>
-              {machines.map((machine) => (
+              {activeData.machineCards.map((machine) => (
                 <option key={machine.id} value={machine.id}>{machine.label}</option>
               ))}
             </select>
@@ -120,8 +124,8 @@ export default function Dashboard() {
             Repo
             <select value={repoFilter} onChange={(e) => setRepoFilter(e.target.value)} className="mt-2 w-full rounded border border-fuchsia-400/50 bg-black/40 px-2 py-2 text-sm">
               <option value="all">All repos</option>
-              {repos.map((repo) => (
-                <option key={repo.id} value={repo.id}>{repo.name}</option>
+              {Array.from(new Set(activeData.repoRows.map((repo) => repo.repoId))).map((repoId) => (
+                <option key={repoId} value={repoId}>{repoId}</option>
               ))}
             </select>
           </label>
@@ -134,7 +138,7 @@ export default function Dashboard() {
           </label>
           <label className="text-xs uppercase tracking-[0.15em] text-violet-200">
             Activity Type
-            <select value={activityFilter} onChange={(e) => setActivityFilter(e.target.value as ActivityType | "all")} className="mt-2 w-full rounded border border-fuchsia-400/50 bg-black/40 px-2 py-2 text-sm">
+            <select value={activityFilter} onChange={(e) => setActivityFilter(e.target.value as "all" | "commit" | "push" | "status")} className="mt-2 w-full rounded border border-fuchsia-400/50 bg-black/40 px-2 py-2 text-sm">
               <option value="all">All events</option>
               <option value="commit">Commits</option>
               <option value="push">Pushes</option>
@@ -145,18 +149,18 @@ export default function Dashboard() {
       </section>
 
       <section className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Metric label="Total commits today" value={`${machineTotals.commits}`} />
-        <Metric label="Pushes today" value={`${machineTotals.pushes}`} />
+        <Metric label="Total commits today" value={`${activeData.totalCommitsToday}`} />
+        <Metric label="Pushes today" value={`${activeData.pushesToday}`} />
         <Metric label="Active repos" value={`${new Set(activeLocations.map((entry) => entry.repoId)).size}`} />
-        <Metric label="Active machines" value={`${new Set(activeLocations.map((entry) => entry.machineId)).size || machines.length}`} />
-        <Metric label="Coding streak" value={`${Math.max(...machines.map((m) => m.streak))} days`} />
-        <Metric label="Most active repo" value={mostActiveRepo.repoId} />
-        <Metric label="Most active machine" value={mostActiveMachine.label} />
+        <Metric label="Active machines" value={`${new Set(activeLocations.map((entry) => entry.machineId)).size || activeData.machineCount}`} />
+        <Metric label="Coding streak" value={`${activeData.codingStreakDays} days`} />
+        <Metric label="Most active repo" value={activeData.mostActiveRepo} />
+        <Metric label="Most active machine" value={activeData.mostActiveMachine} />
         <Metric label="Dirty locations" value={`${activeLocations.filter((location) => location.dirty).length}`} danger />
       </section>
 
       <section className="mb-6 grid gap-4 lg:grid-cols-3">
-        {machines.map((machine) => (
+        {activeData.machineCards.map((machine) => (
           <article key={machine.id} className="neon-panel rounded-xl p-4">
             <p className="text-xs uppercase tracking-[0.2em] text-violet-200">{machine.label}</p>
             <p className="text-xs text-violet-300/80">{machine.host}</p>
@@ -173,9 +177,9 @@ export default function Dashboard() {
       <section className="mb-6 grid gap-4 xl:grid-cols-2">
         <article className="neon-panel rounded-xl p-4">
           <h3 className="mb-3 font-sans text-sm uppercase tracking-[0.18em] text-fuchsia-200">Commits Per Day</h3>
-          <div className="h-64">
+          <div className="h-64 min-h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={dailySlice}>
+              <LineChart data={trend}>
                 <CartesianGrid stroke="rgba(255,255,255,0.1)" strokeDasharray="3 3" />
                 <XAxis dataKey="day" tick={{ fill: "#d2c1f0", fontSize: 12 }} />
                 <YAxis tick={{ fill: "#d2c1f0", fontSize: 12 }} />
@@ -194,9 +198,9 @@ export default function Dashboard() {
 
         <article className="neon-panel rounded-xl p-4">
           <h3 className="mb-3 font-sans text-sm uppercase tracking-[0.18em] text-fuchsia-200">Stacked Commits By Machine</h3>
-          <div className="h-64">
+          <div className="h-64 min-h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={dailySlice}>
+              <BarChart data={trend}>
                 <CartesianGrid stroke="rgba(255,255,255,0.1)" strokeDasharray="3 3" />
                 <XAxis dataKey="day" tick={{ fill: "#d2c1f0", fontSize: 12 }} />
                 <YAxis tick={{ fill: "#d2c1f0", fontSize: 12 }} />
@@ -211,11 +215,11 @@ export default function Dashboard() {
 
         <article className="neon-panel rounded-xl p-4">
           <h3 className="mb-3 font-sans text-sm uppercase tracking-[0.18em] text-fuchsia-200">Repo Activity Share</h3>
-          <div className="h-64">
+          <div className="h-64 min-h-64">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={repoCommitDistribution.slice(0, 6)} dataKey="commits" nameKey="repoId" cx="50%" cy="50%" outerRadius={90} label>
-                  {repoCommitDistribution.slice(0, 6).map((item, index) => (
+                <Pie data={activeData.repoDistribution.slice(0, 6)} dataKey="commits" nameKey="repoId" cx="50%" cy="50%" outerRadius={90} label>
+                  {activeData.repoDistribution.slice(0, 6).map((item, index) => (
                     <Cell key={item.repoId} fill={PIE_COLORS[index % PIE_COLORS.length]} />
                   ))}
                 </Pie>
@@ -227,9 +231,9 @@ export default function Dashboard() {
 
         <article className="neon-panel rounded-xl p-4">
           <h3 className="mb-3 font-sans text-sm uppercase tracking-[0.18em] text-fuchsia-200">Additions Vs Deletions</h3>
-          <div className="h-64">
+          <div className="h-64 min-h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={dailySlice}>
+              <AreaChart data={trend}>
                 <CartesianGrid stroke="rgba(255,255,255,0.1)" strokeDasharray="3 3" />
                 <XAxis dataKey="day" tick={{ fill: "#d2c1f0", fontSize: 12 }} />
                 <YAxis tick={{ fill: "#d2c1f0", fontSize: 12 }} />
@@ -276,7 +280,7 @@ export default function Dashboard() {
         <article className="neon-panel rounded-xl p-4">
           <h3 className="mb-3 font-sans text-sm uppercase tracking-[0.18em] text-fuchsia-200">Activity Heatmap</h3>
           <div className="space-y-1">
-            {heatmapWeeks.map((week, weekIndex) => (
+            {activeData.heatmap.map((week, weekIndex) => (
               <div key={`week-${weekIndex}`} className="grid grid-cols-7 gap-1">
                 {week.map((value, dayIndex) => (
                   <div
@@ -299,7 +303,7 @@ export default function Dashboard() {
         <article className="neon-panel rounded-xl p-4">
           <h3 className="mb-3 font-sans text-sm uppercase tracking-[0.18em] text-fuchsia-200">Recent Activity Timeline</h3>
           <ul className="space-y-2 text-sm">
-            {events.map((event) => (
+            {events.slice().reverse().slice(0, 20).map((event) => (
               <li key={event.id} className="rounded border border-white/10 bg-black/30 p-2">
                 <p className="text-xs uppercase tracking-[0.16em] text-violet-200">{event.type} - {event.machineId} - {event.repoId}</p>
                 <p className="text-violet-50">{event.message}</p>
@@ -312,7 +316,7 @@ export default function Dashboard() {
         <article className="neon-panel rounded-xl p-4">
           <h3 className="mb-3 font-sans text-sm uppercase tracking-[0.18em] text-fuchsia-200">Top Repos Leaderboard</h3>
           <ol className="space-y-2">
-            {repoCommitDistribution.slice(0, 8).map((repo, index) => (
+            {activeData.repoDistribution.slice(0, 8).map((repo, index) => (
               <li key={repo.repoId} className="flex items-center justify-between rounded border border-white/10 bg-black/30 px-3 py-2 text-sm">
                 <span className="text-violet-100">#{index + 1} {repo.repoId}</span>
                 <span className="chip rounded px-2 py-0.5 text-xs">{repo.commits} commits</span>
@@ -325,14 +329,17 @@ export default function Dashboard() {
       <section className="neon-panel rounded-xl p-4 text-xs">
         <h3 className="mb-2 font-sans text-sm uppercase tracking-[0.18em] text-fuchsia-200">Debug / Status Dock</h3>
         <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-          <Status label="App version" value={APP_VERSION} />
-          <Status label="Data mode" value="demo" />
-          <Status label="Collector status" value="not installed" />
-          <Status label="GitHub sync status" value="not configured" />
-          <Status label="Machine count" value={`${machines.length}`} />
-          <Status label="Repo count" value={`${repos.length}`} />
-          <Status label="Tracked locations" value={`${repoLocations.length}`} />
-          <Status label="Last demo refresh" value={lastDemoRefresh} />
+          <Status label="App version" value={activeData.version} />
+          <Status label="Data Mode" value={activeData.mode === "demo" ? "Demo" : "Local Snapshot"} />
+          <Status label="Latest Local Snapshot Time" value={activeData.latestLocalSnapshotTime ?? "not available"} />
+          <Status label="Local Repo Count" value={`${activeData.localRepoCount}`} />
+          <Status label="Dirty Repo Count" value={`${activeData.dirtyRepoCount}`} />
+          <Status label="Unpushed Repo Count" value={`${activeData.unpushedRepoCount}`} />
+          <Status label="Collector Last Result" value={activeData.collectorLastResult} />
+          <Status label="Validation Status" value={activeData.validationStatus} />
+          <Status label="Machine count" value={`${activeData.machineCount}`} />
+          <Status label="Repo count" value={`${activeData.repoCount}`} />
+          <Status label="Source timestamp" value={activeData.sourceTimestamp} />
         </div>
       </section>
     </main>

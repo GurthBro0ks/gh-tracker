@@ -1,22 +1,25 @@
-# Collector Plan (Future Phases)
+# Collector Plan
 
-## Phase 1 Collector Targets
-- Gather per-repo branch, dirty state, and ahead/behind state
-- Gather commit and push activity windows
-- Emit machine-tagged snapshots from Laptop, NUC1, NUC2
+## Phase 1 Status
+Completed:
+- local CLI collector `pnpm collect:local`
+- contract + schema validation `pnpm validate:snapshot`
+- snapshot outputs:
+  - `data/snapshots/nuc2/latest.json`
+  - `data/snapshots/nuc2/<UTC_TIMESTAMP>.json`
+  - `data/snapshots/nuc2/latest-summary.json`
 
-## Proposed Collection Modes
-1. Local CLI collector script (manual or cron)
-2. Optional daemon mode for periodic refresh
-3. Optional event append log for incremental timeline
+## Current Behavior
+- machine defaults to `nuc2` (override with `GH_TRACKER_MACHINE_ID`)
+- scans `/opt/slimy` and `/home/slimy` with depth limit
+- collects git metadata only
+- excludes noisy directories (`node_modules`, `.next`, `dist`, `build`, `coverage`, `.cache`, `.git`)
+- redacts remote credentials and token-like patterns
 
-## Output Contract
-- JSON snapshot files keyed by machine and capture timestamp
-- Separate files for:
-  - `repoLocation` status snapshot
-  - `activityEvent` stream append
+## Not Included Yet
+- GitHub API tokens
+- webhooks
+- timers/cron/systemd automation
 
-## Security Constraints
-- No secrets in committed files
-- No API token usage until Phase 4
-- Local filesystem only during initial collector implementation
+## Phase 2 Target
+Ingest multiple machine snapshots (Laptop + NUC1 + NUC2), unify canonical repo graph, and build historical multi-day rollups for combined analytics.

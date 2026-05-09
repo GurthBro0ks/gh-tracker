@@ -7,10 +7,10 @@ Inspection and readiness checks (repo identity, harness lane, toolchain, proof p
 Scaffold local app with demo data and dashboard shell.
 
 ## Phase 1
-Implement local machine collectors for Git status, branch, commit, and push metadata.
+Implement local machine collector contracts, NUC2 snapshot collection, schema validation, and dashboard local/demo data mode support.
 
 ## Phase 2
-Implement ingestion and normalization into `machine`, `repo`, `repoLocation`, `activityEvent` structures.
+Implement multi-machine ingestion (Laptop + NUC1 + NUC2), cross-machine canonical repo merging, and combined daily historical rollups.
 
 ## Phase 3
 Add local persistence, scheduled refresh, and resilient cache behavior.
