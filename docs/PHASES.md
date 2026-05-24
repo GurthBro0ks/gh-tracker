@@ -33,6 +33,15 @@ Mobile-focused layout improvements for the public dashboard:
 - Responsive font/padding scaling across all dashboard sections.
 - Preserved full desktop layout with conditional responsive classes.
 
+### Phase 3H — Mobile Chart/UX Polish
+Small mobile UX polish pass before Phase 4:
+- Recharts tooltips restyled with dark purple/black background, neon border, and lime text (no white boxes).
+- Bottom safe-area padding added via `env(safe-area-inset-bottom)` to prevent iOS browser bar from covering content.
+- Repo Habitat copy cleaned up: repo name is now the primary title, species/stage/mood moved to secondary line.
+- Debug/status dock clarified for Demo mode (shows "Demo (simulated)", "pending Phase 4 collector", "not connected on public deploy").
+- Placeholder pixel pet art clearly labeled with "Phase 2 Preview" badge and note about sprite-sheet phase.
+- Preserved full desktop layout with responsive CSS.
+
 ## Phase 4
 Add optional GitHub API sync (token-based, secure local-only secrets handling).
 

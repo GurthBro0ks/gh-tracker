@@ -32,8 +32,13 @@ const careLabels: Record<RepoCareAction, string> = {
 export function RepoHabitatGrid({ rows }: { rows: HabitatRow[] }) {
   return (
     <section className="neon-panel mb-6 rounded-xl p-3 sm:p-4">
-      <h3 className="font-sans text-base uppercase tracking-[0.08em] text-white sm:text-lg">Repo Habitat</h3>
-      <p className="mb-3 mt-1 text-xs text-violet-100/80 sm:mb-4 sm:text-sm">Original retro virtual-pet inspired companions driven by repo health. GitHub release/CI/PR sync is placeholder only in Phase 2.</p>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 sm:mb-4">
+        <div>
+          <h3 className="font-sans text-base uppercase tracking-[0.08em] text-white sm:text-lg">Repo Habitat</h3>
+          <p className="mt-0.5 text-[10px] text-violet-300/80 sm:text-xs">Retro virtual-pet companions driven by repo health. Pixel art is placeholder until sprite-sheet phase.</p>
+        </div>
+        <span className="rounded border border-fuchsia-400/30 bg-black/30 px-2 py-0.5 text-[9px] uppercase tracking-[0.1em] text-violet-300">Phase 2 Preview</span>
+      </div>
       <div className="grid gap-3 sm:gap-4 lg:grid-cols-2">
         {rows.map((row) => (
           <RepoPetCard key={`${row.repoId}-${row.machineId}`} row={row} />
@@ -48,12 +53,12 @@ function RepoPetCard({ row }: { row: HabitatRow }) {
     <article className="rounded-xl border border-fuchsia-400/40 bg-black/35 p-2.5 sm:p-3">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="truncate text-[10px] uppercase tracking-[0.15em] text-violet-200 sm:text-xs">{row.repoId}</p>
-          <p className="text-base text-lime-200 sm:text-lg">{row.pet.petName}</p>
-          <p className="text-[10px] text-violet-300 sm:text-xs">{row.pet.species} - {row.pet.stage} - {row.pet.mood}</p>
+          <p className="truncate text-base font-sans uppercase tracking-[0.06em] text-white sm:text-lg">{row.repoId}</p>
+          <p className="text-[10px] text-violet-300 sm:text-xs">{row.pet.species} · {row.pet.stage} · {row.pet.mood}</p>
         </div>
         <RepoHealthBadge health={row.health} />
       </div>
+      <p className="mt-1 text-xs text-lime-200 sm:text-sm">{row.pet.petName}</p>
 
       <div className="mt-2 flex items-center gap-2 sm:mt-3 sm:gap-3">
         <RepoPetSprite species={row.pet.species} state={row.pet.animationState} />

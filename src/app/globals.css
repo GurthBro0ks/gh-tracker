@@ -29,6 +29,7 @@ body {
     linear-gradient(135deg, #06030c, #120920 55%, #09040f);
   color: var(--ink-primary);
   font-family: var(--font-share-tech-mono), monospace;
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 body::before {
@@ -125,6 +126,37 @@ body::before {
 
 .sprite-evolve {
   animation-name: sprite-evolve;
+}
+
+/* Recharts custom tooltip styling */
+.recharts-tooltip-wrapper .recharts-default-tooltip {
+  background: linear-gradient(160deg, rgba(18, 9, 32, 0.95), rgba(8, 4, 15, 0.95)) !important;
+  border: 1px solid color-mix(in srgb, var(--neon-edge) 65%, transparent) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 0 24px rgba(215, 23, 255, 0.22), inset 0 0 0 1px rgba(255, 255, 255, 0.04) !important;
+}
+
+.recharts-tooltip-wrapper .recharts-tooltip-label {
+  color: var(--accent-lime) !important;
+  font-family: var(--font-sans), monospace !important;
+  font-size: 12px !important;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.recharts-tooltip-wrapper .recharts-tooltip-item {
+  color: var(--ink-primary) !important;
+  font-family: var(--font-share-tech-mono), monospace !important;
+  font-size: 12px !important;
+}
+
+.recharts-tooltip-wrapper .recharts-tooltip-item-name {
+  color: var(--ink-dim) !important;
+}
+
+.recharts-tooltip-wrapper .recharts-tooltip-item-value {
+  color: var(--accent-lime) !important;
+  font-weight: bold;
 }
 
 @keyframes sprite-idle {

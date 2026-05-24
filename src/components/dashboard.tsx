@@ -23,6 +23,26 @@ import { RepoHabitatGrid } from "@/components/repo-habitat";
 
 const PIE_COLORS = ["#d717ff", "#97ff4c", "#53b4ff", "#ff74ae", "#ffc44d", "#a98dff"];
 
+function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number; color: string }>; label?: string }) {
+  if (!active || !payload || payload.length === 0) return null;
+  return (
+    <div className="rounded-lg border border-fuchsia-400/50 bg-gradient-to-b from-[rgba(18,9,32,0.95)] to-[rgba(8,4,15,0.95)] px-3 py-2 shadow-[0_0_24px_rgba(215,23,255,0.22)]"
+      style={{ maxWidth: "calc(100vw - 2rem)" }}
+    >
+      <p className="font-sans text-xs uppercase tracking-[0.08em] text-lime-300">{label}</p>
+      <div className="mt-1 space-y-0.5">
+        {payload.map((entry, index) => (
+          <p key={index} className="font-mono text-xs text-violet-100">
+            <span style={{ color: entry.color }} className="mr-1">●</span>
+            <span className="text-violet-300">{entry.name}:</span>{" "}
+            <span className="font-bold text-lime-300">{entry.value}</span>
+          </p>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function formatAgo(timestamp: string) {
   const minutes = Math.max(1, Math.floor((Date.now() - Date.parse(timestamp)) / 60000));
   if (minutes < 60) return `${minutes}m ago`;
@@ -118,7 +138,7 @@ export default function Dashboard({ demoData, localData }: DashboardProps) {
   const dirtyCount = activeLocations.filter((location) => location.dirty).length;
 
   return (
-    <main className="mx-auto w-full max-w-[1500px] px-3 pb-6 sm:px-4 md:px-8" style={{ paddingTop: "max(1rem, env(safe-area-inset-top))" }}>
+    <main className="mx-auto w-full max-w-[1500px] px-3 pb-6 sm:px-4 md:px-8" style={{ paddingTop: "max(1rem, env(safe-area-inset-top))", paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}>
       <header className="neon-panel mb-4 rounded-xl px-3 py-3 sm:mb-6 sm:px-5 sm:py-4">
         <p className="text-[10px] uppercase tracking-[0.25em] text-fuchsia-200/80 sm:text-xs">Slimy.ai telemetry deck</p>
         <div className="mt-1 flex flex-wrap items-end justify-between gap-3 sm:mt-2 sm:gap-4">
@@ -217,9 +237,8 @@ export default function Dashboard({ demoData, localData }: DashboardProps) {
               <div key={`${row.repoId}-${row.machineId}`} className="flex min-w-[140px] flex-shrink-0 items-center gap-2 rounded-lg border border-fuchsia-400/30 bg-black/35 p-2">
                 <RepoPetSpriteCompact species={row.pet.species} state={row.pet.animationState} />
                 <div className="min-w-0">
-                  <p className="truncate text-[10px] uppercase tracking-[0.1em] text-violet-200">{row.repoId}</p>
-                  <p className="text-xs text-lime-200">{row.pet.petName}</p>
-                  <p className="text-[10px] text-violet-300">{row.health.score} pts</p>
+                  <p className="truncate text-xs font-sans uppercase tracking-[0.06em] text-white">{row.repoId}</p>
+                  <p className="text-[10px] text-violet-300">{row.pet.species} · {row.health.score} pts</p>
                 </div>
               </div>
             ))}
@@ -264,7 +283,7 @@ export default function Dashboard({ demoData, localData }: DashboardProps) {
                 <CartesianGrid stroke="rgba(255,255,255,0.1)" strokeDasharray="3 3" />
                 <XAxis dataKey="day" tick={{ fill: "#d2c1f0", fontSize: 12 }} />
                 <YAxis tick={{ fill: "#d2c1f0", fontSize: 12 }} />
-                <Tooltip />
+                <Tooltip content={<CustomTooltip />} />
                 <Line type="monotone" dataKey={viewMode === "combined" ? "total" : "laptop"} stroke="#97ff4c" strokeWidth={2} />
                 {viewMode === "split" ? (
                   <>
@@ -285,7 +304,7 @@ export default function Dashboard({ demoData, localData }: DashboardProps) {
                 <CartesianGrid stroke="rgba(255,255,255,0.1)" strokeDasharray="3 3" />
                 <XAxis dataKey="day" tick={{ fill: "#d2c1f0", fontSize: 12 }} />
                 <YAxis tick={{ fill: "#d2c1f0", fontSize: 12 }} />
-                <Tooltip />
+                <Tooltip content={<CustomTooltip />} />
                 <Bar dataKey="laptop" stackId="a" fill="#97ff4c" />
                 <Bar dataKey="nuc1" stackId="a" fill="#d717ff" />
                 <Bar dataKey="nuc2" stackId="a" fill="#53b4ff" />
@@ -304,7 +323,7 @@ export default function Dashboard({ demoData, localData }: DashboardProps) {
                     <Cell key={item.repoId} fill={PIE_COLORS[index % PIE_COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip content={<CustomTooltip />} />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -318,7 +337,7 @@ export default function Dashboard({ demoData, localData }: DashboardProps) {
                 <CartesianGrid stroke="rgba(255,255,255,0.1)" strokeDasharray="3 3" />
                 <XAxis dataKey="day" tick={{ fill: "#d2c1f0", fontSize: 12 }} />
                 <YAxis tick={{ fill: "#d2c1f0", fontSize: 12 }} />
-                <Tooltip />
+                <Tooltip content={<CustomTooltip />} />
                 <Area type="monotone" dataKey="additions" stackId="1" stroke="#97ff4c" fill="#97ff4c66" />
                 <Area type="monotone" dataKey="deletions" stackId="2" stroke="#ff74ae" fill="#ff74ae66" />
               </AreaChart>
@@ -411,12 +430,12 @@ export default function Dashboard({ demoData, localData }: DashboardProps) {
         <h3 className="mb-2 font-sans text-sm uppercase tracking-[0.18em] text-fuchsia-200">Debug / Status Dock</h3>
         <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
           <Status label="App version" value={activeData.version} />
-          <Status label="Data Mode" value={activeData.mode === "demo" ? "Demo" : "Local Snapshot"} />
-          <Status label="Latest Local Snapshot Time" value={activeData.latestLocalSnapshotTime ?? "not available"} />
-          <Status label="Local Repo Count" value={`${activeData.localRepoCount}`} />
-          <Status label="Dirty Repo Count" value={`${activeData.dirtyRepoCount}`} />
-          <Status label="Unpushed Repo Count" value={`${activeData.unpushedRepoCount}`} />
-          <Status label="Collector Last Result" value={activeData.collectorLastResult} />
+          <Status label="Data Mode" value={activeData.mode === "demo" ? "Demo (simulated)" : "Local Snapshot"} />
+          <Status label="Latest Local Snapshot" value={activeData.latestLocalSnapshotTime ?? "pending Phase 4 collector"} />
+          <Status label="Local Repo Count" value={activeData.mode === "demo" ? "0 (demo mode)" : `${activeData.localRepoCount}`} />
+          <Status label="Dirty Repo Count" value={activeData.mode === "demo" ? "0 (demo mode)" : `${activeData.dirtyRepoCount}`} />
+          <Status label="Unpushed Repo Count" value={activeData.mode === "demo" ? "0 (demo mode)" : `${activeData.unpushedRepoCount}`} />
+          <Status label="Collector Status" value={activeData.mode === "demo" ? "not connected on public deploy" : activeData.collectorLastResult} />
           <Status label="Validation Status" value={activeData.validationStatus} />
           <Status label="Machine count" value={`${activeData.machineCount}`} />
           <Status label="Repo count" value={`${activeData.repoCount}`} />
