@@ -39,3 +39,20 @@ Top-level payload wrapping all entities with schema version.
 ## Phase 1 Notes
 - Model is local-first and token-free.
 - GitHub API/webhooks are intentionally deferred to later phases.
+
+## Phase 2 Additions
+
+### repoHealth
+Health layer combining local cleanliness/sync/activity with remote placeholders.
+- score (0-100) + bucket
+- release health placeholder
+- CI status placeholder
+- PR/issue pressure placeholders
+- attention reasons + care actions
+
+### repoPet
+Visual companion layer driven by repo health.
+- deterministic species from stable repo seed data
+- stage + mood + animation state
+- stats: energy, cleanliness, focus, trust, maturity, glow
+- evolution progress and care actions

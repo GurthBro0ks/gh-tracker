@@ -30,6 +30,7 @@ export type DashboardData = {
   mostActiveRepo: string;
   mostActiveMachine: string;
   machineCards: Array<{ id: string; label: string; host: string; commitsToday: number; pushesToday: number; activeRepos: number; streak: number }>;
+  repoCatalog: Array<{ repoId: string; owner: string; name: string; canonicalRemote: string; primaryLanguage: string | null }>;
   repoRows: Array<{ id: string; repoId: string; machineId: string; path: string; branch: string; dirty: boolean; unpushedCommits: number }>;
   timeline: Array<{ id: string; machineId: string; repoId: string; type: "commit" | "push" | "status"; timestamp: string; message: string }>;
   commitTrend: Array<{ day: string; total: number; laptop: number; nuc1: number; nuc2: number; additions: number; deletions: number }>;
@@ -46,7 +47,7 @@ export function buildDemoDashboardData(): DashboardData {
 
   return {
     mode: "demo",
-    version: "0.2.0-phase1",
+    version: "0.3.0-phase2",
     sourceTimestamp: lastDemoRefresh,
     latestLocalSnapshotTime: null,
     localRepoCount: 0,
@@ -69,6 +70,13 @@ export function buildDemoDashboardData(): DashboardData {
       pushesToday: machine.pushesToday,
       activeRepos: machine.activeRepos,
       streak: machine.streak,
+    })),
+    repoCatalog: repos.map((repo) => ({
+      repoId: repo.id,
+      owner: repo.owner,
+      name: repo.name,
+      canonicalRemote: `git@github.com:${repo.owner}/${repo.name}.git`,
+      primaryLanguage: repo.primaryLanguage,
     })),
     repoRows: repoLocations.map((location) => ({
       id: location.id,
@@ -141,7 +149,7 @@ export function buildDashboardDataFromSnapshot(snapshot: SnapshotEnvelope): Dash
 
   return {
     mode: "local_snapshot",
-    version: "0.2.0-phase1",
+    version: "0.3.0-phase2",
     sourceTimestamp: snapshot.createdAt,
     latestLocalSnapshotTime: snapshot.createdAt,
     localRepoCount: snapshot.repoLocations.length,
@@ -157,6 +165,13 @@ export function buildDashboardDataFromSnapshot(snapshot: SnapshotEnvelope): Dash
     mostActiveRepo,
     mostActiveMachine,
     machineCards,
+    repoCatalog: snapshot.repos.map((repo) => ({
+      repoId: repo.id,
+      owner: repo.owner,
+      name: repo.name,
+      canonicalRemote: repo.canonicalRemote,
+      primaryLanguage: null,
+    })),
     repoRows,
     timeline: snapshot.activityEvents,
     commitTrend: Array.from(dateRows.values()).sort((a, b) => a.day.localeCompare(b.day)),

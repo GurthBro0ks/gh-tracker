@@ -10,10 +10,18 @@ Scaffold local app with demo data and dashboard shell.
 Implement local machine collector contracts, NUC2 snapshot collection, schema validation, and dashboard local/demo data mode support.
 
 ## Phase 2
-Implement multi-machine ingestion (Laptop + NUC1 + NUC2), cross-machine canonical repo merging, and combined daily historical rollups.
+Implement Repo Habitat foundation:
+- Repo health model contracts and scoring buckets.
+- ReleaseBar-inspired placeholders for release/CI/PR/issue sync.
+- Deterministic original pixel repo pets.
+- Habitat dashboard section (without GitHub API sync).
 
 ## Phase 3
-Add local persistence, scheduled refresh, and resilient cache behavior.
+Implement GitHub health ingestion and evolution rules:
+- Optional secure GitHub API sync for release/CI/PR/issues.
+- Merge remote health into RepoHealth score.
+- Expand pixel-pet states with sprite-sheet assets.
+- Add habitat history and trend persistence.
 
 ## Phase 4
 Add optional GitHub API sync (token-based, secure local-only secrets handling).

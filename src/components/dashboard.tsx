@@ -18,6 +18,8 @@ import {
 } from "recharts";
 import { useMemo, useState } from "react";
 import type { DashboardData, DashboardDataMode } from "@/lib/dashboard-adapter";
+import { generateRepoPet, deriveRepoHealth } from "@/lib/repo-habitat";
+import { RepoHabitatGrid } from "@/components/repo-habitat";
 
 const PIE_COLORS = ["#d717ff", "#97ff4c", "#53b4ff", "#ff74ae", "#ffc44d", "#a98dff"];
 
@@ -70,6 +72,45 @@ export default function Dashboard({ demoData, localData }: DashboardProps) {
     if (dateRange === "30d") return activeData.commitTrend.slice(-30);
     return activeData.commitTrend;
   }, [activeData.commitTrend, dateRange]);
+
+  const habitatRows = useMemo(() => {
+    const repoCommitLookup = new Map(activeData.repoDistribution.map((row) => [row.repoId, row.commits]));
+    return activeLocations.slice(0, 8).map((location) => {
+      const repoMeta = activeData.repoCatalog.find((entry) => entry.repoId === location.repoId);
+      const commitsLast30Days = repoCommitLookup.get(location.repoId) ?? 0;
+      const signal = {
+        machineId: location.machineId,
+        dirty: location.dirty,
+        stagedCount: location.dirty ? 1 : 0,
+        unstagedCount: location.dirty ? 1 : 0,
+        untrackedCount: location.dirty ? 1 : 0,
+        aheadCount: location.unpushedCommits,
+        behindCount: 0,
+        commitsToday: Math.min(4, commitsLast30Days),
+        commitsLast7Days: Math.max(1, Math.floor(commitsLast30Days / 4)),
+        commitsLast30Days,
+      };
+      const health = deriveRepoHealth(signal);
+      const pet = generateRepoPet(
+        {
+          repoId: location.repoId,
+          owner: repoMeta?.owner ?? "unknown",
+          name: repoMeta?.name ?? location.repoId,
+          canonicalRemote: repoMeta?.canonicalRemote ?? `git@github.com:unknown/${location.repoId}.git`,
+          primaryLanguage: repoMeta?.primaryLanguage ?? null,
+        },
+        signal,
+        health,
+      );
+
+      return {
+        repoId: location.repoId,
+        machineId: location.machineId,
+        health,
+        pet,
+      };
+    });
+  }, [activeData.repoCatalog, activeData.repoDistribution, activeLocations]);
 
   return (
     <main className="mx-auto w-full max-w-[1500px] px-4 py-6 md:px-8">
@@ -173,6 +214,8 @@ export default function Dashboard({ demoData, localData }: DashboardProps) {
           </article>
         ))}
       </section>
+
+      <RepoHabitatGrid rows={habitatRows} />
 
       <section className="mb-6 grid gap-4 xl:grid-cols-2">
         <article className="neon-panel rounded-xl p-4">
