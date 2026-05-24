@@ -23,6 +23,16 @@ Implement GitHub health ingestion and evolution rules:
 - Expand pixel-pet states with sprite-sheet assets.
 - Add habitat history and trend persistence.
 
+### Phase 3G — Mobile Public QA Polish
+Mobile-focused layout improvements for the public dashboard:
+- Safe-area padding for iOS status bar using `env(safe-area-inset-top)`.
+- Collapsible filter panel on mobile (hidden by default, toggle accessible).
+- Compact 4-metric KPI strip above the fold on small screens.
+- Horizontal-scrollable habitat quick-view strip on mobile.
+- Clearer data mode indicators (Demo vs NUC2 Snapshot).
+- Responsive font/padding scaling across all dashboard sections.
+- Preserved full desktop layout with conditional responsive classes.
+
 ## Phase 4
 Add optional GitHub API sync (token-based, secure local-only secrets handling).
 

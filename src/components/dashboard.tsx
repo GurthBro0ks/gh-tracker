@@ -43,6 +43,7 @@ export default function Dashboard({ demoData, localData }: DashboardProps) {
   const [repoFilter, setRepoFilter] = useState("all");
   const [viewMode, setViewMode] = useState<"combined" | "split">("combined");
   const [activityFilter, setActivityFilter] = useState<"all" | "commit" | "push" | "status">("all");
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const activeData = mode === "local_snapshot" && localData ? localData : demoData;
 
@@ -112,38 +113,50 @@ export default function Dashboard({ demoData, localData }: DashboardProps) {
     });
   }, [activeData.repoCatalog, activeData.repoDistribution, activeLocations]);
 
+  const activeRepoCount = new Set(activeLocations.map((entry) => entry.repoId)).size;
+  const activeMachineCount = new Set(activeLocations.map((entry) => entry.machineId)).size || activeData.machineCount;
+  const dirtyCount = activeLocations.filter((location) => location.dirty).length;
+
   return (
-    <main className="mx-auto w-full max-w-[1500px] px-4 py-6 md:px-8">
-      <header className="neon-panel mb-6 rounded-xl px-5 py-4">
-        <p className="text-xs uppercase tracking-[0.25em] text-fuchsia-200/80">Slimy.ai telemetry deck</p>
-        <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
+    <main className="mx-auto w-full max-w-[1500px] px-3 pb-6 sm:px-4 md:px-8" style={{ paddingTop: "max(1rem, env(safe-area-inset-top))" }}>
+      <header className="neon-panel mb-4 rounded-xl px-3 py-3 sm:mb-6 sm:px-5 sm:py-4">
+        <p className="text-[10px] uppercase tracking-[0.25em] text-fuchsia-200/80 sm:text-xs">Slimy.ai telemetry deck</p>
+        <div className="mt-1 flex flex-wrap items-end justify-between gap-3 sm:mt-2 sm:gap-4">
           <div>
-            <h1 className="font-sans text-3xl uppercase tracking-[0.08em] text-white md:text-4xl">gh-tracker dashboard</h1>
-            <p className="mt-1 text-sm text-violet-100/80">Local-first Git/GitHub activity view for Laptop, NUC1, and NUC2</p>
+            <h1 className="font-sans text-xl uppercase tracking-[0.08em] text-white sm:text-3xl md:text-4xl">gh-tracker dashboard</h1>
+            <p className="mt-0.5 text-xs text-violet-100/80 sm:mt-1 sm:text-sm">Local-first Git/GitHub activity view for Laptop, NUC1, and NUC2</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              className={`rounded border px-3 py-1 text-xs uppercase tracking-[0.15em] ${mode === "demo" ? "border-lime-300 bg-lime-300/20 text-lime-200" : "border-fuchsia-400/50 bg-black/30 text-violet-200"}`}
+              className={`rounded border px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] sm:px-3 sm:text-xs sm:tracking-[0.15em] ${mode === "demo" ? "border-lime-300 bg-lime-300/20 text-lime-200" : "border-fuchsia-400/50 bg-black/30 text-violet-200"}`}
               onClick={() => setMode("demo")}
             >
-              Demo Data
+              {mode === "demo" ? "● Demo" : "Demo"}
             </button>
             <button
               type="button"
               disabled={!localData}
-              className={`rounded border px-3 py-1 text-xs uppercase tracking-[0.15em] ${mode === "local_snapshot" ? "border-lime-300 bg-lime-300/20 text-lime-200" : "border-fuchsia-400/50 bg-black/30 text-violet-200"} ${!localData ? "cursor-not-allowed opacity-50" : ""}`}
+              className={`rounded border px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] sm:px-3 sm:text-xs sm:tracking-[0.15em] ${mode === "local_snapshot" ? "border-lime-300 bg-lime-300/20 text-lime-200" : "border-fuchsia-400/50 bg-black/30 text-violet-200"} ${!localData ? "cursor-not-allowed opacity-50" : ""}`}
               onClick={() => setMode("local_snapshot")}
             >
-              NUC2 Local Snapshot
+              {mode === "local_snapshot" ? "● NUC2 Snapshot" : "NUC2 Snapshot"}
             </button>
           </div>
         </div>
       </header>
 
-      <section className="neon-panel mb-6 rounded-xl p-4">
-        <h2 className="mb-3 font-sans text-lg uppercase tracking-[0.08em]">Filters</h2>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <section className="neon-panel mb-4 rounded-xl p-3 sm:mb-6 sm:p-4">
+        <button
+          type="button"
+          onClick={() => setFiltersOpen((v) => !v)}
+          className="flex w-full items-center justify-between sm:hidden"
+        >
+          <h2 className="font-sans text-sm uppercase tracking-[0.08em]">Filters</h2>
+          <span className="text-xs text-violet-200">{filtersOpen ? "▲ Hide" : "▼ Show"}</span>
+        </button>
+        <h2 className="mb-3 hidden font-sans text-lg uppercase tracking-[0.08em] sm:block">Filters</h2>
+        <div className={`grid gap-3 sm:grid-cols-2 lg:grid-cols-5 ${filtersOpen ? "" : "hidden sm:grid"}`}>
           <label className="text-xs uppercase tracking-[0.15em] text-violet-200">
             Date Range
             <select value={dateRange} onChange={(e) => setDateRange(e.target.value)} className="mt-2 w-full rounded border border-fuchsia-400/50 bg-black/40 px-2 py-2 text-sm">
@@ -189,15 +202,40 @@ export default function Dashboard({ demoData, localData }: DashboardProps) {
         </div>
       </section>
 
-      <section className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="mb-4 grid grid-cols-2 gap-2 sm:mb-6 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
+        <Metric label="Commits today" value={`${activeData.totalCommitsToday}`} compact />
+        <Metric label="Active repos" value={`${activeRepoCount}`} compact />
+        <Metric label="Dirty" value={`${dirtyCount}`} danger compact />
+        <Metric label="Machines" value={`${activeMachineCount}`} compact />
+      </section>
+
+      {habitatRows.length > 0 && (
+        <section className="neon-panel mb-4 rounded-xl p-3 sm:mb-6 sm:hidden">
+          <h3 className="mb-2 font-sans text-xs uppercase tracking-[0.12em] text-fuchsia-200">Habitat Quick View</h3>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {habitatRows.slice(0, 4).map((row) => (
+              <div key={`${row.repoId}-${row.machineId}`} className="flex min-w-[140px] flex-shrink-0 items-center gap-2 rounded-lg border border-fuchsia-400/30 bg-black/35 p-2">
+                <RepoPetSpriteCompact species={row.pet.species} state={row.pet.animationState} />
+                <div className="min-w-0">
+                  <p className="truncate text-[10px] uppercase tracking-[0.1em] text-violet-200">{row.repoId}</p>
+                  <p className="text-xs text-lime-200">{row.pet.petName}</p>
+                  <p className="text-[10px] text-violet-300">{row.health.score} pts</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section className="mb-6 hidden gap-4 sm:grid sm:grid-cols-2 xl:grid-cols-4">
         <Metric label="Total commits today" value={`${activeData.totalCommitsToday}`} />
         <Metric label="Pushes today" value={`${activeData.pushesToday}`} />
-        <Metric label="Active repos" value={`${new Set(activeLocations.map((entry) => entry.repoId)).size}`} />
-        <Metric label="Active machines" value={`${new Set(activeLocations.map((entry) => entry.machineId)).size || activeData.machineCount}`} />
+        <Metric label="Active repos" value={`${activeRepoCount}`} />
+        <Metric label="Active machines" value={`${activeMachineCount}`} />
         <Metric label="Coding streak" value={`${activeData.codingStreakDays} days`} />
         <Metric label="Most active repo" value={activeData.mostActiveRepo} />
         <Metric label="Most active machine" value={activeData.mostActiveMachine} />
-        <Metric label="Dirty locations" value={`${activeLocations.filter((location) => location.dirty).length}`} danger />
+        <Metric label="Dirty locations" value={`${dirtyCount}`} danger />
       </section>
 
       <section className="mb-6 grid gap-4 lg:grid-cols-3">
@@ -389,12 +427,31 @@ export default function Dashboard({ demoData, localData }: DashboardProps) {
   );
 }
 
-function Metric({ label, value, danger = false }: { label: string; value: string; danger?: boolean }) {
+function Metric({ label, value, danger = false, compact = false }: { label: string; value: string; danger?: boolean; compact?: boolean }) {
+  if (compact) {
+    return (
+      <article className="neon-panel rounded-lg p-2.5 sm:rounded-xl sm:p-4">
+        <p className="text-[9px] uppercase tracking-[0.15em] text-violet-200 sm:text-xs sm:tracking-[0.18em]">{label}</p>
+        <p className={`mt-1 font-sans text-lg uppercase sm:mt-2 sm:text-2xl ${danger ? "text-rose-300" : "metric-glow text-lime-300"}`}>{value}</p>
+      </article>
+    );
+  }
   return (
     <article className="neon-panel rounded-xl p-4">
       <p className="text-xs uppercase tracking-[0.18em] text-violet-200">{label}</p>
       <p className={`mt-2 font-sans text-2xl uppercase ${danger ? "text-rose-300" : "metric-glow text-lime-300"}`}>{value}</p>
     </article>
+  );
+}
+
+function RepoPetSpriteCompact({ species, state }: { species: string; state: string }) {
+  const glyph = species.includes("Snail") ? "@" : species.includes("Slime") ? "o" : species.includes("Moth") ? "^" : species.includes("Crab") ? "#" : species.includes("Frog") ? "8" : species.includes("Bat") ? "M" : species.includes("Turtle") ? "Q" : species.includes("Mantis") ? "A" : species.includes("Golem") ? "H" : "U";
+  return (
+    <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-md border border-fuchsia-400/40 bg-gradient-to-b from-[rgba(39,20,63,0.9)] to-[rgba(10,6,19,0.95)] sprite-${state}`} aria-label={`${species} sprite`}>
+      <div className="flex h-7 w-7 items-center justify-center rounded border border-white/10 bg-[length:8px_8px] font-sans text-lg text-[#99ff60]" style={{ backgroundImage: "linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px)" }}>
+        <span>{glyph}</span>
+      </div>
+    </div>
   );
 }
 

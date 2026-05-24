@@ -18,6 +18,10 @@
   --font-mono: var(--font-share-tech-mono);
 }
 
+html {
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
 body {
   background:
     radial-gradient(circle at 10% 10%, rgba(151, 255, 76, 0.08), transparent 35%),

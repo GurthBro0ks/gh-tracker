@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Orbitron, Share_Tech_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -16,6 +16,12 @@ const shareTechMono = Share_Tech_Mono({
 export const metadata: Metadata = {
   title: "gh-tracker",
   description: "SlimyAI local Git activity dashboard",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
