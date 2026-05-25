@@ -80,8 +80,8 @@ GH Tracker enforces repo ownership at aggregate time:
 
 - NUC1: Real snapshot collected and imported (24 repo locations)
 - NUC2: Real snapshot collected via SSH and imported (18 repo locations)
-- Laptop: Pending manual snapshot import — see `docs/LAPTOP_INGESTION_WORKFLOW.md`
-- Aggregate: 42 locations, 27 unique repos, 17 dirty, 17 unpushed
+- Laptop: Real snapshot manually imported (32 repo locations across 3 machines after ownership filter)
+- Aggregate: 32 locations, 19 unique repos, 3 machines (laptop, nuc1, nuc2), 14 excluded
 - GitHub remote health: Pending Phase 5
 
 ## Laptop Ingestion
@@ -92,3 +92,9 @@ Since the laptop is not reachable via SSH from NUC1, a manual export workflow is
 3. Run `pnpm import:snapshot` and `pnpm aggregate:snapshots` on NUC1
 
 Full instructions: `docs/LAPTOP_INGESTION_WORKFLOW.md`
+
+### Validation Hardening
+
+`pnpm validate:snapshot` now rejects snapshots with `repo_locations=0` for real machines.
+Use `--allow-empty` or `GH_TRACKER_ALLOW_EMPTY_SNAPSHOT=1` for testing/discovery only.
+This prevents uploading empty snapshots caused by wrong scan roots or symlink issues.

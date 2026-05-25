@@ -58,6 +58,19 @@ Multi-machine snapshot ingestion and aggregation.
 - Automated sync via cron/systemd timer documented for future
 - No fabricated data — real snapshot required
 
+### Phase 4B.1 — Ownership Filter
+- Aggregate-time filtering of non-owned GitHub remotes
+- Excluded repos reported in `excluded_repos_report.json`
+- Configurable via `GH_TRACKER_ALLOWED_REMOTE_OWNERS` and `GH_TRACKER_EXCLUDE_REPO_NAMES`
+
+### Phase 4B.2 — Dashboard + Laptop Workflow Cleanup
+- Dynamic dashboard subtitle: shows "pending" only when laptop is missing
+- pnpm-workspace.yaml fixed for laptop/standalone checkouts
+- Laptop workflow docs hardened with correct SSH alias, real scan roots, zero-repo warning
+- Snapshot validation fails loudly on `repo_locations=0` for real machines
+- Timeline deduplication groups duplicate canonical repo events across machines
+- Debug dock shows ownership filter status and excluded repo count
+
 ## Phase 5
 GitHub API sync for release/CI/PR/issue health:
 - Token-based, secure local-only secrets handling

@@ -2,7 +2,7 @@
 
 ## Status
 
-Laptop snapshot is **pending manual import**. NUC1 and NUC2 are already aggregated.
+Laptop snapshot is **loaded** when `data/snapshots/machines/laptop/latest.json` exists and passes validation.
 
 ## Why Manual?
 
@@ -17,7 +17,7 @@ We use a safe manual export workflow instead.
 ## Prerequisites
 
 - Laptop has git, Node.js, and pnpm installed
-- Laptop has SSH access to NUC1 (via Tailscale: `nuc1-ts`)
+- Laptop has SSH access to NUC1 (Tailscale or LAN)
 
 ## Step 1: Clone or Update gh-tracker on Laptop
 
@@ -34,17 +34,29 @@ Or fresh clone:
 ```bash
 mkdir -p ~/Projects
 cd ~/Projects
-git clone git@github.com:GurthBro0ks/gh-tracker.git
+# Try SSH first; fall back to HTTPS if GitHub SSH is unavailable
+git clone git@github.com:GurthBro0ks/gh-tracker.git || \
+  git clone https://github.com/GurthBro0ks/gh-tracker.git
 cd gh-tracker
 pnpm install
 ```
 
 ## Step 2: Collect Laptop Snapshot
 
+Use the **real scan roots** that exist on the laptop (symlink roots are skipped by the collector):
+
 ```bash
 cd /opt/slimy/gh-tracker || cd ~/Projects/gh-tracker
-GH_TRACKER_MACHINE_ID=laptop pnpm collect:local
-GH_TRACKER_MACHINE_ID=laptop pnpm validate:snapshot
+export GH_TRACKER_SCAN_ROOTS="$HOME/Projects,$HOME/Standalone,$HOME/slimy-dev,$HOME/Desktop"
+export GH_TRACKER_MACHINE_ID=laptop
+pnpm collect:local
+pnpm validate:snapshot
+```
+
+If `pnpm` is broken before the workspace fix is applied, use the tsx fallback:
+```bash
+npx tsx scripts/collect-local.ts
+npx tsx scripts/validate-snapshot.ts
 ```
 
 ## Step 3: Verify Snapshot Created
@@ -53,10 +65,20 @@ GH_TRACKER_MACHINE_ID=laptop pnpm validate:snapshot
 ls -la data/snapshots/machines/laptop/latest.json
 ```
 
+**CRITICAL:** If `repo_locations=0`, do **not** upload the snapshot.
+- Zero repos means the collector found nothing (wrong roots, permission issues, or symlinks not followed).
+- Fix the scan roots and re-run before transferring.
+
 ## Step 4: Transfer to NUC1
 
 ```bash
 # From laptop:
+scp data/snapshots/machines/laptop/latest.json \
+  slimy@nuc1:/opt/slimy/gh-tracker/data/inbox/laptop-latest.json
+```
+
+If `nuc1` SSH alias is not configured, use the Tailscale address:
+```bash
 scp data/snapshots/machines/laptop/latest.json \
   slimy@nuc1-ts:/opt/slimy/gh-tracker/data/inbox/laptop-latest.json
 ```
@@ -64,7 +86,7 @@ scp data/snapshots/machines/laptop/latest.json \
 ## Step 5: Import on NUC1
 
 ```bash
-ssh slimy@nuc1-ts
+ssh slimy@nuc1
 cd /opt/slimy/gh-tracker
 pnpm import:snapshot -- data/inbox/laptop-latest.json
 pnpm validate:snapshot -- data/snapshots/machines/laptop/latest.json
@@ -79,7 +101,7 @@ curl -I http://127.0.0.1:5055
 
 Dashboard should show:
 - Data Mode: Aggregated Live Snapshots
-- Machines: NUC1, NUC2, Laptop
+- Machines: Laptop, NUC1, NUC2
 - Machine count: 3
 - Laptop status: Loaded (with timestamp)
 
@@ -104,4 +126,5 @@ This means the laptop snapshot is treated as **discovery only**: all found repos
 - Do not fabricate laptop data
 - Do not use demo data as real laptop data
 - Only real `pnpm collect:local` snapshots are valid
+- Do not upload snapshots with `repo_locations=0` — fix roots and retry
 - If laptop is unavailable, dashboard shows "Laptop pending manual snapshot import"

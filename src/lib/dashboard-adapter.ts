@@ -31,6 +31,7 @@ export type DashboardData = {
   mostActiveMachine: string;
   loadedMachineIds: string[];
   laptopStatus: "loaded" | "pending";
+  excludedReposCount?: number;
   machineCards: Array<{ id: string; label: string; host: string; commitsToday: number; pushesToday: number; activeRepos: number; streak: number }>;
   repoCatalog: Array<{ repoId: string; owner: string; name: string; canonicalRemote: string; primaryLanguage: string | null }>;
   repoRows: Array<{ id: string; repoId: string; machineId: string; path: string; branch: string; dirty: boolean; unpushedCommits: number }>;
@@ -66,6 +67,7 @@ export function buildDemoDashboardData(): DashboardData {
     mostActiveMachine,
     loadedMachineIds: machines.map((m) => m.id),
     laptopStatus: "loaded",
+    excludedReposCount: 0,
     machineCards: machines.map((machine) => ({
       id: machine.id,
       label: machine.label,

@@ -37,6 +37,14 @@ Local dashboard for tracking Git/GitHub activity across Laptop, NUC1, and NUC2.
 - Configurable via `GH_TRACKER_ALLOWED_REMOTE_OWNERS` and `GH_TRACKER_EXCLUDE_REPO_NAMES`
 - Broad laptop roots are discovery-only: all found repos are captured, but only owned/approved repos flow into the aggregate
 
+## Phase 4B.2 (Dashboard + Laptop Workflow Cleanup)
+- Dashboard subtitle now dynamically shows "pending" only when laptop is missing
+- pnpm-workspace.yaml fixed (`packages: ["."]`) for laptop/standalone checkouts
+- Laptop workflow docs hardened with correct SSH alias (`nuc1`), real scan roots, HTTPS fallback, and zero-repo warning
+- Snapshot validation fails loudly on `repo_locations=0` for real machines (use `--allow-empty` for testing)
+- Timeline deduplication groups duplicate canonical repo events across machines
+- Debug dock shows ownership filter status and excluded repo count
+
 ## Run Local
 ```bash
 pnpm install

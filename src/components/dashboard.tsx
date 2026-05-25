@@ -92,6 +92,24 @@ export default function Dashboard({ demoData, localData }: DashboardProps) {
     [activeData.timeline, machineFilter, repoFilter, activityFilter],
   );
 
+  const dedupedEvents = useMemo(() => {
+    const groups = new Map<string, { event: typeof events[0]; machines: string[] }>();
+    for (const event of events) {
+      const key = `${event.repoId}:${event.type}:${event.message}`;
+      const existing = groups.get(key);
+      if (existing) {
+        if (!existing.machines.includes(event.machineId)) {
+          existing.machines.push(event.machineId);
+        }
+      } else {
+        groups.set(key, { event, machines: [event.machineId] });
+      }
+    }
+    return Array.from(groups.values())
+      .sort((a, b) => b.event.timestamp.localeCompare(a.event.timestamp))
+      .slice(0, 20);
+  }, [events]);
+
   const trend = useMemo(() => {
     if (dateRange === "7d") return activeData.commitTrend.slice(-7);
     if (dateRange === "30d") return activeData.commitTrend.slice(-30);
@@ -154,7 +172,11 @@ export default function Dashboard({ demoData, localData }: DashboardProps) {
         <div className="mt-1 flex flex-wrap items-end justify-between gap-3 sm:mt-2 sm:gap-4">
           <div>
             <h1 className="font-sans text-xl uppercase tracking-[0.08em] text-white sm:text-3xl md:text-4xl">gh-tracker dashboard</h1>
-            <p className="mt-0.5 text-xs text-violet-100/80 sm:mt-1 sm:text-sm">Local-first Git/GitHub activity view for NUC1, NUC2, and Laptop (pending manual snapshot import)</p>
+            <p className="mt-0.5 text-xs text-violet-100/80 sm:mt-1 sm:text-sm">
+              {activeData.laptopStatus === "loaded"
+                ? "Aggregated local Git activity across Laptop, NUC1, and NUC2"
+                : "Local-first Git/GitHub activity view for NUC1, NUC2, and Laptop (pending manual snapshot import)"}
+            </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <button
@@ -442,9 +464,14 @@ export default function Dashboard({ demoData, localData }: DashboardProps) {
         <article className="neon-panel rounded-xl p-4">
           <h3 className="mb-3 font-sans text-sm uppercase tracking-[0.18em] text-fuchsia-200">Recent Activity Timeline</h3>
           <ul className="space-y-2 text-sm">
-            {events.slice().reverse().slice(0, 20).map((event) => (
+            {dedupedEvents.map(({ event, machines }) => (
               <li key={event.id} className="rounded border border-white/10 bg-black/30 p-2">
-                <p className="text-xs uppercase tracking-[0.16em] text-violet-200">{event.type} - {event.machineId} - {event.repoId}</p>
+                <p className="text-xs uppercase tracking-[0.16em] text-violet-200">
+                  {event.type} — {machines.length > 1 ? `${machines.join(", ")}` : event.machineId} — {event.repoId}
+                  {machines.length > 1 && (
+                    <span className="ml-1 text-[10px] text-amber-200/80">({machines.length} machines)</span>
+                  )}
+                </p>
                 <p className="text-violet-50">{event.message}</p>
                 <p className="text-xs text-violet-300/70">{formatAgo(event.timestamp)}</p>
               </li>
@@ -477,9 +504,11 @@ export default function Dashboard({ demoData, localData }: DashboardProps) {
           <Status label="Collector Status" value={activeData.mode === "demo" ? "not connected on public deploy" : activeData.collectorLastResult} />
           <Status label="Validation Status" value={activeData.validationStatus} />
           <Status label="Machine count" value={`${activeData.machineCount}`} />
-          <Status label="Machines loaded" value={activeData.loadedMachineIds.length > 0 ? activeData.loadedMachineIds.join(", ") + (activeData.laptopStatus === "pending" ? " (Laptop pending manual import)" : "") : "Demo mode"} />
+          <Status label="Loaded machines" value={activeData.loadedMachineIds.length > 0 ? activeData.loadedMachineIds.join(", ") : "Demo mode"} />
           <Status label="Laptop status" value={activeData.laptopStatus === "loaded" ? "Loaded" : "Pending manual snapshot import"} />
           <Status label="Repo count" value={`${activeData.repoCount}`} />
+          <Status label="Ownership filter" value={activeData.mode === "demo" ? "N/A (demo)" : "enabled"} />
+          <Status label="Excluded repos" value={activeData.mode === "demo" ? "N/A (demo)" : `${activeData.excludedReposCount ?? "unknown"}`} />
           <Status label="GitHub health sync" value="Pending Phase 5" />
           <Status label="Source timestamp" value={activeData.sourceTimestamp} />
         </div>

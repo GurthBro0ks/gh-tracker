@@ -12,6 +12,7 @@ async function main() {
   const args = process.argv.slice(2);
   const explicitPath = args.find((arg) => !arg.startsWith("--"));
   const snapshotPath = explicitPath ? path.resolve(explicitPath) : SNAPSHOT_PATH;
+  const allowEmpty = args.includes("--allow-empty") || process.env.GH_TRACKER_ALLOW_EMPTY_SNAPSHOT === "1";
 
   let raw = "";
   try {
@@ -42,6 +43,13 @@ async function main() {
   const dashboardData = buildDashboardDataFromSnapshot(snapshot);
   if (!dashboardData.repoRows) {
     throw new Error("dashboard adapter parse failed");
+  }
+
+  if (snapshot.repoLocations.length === 0 && !allowEmpty) {
+    process.stdout.write(`snapshot_invalid=1\n`);
+    process.stdout.write(`reason=no_repo_locations\n`);
+    process.stdout.write(`machine=${snapshot.machine.id}\n`);
+    throw new Error(`snapshot has zero repo locations for real machine ${snapshot.machine.id}. Use --allow-empty or GH_TRACKER_ALLOW_EMPTY_SNAPSHOT=1 for testing/discovery.`);
   }
 
   process.stdout.write(`snapshot_valid=1\n`);
