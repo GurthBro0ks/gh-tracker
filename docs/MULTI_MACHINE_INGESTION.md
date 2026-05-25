@@ -66,7 +66,17 @@ Machine IDs are normalized:
 
 ## Current Status
 
-- NUC1: Real snapshot collected and imported
-- NUC2: Real snapshot collected via SSH and imported
-- Laptop: Pending Phase 4B
+- NUC1: Real snapshot collected and imported (24 repo locations)
+- NUC2: Real snapshot collected via SSH and imported (18 repo locations)
+- Laptop: Pending manual snapshot import — see `docs/LAPTOP_INGESTION_WORKFLOW.md`
+- Aggregate: 42 locations, 27 unique repos, 17 dirty, 17 unpushed
 - GitHub remote health: Pending Phase 5
+
+## Laptop Ingestion
+
+Since the laptop is not reachable via SSH from NUC1, a manual export workflow is provided:
+1. Run `GH_TRACKER_MACHINE_ID=laptop pnpm collect:local` on the laptop
+2. Copy the generated snapshot to NUC1 via scp
+3. Run `pnpm import:snapshot` and `pnpm aggregate:snapshots` on NUC1
+
+Full instructions: `docs/LAPTOP_INGESTION_WORKFLOW.md`

@@ -52,9 +52,11 @@ Multi-machine snapshot ingestion and aggregation.
 - Aggregate dashboard mode with computed cross-machine stats
 - Security: CLI-only ingestion, no public HTTP endpoint
 
-### Phase 4B — Laptop Sync
-- Laptop snapshot collection and import
-- Automated sync via cron/systemd timer (documented)
+### Phase 4B — Laptop Snapshot Ingestion
+- Laptop snapshot collection workflow (manual SSH export)
+- Dashboard supports NUC1 + NUC2 + Laptop (pending/loaded)
+- Automated sync via cron/systemd timer documented for future
+- No fabricated data — real snapshot required
 
 ## Phase 5
 GitHub API sync for release/CI/PR/issue health:

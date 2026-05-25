@@ -19,9 +19,14 @@ Local dashboard for tracking Git/GitHub activity across Laptop, NUC1, and NUC2.
 - Aggregate script: `pnpm aggregate:snapshots`
 - Aggregate validation: `pnpm validate:aggregate`
 - Dashboard supports Demo, Local Snapshot, and Aggregated modes
-- Real NUC1 + NUC2 snapshots imported and aggregated
-- Laptop support pending Phase 4B
+- Real NUC1 + NUC2 snapshots imported and aggregated (42 locations, 27 unique repos)
 - No public HTTP ingestion endpoint (CLI-only)
+
+## Phase 4B (Laptop Snapshot Ingestion)
+- Laptop snapshot workflow documented in `docs/LAPTOP_INGESTION_WORKFLOW.md`
+- Dashboard updated to show Laptop as pending or loaded (no fabricated data)
+- Manual SSH/scp export workflow (laptop not reachable via SSH from NUC1)
+- When laptop snapshot is imported, aggregate becomes NUC1 + NUC2 + Laptop
 
 ## Run Local
 ```bash

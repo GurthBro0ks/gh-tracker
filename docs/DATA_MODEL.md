@@ -40,7 +40,13 @@ Top-level payload wrapping all entities with schema version.
 - Model is local-first and token-free.
 - GitHub API/webhooks are intentionally deferred to later phases.
 
-## Phase 2 Additions
+## Phase 4 Additions
+
+### Multi-Machine Aggregation
+- `snapshotEnvelope` now supports machine-specific snapshots from NUC1, NUC2, and Laptop
+- `aggregate` snapshot merges all machine snapshots into unified view
+- Machine IDs normalized: `nuc1`, `nuc2`, `laptop`
+- Laptop snapshot may be pending (dashboard shows status)
 
 ### repoHealth
 Health layer combining local cleanliness/sync/activity with remote placeholders.

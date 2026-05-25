@@ -154,7 +154,7 @@ export default function Dashboard({ demoData, localData }: DashboardProps) {
         <div className="mt-1 flex flex-wrap items-end justify-between gap-3 sm:mt-2 sm:gap-4">
           <div>
             <h1 className="font-sans text-xl uppercase tracking-[0.08em] text-white sm:text-3xl md:text-4xl">gh-tracker dashboard</h1>
-            <p className="mt-0.5 text-xs text-violet-100/80 sm:mt-1 sm:text-sm">Local-first Git/GitHub activity view for Laptop, NUC1, and NUC2</p>
+            <p className="mt-0.5 text-xs text-violet-100/80 sm:mt-1 sm:text-sm">Local-first Git/GitHub activity view for NUC1, NUC2, and Laptop (pending manual snapshot import)</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <button
@@ -477,7 +477,8 @@ export default function Dashboard({ demoData, localData }: DashboardProps) {
           <Status label="Collector Status" value={activeData.mode === "demo" ? "not connected on public deploy" : activeData.collectorLastResult} />
           <Status label="Validation Status" value={activeData.validationStatus} />
           <Status label="Machine count" value={`${activeData.machineCount}`} />
-          <Status label="Machines loaded" value="NUC1, NUC2 (Laptop pending Phase 4B)" />
+          <Status label="Machines loaded" value={activeData.loadedMachineIds.length > 0 ? activeData.loadedMachineIds.join(", ") + (activeData.laptopStatus === "pending" ? " (Laptop pending manual import)" : "") : "Demo mode"} />
+          <Status label="Laptop status" value={activeData.laptopStatus === "loaded" ? "Loaded" : "Pending manual snapshot import"} />
           <Status label="Repo count" value={`${activeData.repoCount}`} />
           <Status label="GitHub health sync" value="Pending Phase 5" />
           <Status label="Source timestamp" value={activeData.sourceTimestamp} />

@@ -29,6 +29,8 @@ export type DashboardData = {
   codingStreakDays: number;
   mostActiveRepo: string;
   mostActiveMachine: string;
+  loadedMachineIds: string[];
+  laptopStatus: "loaded" | "pending";
   machineCards: Array<{ id: string; label: string; host: string; commitsToday: number; pushesToday: number; activeRepos: number; streak: number }>;
   repoCatalog: Array<{ repoId: string; owner: string; name: string; canonicalRemote: string; primaryLanguage: string | null }>;
   repoRows: Array<{ id: string; repoId: string; machineId: string; path: string; branch: string; dirty: boolean; unpushedCommits: number }>;
@@ -62,6 +64,8 @@ export function buildDemoDashboardData(): DashboardData {
     codingStreakDays,
     mostActiveRepo,
     mostActiveMachine,
+    loadedMachineIds: machines.map((m) => m.id),
+    laptopStatus: "loaded",
     machineCards: machines.map((machine) => ({
       id: machine.id,
       label: machine.label,
@@ -157,9 +161,12 @@ export function buildDashboardDataFromSnapshot(snapshot: SnapshotEnvelope): Dash
   const totalCommitsToday = todayStats.reduce((sum, entry) => sum + entry.commits, 0);
   const pushesToday = todayStats.reduce((sum, entry) => sum + entry.pushes, 0);
 
+  const loadedMachineIds = Array.from(new Set(snapshot.repoLocations.map((l) => l.machineId)));
+  const laptopStatus = loadedMachineIds.includes("laptop") ? "loaded" : "pending";
+
   return {
     mode,
-    version: "0.4.0-phase4a",
+    version: "0.4.0-phase4b",
     sourceTimestamp: snapshot.createdAt,
     latestLocalSnapshotTime: snapshot.createdAt,
     localRepoCount: snapshot.repoLocations.length,
@@ -174,6 +181,8 @@ export function buildDashboardDataFromSnapshot(snapshot: SnapshotEnvelope): Dash
     codingStreakDays: 1,
     mostActiveRepo,
     mostActiveMachine,
+    loadedMachineIds,
+    laptopStatus,
     machineCards,
     repoCatalog: snapshot.repos.map((repo) => ({
       repoId: repo.id,
