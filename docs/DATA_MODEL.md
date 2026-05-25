@@ -48,6 +48,15 @@ Top-level payload wrapping all entities with schema version.
 - Machine IDs normalized: `nuc1`, `nuc2`, `laptop`
 - Laptop snapshot may be pending (dashboard shows status)
 
+### Ownership Filtering (Phase 4B.1)
+- `aggregate` generation filters repos by remote owner
+- **Default allowed owner**: `GurthBro0ks`
+- Non-owned GitHub remotes are excluded from aggregate/dashboard
+- Excluded repos are reported in `excluded_repos_report.json` with repo name, path, machine, and redacted remote URL
+- Local-only repos (no remote, owner=`local`) are retained
+- Configurable via `GH_TRACKER_ALLOWED_REMOTE_OWNERS` (comma-separated) and `GH_TRACKER_EXCLUDE_REPO_NAMES`
+- Broad laptop roots are discovery-only: all repos are captured in machine snapshots, but only owned/approved repos flow into the aggregate
+
 ### repoHealth
 Health layer combining local cleanliness/sync/activity with remote placeholders.
 - score (0-100) + bucket

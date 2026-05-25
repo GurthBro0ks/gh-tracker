@@ -6,6 +6,146 @@ import { snapshotEnvelopeSchema } from "../src/lib/snapshot-schema";
 const MACHINES_DIR = path.join(process.cwd(), "data", "snapshots", "machines");
 const AGGREGATE_DIR = path.join(process.cwd(), "data", "snapshots", "aggregate");
 
+const DEFAULT_ALLOWED_OWNERS = "GurthBro0ks";
+
+function getAllowedOwners(): string[] {
+  const env = process.env.GH_TRACKER_ALLOWED_REMOTE_OWNERS || DEFAULT_ALLOWED_OWNERS;
+  return env.split(",").map((o) => o.trim()).filter(Boolean);
+}
+
+function getExcludedRepoNames(): string[] {
+  const env = process.env.GH_TRACKER_EXCLUDE_REPO_NAMES;
+  if (!env) return [];
+  return env.split(",").map((n) => n.trim()).filter(Boolean);
+}
+
+type ExcludedRepoEntry = {
+  repoName: string;
+  repoId: string;
+  owner: string;
+  remoteKey: string;
+  canonicalRemote: string;
+  machineId: string;
+  paths: string[];
+  reason: string;
+};
+
+function isRepoAllowed(repo: Repo, allowedOwners: string[], excludedNames: string[]): boolean {
+  if (excludedNames.includes(repo.name)) {
+    return false;
+  }
+  if (repo.owner === "local") {
+    return true;
+  }
+  return allowedOwners.includes(repo.owner);
+}
+
+function filterSnapshot(
+  snapshot: SnapshotEnvelope,
+  allowedOwners: string[],
+  excludedNames: string[]
+): { filtered: SnapshotEnvelope; excluded: ExcludedRepoEntry[] } {
+  const allowedRepoIds = new Set<string>();
+  const excluded: ExcludedRepoEntry[] = [];
+
+  for (const repo of snapshot.repos) {
+    if (isRepoAllowed(repo, allowedOwners, excludedNames)) {
+      allowedRepoIds.add(repo.id);
+    } else {
+      const reason = excludedNames.includes(repo.name)
+        ? "explicitly_excluded"
+        : "owner_not_allowed";
+      excluded.push({
+        repoName: repo.name,
+        repoId: repo.id,
+        owner: repo.owner,
+        remoteKey: repo.remoteKey,
+        canonicalRemote: repo.canonicalRemote,
+        machineId: snapshot.machine.id,
+        paths: [],
+        reason,
+      });
+    }
+  }
+
+  const excludedPaths = new Map<string, string[]>();
+  for (const loc of snapshot.repoLocations) {
+    if (!allowedRepoIds.has(loc.repoId)) {
+      const paths = excludedPaths.get(loc.repoId) || [];
+      paths.push(loc.path);
+      excludedPaths.set(loc.repoId, paths);
+    }
+  }
+
+  for (const entry of excluded) {
+    entry.paths = excludedPaths.get(entry.repoId) || [];
+  }
+
+  const filteredRepos = snapshot.repos.filter((r) => allowedRepoIds.has(r.id));
+  const filteredLocations = snapshot.repoLocations.filter((l) => allowedRepoIds.has(l.repoId));
+  const filteredEvents = snapshot.activityEvents.filter((e) => allowedRepoIds.has(e.repoId));
+  const filteredDailyRepoStats = snapshot.dailyRepoStats.filter((s) => allowedRepoIds.has(s.repoId));
+
+  const filteredDailyMachineStats = recalculateDailyMachineStats(filteredDailyRepoStats, filteredLocations);
+
+  const filtered: SnapshotEnvelope = {
+    ...snapshot,
+    repos: filteredRepos,
+    repoLocations: filteredLocations,
+    activityEvents: filteredEvents,
+    dailyRepoStats: filteredDailyRepoStats,
+    dailyMachineStats: filteredDailyMachineStats,
+    collectorRun: {
+      ...snapshot.collectorRun,
+      reposFound: filteredLocations.length,
+    },
+  };
+
+  return { filtered, excluded };
+}
+
+function recalculateDailyMachineStats(
+  dailyRepoStats: DailyRepoStats[],
+  locations: RepoLocation[]
+): DailyMachineStats[] {
+  const byKey = new Map<string, DailyMachineStats>();
+  for (const stat of dailyRepoStats) {
+    const key = `${stat.date}:${stat.machineId}`;
+    const existing = byKey.get(key);
+    if (existing) {
+      existing.commits += stat.commits;
+      existing.pushes += stat.pushes;
+      existing.additions += stat.additions;
+      existing.deletions += stat.deletions;
+    } else {
+      byKey.set(key, {
+        date: stat.date,
+        machineId: stat.machineId,
+        commits: stat.commits,
+        pushes: stat.pushes,
+        additions: stat.additions,
+        deletions: stat.deletions,
+        activeRepos: 0,
+        dirtyRepos: 0,
+        unpushedRepos: 0,
+      });
+    }
+  }
+
+  for (const loc of locations) {
+    const today = new Date().toISOString().slice(0, 10);
+    const key = `${today}:${loc.machineId}`;
+    const entry = byKey.get(key);
+    if (entry) {
+      entry.activeRepos += 1;
+      if (loc.dirty) entry.dirtyRepos += 1;
+      if (loc.aheadCount > 0) entry.unpushedRepos += 1;
+    }
+  }
+
+  return Array.from(byKey.values()).sort((a, b) => a.date.localeCompare(b.date));
+}
+
 async function loadMachineSnapshots(): Promise<SnapshotEnvelope[]> {
   const snapshots: SnapshotEnvelope[] = [];
   let entries: string[] = [];
@@ -144,11 +284,23 @@ function computeAggregateStats(snapshots: SnapshotEnvelope[], allLocations: Repo
 }
 
 async function main() {
-  const snapshots = await loadMachineSnapshots();
+  const rawSnapshots = await loadMachineSnapshots();
 
-  if (snapshots.length === 0) {
+  if (rawSnapshots.length === 0) {
     process.stderr.write("no machine snapshots found\n");
     process.exit(1);
+  }
+
+  const allowedOwners = getAllowedOwners();
+  const excludedNames = getExcludedRepoNames();
+
+  const snapshots: SnapshotEnvelope[] = [];
+  const allExcluded: ExcludedRepoEntry[] = [];
+
+  for (const snapshot of rawSnapshots) {
+    const { filtered, excluded } = filterSnapshot(snapshot, allowedOwners, excludedNames);
+    snapshots.push(filtered);
+    allExcluded.push(...excluded);
   }
 
   const repos = mergeRepos(snapshots);
@@ -172,7 +324,7 @@ async function main() {
     collectorRun: {
       id: `aggregate-${createdAt.replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z")}`,
       machineId: "aggregate",
-      collectorVersion: "phase4a-aggregate-1",
+      collectorVersion: "phase4b1-aggregate-1",
       mode: "local",
       result: "ok",
       startedAt: createdAt,
@@ -195,6 +347,7 @@ async function main() {
 
   const latestPath = path.join(AGGREGATE_DIR, "latest.json");
   const summaryPath = path.join(AGGREGATE_DIR, "latest-summary.json");
+  const excludedPath = path.join(AGGREGATE_DIR, "excluded_repos_report.json");
 
   await writeFile(latestPath, `${JSON.stringify(aggregate, null, 2)}\n`, "utf8");
 
@@ -211,13 +364,25 @@ async function main() {
 
   await writeFile(summaryPath, `${JSON.stringify(summary, null, 2)}\n`, "utf8");
 
+  const excludedReport = {
+    generatedAt: createdAt,
+    allowedOwners,
+    excludedRepoNames: excludedNames.length > 0 ? excludedNames : undefined,
+    excludedCount: allExcluded.length,
+    excluded: allExcluded,
+  };
+
+  await writeFile(excludedPath, `${JSON.stringify(excludedReport, null, 2)}\n`, "utf8");
+
   process.stdout.write(`machines=${snapshots.length}\n`);
   process.stdout.write(`total_repo_locations=${repoLocations.length}\n`);
   process.stdout.write(`unique_repos=${aggregateStats.uniqueRepos}\n`);
   process.stdout.write(`dirty=${aggregateStats.dirtyRepos}\n`);
   process.stdout.write(`unpushed=${aggregateStats.unpushedRepos}\n`);
+  process.stdout.write(`excluded=${allExcluded.length}\n`);
   process.stdout.write(`latest=${latestPath}\n`);
   process.stdout.write(`summary=${summaryPath}\n`);
+  process.stdout.write(`excluded_report=${excludedPath}\n`);
 }
 
 main().catch((error) => {

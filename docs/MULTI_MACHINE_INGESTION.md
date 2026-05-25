@@ -49,6 +49,18 @@ Machine IDs are normalized:
 - `slimy-nuc2` → `nuc2`
 - Any hostname containing `laptop` → `laptop`
 
+## Ownership Filtering
+
+GH Tracker enforces repo ownership at aggregate time:
+
+- **Default allowed GitHub owner**: `GurthBro0ks`
+- Repos with GitHub remotes owned by other users/orgs are **excluded** from the aggregate/dashboard
+- Excluded repos are reported in `data/snapshots/aggregate/excluded_repos_report.json`
+- Local-only repos (no remote) are retained
+- Broad laptop roots are treated as **discovery only** — found repos are recorded, but non-owned remotes are filtered before aggregation
+- The operator can approve additional owners via `GH_TRACKER_ALLOWED_REMOTE_OWNERS` (comma-separated)
+- Explicit repo-name exclusions are supported via `GH_TRACKER_EXCLUDE_REPO_NAMES`
+
 ## Security
 
 - Snapshot ingestion is CLI/file-based only

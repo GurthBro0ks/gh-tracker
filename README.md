@@ -28,6 +28,15 @@ Local dashboard for tracking Git/GitHub activity across Laptop, NUC1, and NUC2.
 - Manual SSH/scp export workflow (laptop not reachable via SSH from NUC1)
 - When laptop snapshot is imported, aggregate becomes NUC1 + NUC2 + Laptop
 
+## Phase 4B.1 (Ownership Filter)
+- Ownership filtering added to aggregate generation
+- **Default allowed GitHub owner**: `GurthBro0ks`
+- Non-owned GitHub remotes are excluded from aggregate/dashboard by default
+- Excluded repos are reported in `data/snapshots/aggregate/excluded_repos_report.json`
+- Local-only repos (no remote) are retained
+- Configurable via `GH_TRACKER_ALLOWED_REMOTE_OWNERS` and `GH_TRACKER_EXCLUDE_REPO_NAMES`
+- Broad laptop roots are discovery-only: all found repos are captured, but only owned/approved repos flow into the aggregate
+
 ## Run Local
 ```bash
 pnpm install

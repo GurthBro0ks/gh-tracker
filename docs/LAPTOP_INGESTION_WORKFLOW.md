@@ -87,6 +87,18 @@ Dashboard should show:
 
 There is no public HTTP endpoint for uploading snapshots. All transfers happen via SSH/scp between trusted machines.
 
+## Ownership Filtering
+
+The laptop collector may scan broad folders (`~/Projects`, `~/Desktop`, etc.) and discover repos the operator does not own. GH Tracker filters these out automatically:
+
+- **Default allowed GitHub owner**: `GurthBro0ks`
+- Repos with GitHub remotes owned by other users/orgs are **excluded** from the aggregate dashboard
+- Excluded repos are listed in `data/snapshots/aggregate/excluded_repos_report.json` — they are reported, not silently hidden
+- Local-only repos (no remote) are retained
+- The operator can add more allowed owners later via the `GH_TRACKER_ALLOWED_REMOTE_OWNERS` env var (comma-separated)
+
+This means the laptop snapshot is treated as **discovery only**: all found repos are captured, but only owned/approved repos make it into the dashboard.
+
 ## Safety Rules
 
 - Do not fabricate laptop data
