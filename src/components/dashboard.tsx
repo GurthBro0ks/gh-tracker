@@ -17,7 +17,8 @@ import {
   YAxis,
 } from "recharts";
 import { useMemo, useState } from "react";
-import type { DashboardData, DashboardDataMode } from "@/lib/dashboard-adapter";
+import type { DashboardData, DashboardDataMode, DashboardGithubRepoHealth } from "@/lib/dashboard-adapter";
+import type { RepoHealth, RepoHealthBucket } from "@/lib/contracts";
 import { generateRepoPet, deriveRepoHealth } from "@/lib/repo-habitat";
 import { RepoHabitatGrid } from "@/components/repo-habitat";
 
@@ -53,6 +54,56 @@ function formatAgo(timestamp: string) {
 
 function formatCompact(value: number) {
   return new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(value);
+}
+
+function githubStatusLabel(status: DashboardData["githubHealth"]["status"]) {
+  if (status === "synced") return "Synced";
+  if (status === "partial") return "Partial";
+  if (status === "failed") return "Failed";
+  return "Pending Phase 5";
+}
+
+function bucketFromScore(score: number): RepoHealthBucket {
+  if (score >= 90) return "legendary";
+  if (score >= 75) return "healthy";
+  if (score >= 55) return "needs_care";
+  if (score >= 35) return "stressed";
+  return "sick";
+}
+
+function mergeRemoteHealth(base: RepoHealth, github?: DashboardGithubRepoHealth | null): RepoHealth {
+  if (!github) return base;
+
+  const score = Math.max(0, Math.min(100, Math.round(base.score * 0.65 + github.health.score * 0.35)));
+  const careActions = new Set(base.careActions);
+
+  if (github.latestRelease.status === "none" || github.latestRelease.status === "stale") careActions.add("review_release_plan");
+  if ((github.pullRequests.open ?? 0) > 0 || (github.pullRequests.stale ?? 0) > 0) careActions.add("triage_prs");
+  if ((github.issues.open ?? 0) > 0 || (github.issues.stale ?? 0) > 0) careActions.add("triage_issues");
+  if (github.ci.status === "failure") careActions.add("set_up_ci_sync");
+
+  return {
+    ...base,
+    score,
+    bucket: bucketFromScore(score),
+    release: {
+      freshnessDays: github.latestRelease.ageDays,
+      commitsSinceRelease: null,
+      status: github.latestRelease.status === "fresh" ? "fresh" : github.latestRelease.status === "aging" ? "aging" : github.latestRelease.status === "unknown" ? "not_synced" : "stale",
+    },
+    sync: {
+      ...base.sync,
+      githubSyncConfigured: true,
+    },
+    ci: {
+      status: github.ci.status === "success" ? "passing" : github.ci.status === "failure" ? "failing" : "unknown",
+      lastRunAt: github.ci.createdAt,
+    },
+    prPressure: github.pullRequests.open,
+    issuePressure: github.issues.open,
+    attentionReasons: base.attentionReasons.filter((reason) => !reason.endsWith("_unknown")),
+    careActions: Array.from(careActions),
+  };
 }
 
 type DashboardProps = {
@@ -120,6 +171,7 @@ export default function Dashboard({ demoData, localData }: DashboardProps) {
     const repoCommitLookup = new Map(activeData.repoDistribution.map((row) => [row.repoId, row.commits]));
     return activeLocations.slice(0, 8).map((location) => {
       const repoMeta = activeData.repoCatalog.find((entry) => entry.repoId === location.repoId);
+      const github = repoMeta?.github ?? null;
       const commitsLast30Days = repoCommitLookup.get(location.repoId) ?? 0;
       const signal = {
         machineId: location.machineId,
@@ -133,7 +185,7 @@ export default function Dashboard({ demoData, localData }: DashboardProps) {
         commitsLast7Days: Math.max(1, Math.floor(commitsLast30Days / 4)),
         commitsLast30Days,
       };
-      const health = deriveRepoHealth(signal);
+      const health = mergeRemoteHealth(deriveRepoHealth(signal), github);
       const pet = generateRepoPet(
         {
           repoId: location.repoId,
@@ -151,6 +203,7 @@ export default function Dashboard({ demoData, localData }: DashboardProps) {
         machineId: location.machineId,
         health,
         pet,
+        github,
       };
     });
   }, [activeData.repoCatalog, activeData.repoDistribution, activeLocations]);
@@ -164,6 +217,12 @@ export default function Dashboard({ demoData, localData }: DashboardProps) {
     ? [...lineChangeSeries].sort((a, b) => a - b)[Math.floor(lineChangeSeries.length / 2)]
     : 0;
   const hasLineChangeOutlier = maxLineChange > 50000 && (medianLineChange === 0 || maxLineChange >= medianLineChange * 8);
+  const githubRepos = activeData.repoCatalog.map((repo) => repo.github).filter((repo): repo is DashboardGithubRepoHealth => Boolean(repo));
+  const githubHealthAvailable = activeData.githubHealth.status !== "pending";
+  const githubOpenPrs = githubRepos.reduce((sum, repo) => sum + (repo.pullRequests.open ?? 0), 0);
+  const githubOpenIssues = githubRepos.reduce((sum, repo) => sum + (repo.issues.open ?? 0), 0);
+  const githubFailingCi = githubRepos.filter((repo) => repo.ci.status === "failure").length;
+  const githubNoRelease = githubRepos.filter((repo) => repo.latestRelease.status === "none").length;
 
   return (
     <main className="mx-auto w-full max-w-[1500px] px-3 pb-6 sm:px-4 md:px-8" style={{ paddingTop: "max(1rem, env(safe-area-inset-top))", paddingBottom: "max(5.5rem, calc(env(safe-area-inset-bottom) + 2rem))" }}>
@@ -268,6 +327,32 @@ export default function Dashboard({ demoData, localData }: DashboardProps) {
         <Metric label="Dirty" value={`${dirtyCount}`} danger compact />
         <Metric label="Machines" value={`${activeMachineCount}`} compact />
       </section>
+
+      {githubHealthAvailable ? (
+        <section className="neon-panel mb-4 rounded-xl p-3 sm:mb-6 sm:p-4">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <h2 className="font-sans text-sm uppercase tracking-[0.12em] text-fuchsia-200 sm:text-lg">GitHub Remote Health</h2>
+              <p className="mt-0.5 text-[10px] text-violet-300/85 sm:text-xs">
+                Read-only sync via GitHub CLI · Latest sync {activeData.githubHealth.latestSyncAt ? formatAgo(activeData.githubHealth.latestSyncAt) : "unknown"}
+              </p>
+            </div>
+            <span className={`rounded border px-2 py-1 text-[10px] uppercase tracking-[0.12em] ${activeData.githubHealth.status === "synced" ? "border-lime-300/50 bg-lime-400/10 text-lime-200" : activeData.githubHealth.status === "partial" ? "border-amber-300/50 bg-amber-400/10 text-amber-200" : "border-rose-300/50 bg-rose-400/10 text-rose-200"}`}>
+              {githubStatusLabel(activeData.githubHealth.status)}
+            </span>
+          </div>
+          <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2 xl:grid-cols-4">
+            <Status label="Repos synced" value={`${activeData.githubHealth.syncedRepoCount}/${githubRepos.length}`} />
+            <Status label="Partial/failed" value={`${activeData.githubHealth.partialRepoCount}/${activeData.githubHealth.failedRepoCount}`} />
+            <Status label="Release gaps" value={githubNoRelease > 0 ? `${githubNoRelease} with no release` : "latest releases found"} />
+            <Status label="CI pressure" value={githubFailingCi > 0 ? `${githubFailingCi} failing` : "no failures in latest runs"} />
+            <Status label="Open PRs" value={`${githubOpenPrs}`} />
+            <Status label="Open issues" value={`${githubOpenIssues}`} />
+            <Status label="Warnings" value={`${activeData.githubHealth.warningCount}`} />
+            <Status label="Data source" value="ownership-filtered aggregate" />
+          </div>
+        </section>
+      ) : null}
 
       {habitatRows.length > 0 && (
         <section className="neon-panel mb-4 rounded-xl p-3 sm:mb-6 sm:hidden">
@@ -509,7 +594,9 @@ export default function Dashboard({ demoData, localData }: DashboardProps) {
           <Status label="Repo count" value={`${activeData.repoCount}`} />
           <Status label="Ownership filter" value={activeData.mode === "demo" ? "N/A (demo)" : "enabled"} />
           <Status label="Excluded repos" value={activeData.mode === "demo" ? "N/A (demo)" : `${activeData.excludedReposCount ?? "unknown"}`} />
-          <Status label="GitHub health sync" value="Pending Phase 5" />
+          <Status label="GitHub health sync" value={githubStatusLabel(activeData.githubHealth.status)} />
+          <Status label="GitHub latest sync" value={activeData.githubHealth.latestSyncAt ?? "not synced"} />
+          <Status label="GitHub synced repos" value={`${activeData.githubHealth.syncedRepoCount}`} />
           <Status label="Source timestamp" value={activeData.sourceTimestamp} />
         </div>
       </section>

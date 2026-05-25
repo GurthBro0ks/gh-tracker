@@ -12,6 +12,47 @@ import type { SnapshotEnvelope } from "@/lib/contracts";
 
 export type DashboardDataMode = "demo" | "local_snapshot" | "aggregated";
 
+export type DashboardGithubRepoHealth = {
+  canonicalRepo: string;
+  fullName: string;
+  defaultBranch: string | null;
+  visibility: "private" | "public" | "unknown";
+  isArchived: boolean | null;
+  pushedAt: string | null;
+  updatedAt: string | null;
+  latestRelease: {
+    tagName: string | null;
+    name: string | null;
+    publishedAt: string | null;
+    ageDays: number | null;
+    status: "fresh" | "aging" | "stale" | "none" | "unknown";
+  };
+  pullRequests: { open: number | null; stale: number | null };
+  issues: { open: number | null; stale: number | null };
+  ci: {
+    status: "success" | "failure" | "in_progress" | "none" | "unknown";
+    conclusion: string | null;
+    workflowName: string | null;
+    createdAt: string | null;
+  };
+  health: {
+    score: number;
+    label: "healthy" | "watch" | "attention" | "unknown";
+    reasons: string[];
+  };
+  sync: { status: "ok" | "partial" | "failed"; warnings: string[]; error: string | null };
+};
+
+export type DashboardGithubHealth = {
+  status: "synced" | "partial" | "pending" | "failed";
+  latestSyncAt: string | null;
+  syncedRepoCount: number;
+  partialRepoCount: number;
+  failedRepoCount: number;
+  warningCount: number;
+  repos: Record<string, DashboardGithubRepoHealth>;
+};
+
 export type DashboardData = {
   mode: DashboardDataMode;
   version: string;
@@ -32,8 +73,9 @@ export type DashboardData = {
   loadedMachineIds: string[];
   laptopStatus: "loaded" | "pending";
   excludedReposCount?: number;
+  githubHealth: DashboardGithubHealth;
   machineCards: Array<{ id: string; label: string; host: string; commitsToday: number; pushesToday: number; activeRepos: number; streak: number }>;
-  repoCatalog: Array<{ repoId: string; owner: string; name: string; canonicalRemote: string; primaryLanguage: string | null }>;
+  repoCatalog: Array<{ repoId: string; owner: string; name: string; canonicalRemote: string; primaryLanguage: string | null; github?: DashboardGithubRepoHealth | null }>;
   repoRows: Array<{ id: string; repoId: string; machineId: string; path: string; branch: string; dirty: boolean; unpushedCommits: number }>;
   timeline: Array<{ id: string; machineId: string; repoId: string; type: "commit" | "push" | "status"; timestamp: string; message: string }>;
   commitTrend: Array<{ day: string; total: number; laptop: number; nuc1: number; nuc2: number; additions: number; deletions: number }>;
@@ -68,6 +110,7 @@ export function buildDemoDashboardData(): DashboardData {
     loadedMachineIds: machines.map((m) => m.id),
     laptopStatus: "loaded",
     excludedReposCount: 0,
+    githubHealth: emptyGithubHealth(),
     machineCards: machines.map((machine) => ({
       id: machine.id,
       label: machine.label,
@@ -83,6 +126,7 @@ export function buildDemoDashboardData(): DashboardData {
       name: repo.name,
       canonicalRemote: `git@github.com:${repo.owner}/${repo.name}.git`,
       primaryLanguage: repo.primaryLanguage,
+      github: null,
     })),
     repoRows: repoLocations.map((location) => ({
       id: location.id,
@@ -185,6 +229,7 @@ export function buildDashboardDataFromSnapshot(snapshot: SnapshotEnvelope): Dash
     mostActiveMachine,
     loadedMachineIds,
     laptopStatus,
+    githubHealth: emptyGithubHealth(),
     machineCards,
     repoCatalog: snapshot.repos.map((repo) => ({
       repoId: repo.id,
@@ -192,11 +237,38 @@ export function buildDashboardDataFromSnapshot(snapshot: SnapshotEnvelope): Dash
       name: repo.name,
       canonicalRemote: repo.canonicalRemote,
       primaryLanguage: null,
+      github: null,
     })),
     repoRows,
     timeline: snapshot.activityEvents,
     commitTrend: Array.from(dateRows.values()).sort((a, b) => a.day.localeCompare(b.day)),
     repoDistribution,
     heatmap: heatmapWeeks,
+  };
+}
+
+function emptyGithubHealth(): DashboardGithubHealth {
+  return {
+    status: "pending",
+    latestSyncAt: null,
+    syncedRepoCount: 0,
+    partialRepoCount: 0,
+    failedRepoCount: 0,
+    warningCount: 0,
+    repos: {},
+  };
+}
+
+export function mergeGithubHealth(data: DashboardData, github: DashboardGithubHealth): DashboardData {
+  const repoCatalog = data.repoCatalog.map((repo) => {
+    const fullName = `${repo.owner}/${repo.name}`.toLowerCase();
+    const githubHealth = github.repos[repo.repoId] ?? github.repos[fullName] ?? null;
+    return { ...repo, github: githubHealth };
+  });
+
+  return {
+    ...data,
+    githubHealth: github,
+    repoCatalog,
   };
 }

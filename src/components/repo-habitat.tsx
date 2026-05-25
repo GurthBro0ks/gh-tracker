@@ -1,3 +1,4 @@
+import type { DashboardGithubRepoHealth } from "@/lib/dashboard-adapter";
 import type { RepoAttentionReason, RepoCareAction, RepoHealth, RepoPet } from "@/lib/contracts";
 
 type HabitatRow = {
@@ -5,6 +6,7 @@ type HabitatRow = {
   machineId: string;
   pet: RepoPet;
   health: RepoHealth;
+  github?: DashboardGithubRepoHealth | null;
 };
 
 const attentionLabels: Record<RepoAttentionReason, string> = {
@@ -37,7 +39,7 @@ export function RepoHabitatGrid({ rows }: { rows: HabitatRow[] }) {
           <h3 className="font-sans text-base uppercase tracking-[0.08em] text-white sm:text-lg">Repo Habitat</h3>
           <p className="mt-0.5 text-[10px] text-violet-300/80 sm:text-xs">Retro virtual-pet companions driven by repo health. Pixel art is placeholder until sprite-sheet phase.</p>
         </div>
-        <span className="rounded border border-fuchsia-400/30 bg-black/30 px-2 py-0.5 text-[9px] uppercase tracking-[0.1em] text-violet-300">Phase 2 Preview</span>
+        <span className="rounded border border-fuchsia-400/30 bg-black/30 px-2 py-0.5 text-[9px] uppercase tracking-[0.1em] text-violet-300">Local + GitHub Health</span>
       </div>
       <div className="grid gap-3 sm:gap-4 lg:grid-cols-2">
         {rows.map((row) => (
@@ -56,7 +58,10 @@ function RepoPetCard({ row }: { row: HabitatRow }) {
           <p className="text-base font-sans uppercase tracking-[0.06em] text-white break-words sm:text-lg">{row.repoId}</p>
           <p className="text-[10px] text-violet-300 break-words sm:text-xs">{row.pet.species} · {row.pet.stage} · {row.pet.mood}</p>
         </div>
-        <RepoHealthBadge health={row.health} />
+        <div className="flex flex-col gap-1 sm:items-end">
+          <RepoHealthBadge health={row.health} />
+          {row.github ? <GithubHealthBadge github={row.github} /> : null}
+        </div>
       </div>
       <p className="mt-1 text-xs text-lime-200 sm:text-sm">{row.pet.petName}</p>
 
@@ -86,10 +91,10 @@ function RepoPetCard({ row }: { row: HabitatRow }) {
       </div>
 
       <div className="mt-2 grid gap-1.5 text-[10px] sm:mt-3 sm:gap-2 sm:text-xs sm:grid-cols-2">
-        <p className="rounded border border-cyan-300/30 bg-cyan-400/10 px-1.5 py-0.5 sm:px-2 sm:py-1">Release health: not synced yet</p>
-        <p className="rounded border border-cyan-300/30 bg-cyan-400/10 px-1.5 py-0.5 sm:px-2 sm:py-1">CI: not synced yet</p>
-        <p className="rounded border border-cyan-300/30 bg-cyan-400/10 px-1.5 py-0.5 sm:px-2 sm:py-1">PR/issue pressure: not synced yet</p>
-        <p className="rounded border border-cyan-300/30 bg-cyan-400/10 px-1.5 py-0.5 sm:px-2 sm:py-1">GitHub health sync: not configured</p>
+        <p className="rounded border border-cyan-300/30 bg-cyan-400/10 px-1.5 py-0.5 sm:px-2 sm:py-1">Release: {row.github ? formatRelease(row.github.latestRelease) : "not synced yet"}</p>
+        <p className="rounded border border-cyan-300/30 bg-cyan-400/10 px-1.5 py-0.5 sm:px-2 sm:py-1">CI: {row.github ? formatCi(row.github.ci) : "not synced yet"}</p>
+        <p className="rounded border border-cyan-300/30 bg-cyan-400/10 px-1.5 py-0.5 sm:px-2 sm:py-1">PR/issue pressure: {row.github ? `${row.github.pullRequests.open ?? "?"} PR / ${row.github.issues.open ?? "?"} issues` : "not synced yet"}</p>
+        <p className="rounded border border-cyan-300/30 bg-cyan-400/10 px-1.5 py-0.5 sm:px-2 sm:py-1">GitHub sync: {row.github ? row.github.sync.status : "not configured"}</p>
       </div>
     </article>
   );
@@ -97,6 +102,22 @@ function RepoPetCard({ row }: { row: HabitatRow }) {
 
 export function RepoHealthBadge({ health }: { health: RepoHealth }) {
   return <p className="self-start rounded border border-lime-300/50 bg-lime-400/10 px-2 py-1 text-xs uppercase tracking-[0.12em] text-lime-200 break-words">{health.score} - {health.bucket.replace("_", " ")}</p>;
+}
+
+function GithubHealthBadge({ github }: { github: DashboardGithubRepoHealth }) {
+  const tone = github.health.label === "healthy" ? "border-lime-300/50 bg-lime-400/10 text-lime-200" : github.health.label === "watch" ? "border-amber-300/50 bg-amber-400/10 text-amber-200" : "border-rose-300/50 bg-rose-400/10 text-rose-200";
+  return <p className={`self-start rounded border px-2 py-1 text-[10px] uppercase tracking-[0.12em] break-words ${tone}`}>GitHub {github.health.score} - {github.health.label}</p>;
+}
+
+function formatRelease(release: DashboardGithubRepoHealth["latestRelease"]) {
+  if (release.status === "none") return "No release found";
+  if (!release.tagName) return "unknown";
+  return release.ageDays === null ? `${release.tagName} (${release.status})` : `${release.tagName} (${release.ageDays}d)`;
+}
+
+function formatCi(ci: DashboardGithubRepoHealth["ci"]) {
+  if (ci.status === "none") return "No runs found";
+  return ci.workflowName ? `${ci.status} (${ci.workflowName})` : ci.status;
 }
 
 export function CareActionList({ actions }: { actions: RepoCareAction[] }) {
