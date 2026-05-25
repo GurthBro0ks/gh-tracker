@@ -51,22 +51,22 @@ export function RepoHabitatGrid({ rows }: { rows: HabitatRow[] }) {
 function RepoPetCard({ row }: { row: HabitatRow }) {
   return (
     <article className="rounded-xl border border-fuchsia-400/40 bg-black/35 p-2.5 sm:p-3">
-      <div className="flex flex-wrap items-start justify-between gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <p className="truncate text-base font-sans uppercase tracking-[0.06em] text-white sm:text-lg">{row.repoId}</p>
-          <p className="text-[10px] text-violet-300 sm:text-xs">{row.pet.species} · {row.pet.stage} · {row.pet.mood}</p>
+          <p className="text-base font-sans uppercase tracking-[0.06em] text-white break-words sm:text-lg">{row.repoId}</p>
+          <p className="text-[10px] text-violet-300 break-words sm:text-xs">{row.pet.species} · {row.pet.stage} · {row.pet.mood}</p>
         </div>
         <RepoHealthBadge health={row.health} />
       </div>
       <p className="mt-1 text-xs text-lime-200 sm:text-sm">{row.pet.petName}</p>
 
-      <div className="mt-2 flex items-center gap-2 sm:mt-3 sm:gap-3">
+      <div className="mt-2 flex flex-col gap-2 sm:mt-3 sm:flex-row sm:items-center sm:gap-3">
         <RepoPetSprite species={row.pet.species} state={row.pet.animationState} />
-        <div className="grid flex-1 grid-cols-2 gap-1.5 text-[10px] text-violet-200 sm:gap-2 sm:text-xs">
-          <p className="rounded border border-white/10 px-1.5 py-0.5 sm:px-2 sm:py-1">Machine: {row.machineId.toUpperCase()}</p>
-          <p className="rounded border border-white/10 px-1.5 py-0.5 sm:px-2 sm:py-1">Energy: {row.pet.stats.energy}</p>
-          <p className="rounded border border-white/10 px-1.5 py-0.5 sm:px-2 sm:py-1">Cleanliness: {row.pet.stats.cleanliness}</p>
-          <p className="rounded border border-white/10 px-1.5 py-0.5 sm:px-2 sm:py-1">Trust: {row.pet.stats.trust}</p>
+        <div className="grid min-w-0 flex-1 grid-cols-1 gap-1.5 text-[10px] text-violet-200 sm:grid-cols-2 sm:gap-2 sm:text-xs">
+          <p className="rounded border border-white/10 px-1.5 py-0.5 break-words sm:px-2 sm:py-1">Machine: {row.machineId.toUpperCase()}</p>
+          <p className="rounded border border-white/10 px-1.5 py-0.5 break-words sm:px-2 sm:py-1">Energy: {row.pet.stats.energy}</p>
+          <p className="rounded border border-white/10 px-1.5 py-0.5 break-words sm:px-2 sm:py-1">Cleanliness: {row.pet.stats.cleanliness}</p>
+          <p className="rounded border border-white/10 px-1.5 py-0.5 break-words sm:px-2 sm:py-1">Trust: {row.pet.stats.trust}</p>
         </div>
       </div>
 
@@ -75,7 +75,7 @@ function RepoPetCard({ row }: { row: HabitatRow }) {
           <p className="mb-1 text-[10px] uppercase tracking-[0.14em] text-violet-300 sm:text-xs">Attention Reasons</p>
           <ul className="space-y-1 text-[10px] text-violet-100/90 sm:text-xs">
             {row.health.attentionReasons.slice(0, 4).map((reason) => (
-              <li key={reason} className="rounded border border-white/10 bg-black/30 px-1.5 py-0.5 sm:px-2 sm:py-1">{attentionLabels[reason]}</li>
+              <li key={reason} className="rounded border border-white/10 bg-black/30 px-1.5 py-0.5 break-words sm:px-2 sm:py-1">{attentionLabels[reason]}</li>
             ))}
           </ul>
         </div>
@@ -96,14 +96,14 @@ function RepoPetCard({ row }: { row: HabitatRow }) {
 }
 
 export function RepoHealthBadge({ health }: { health: RepoHealth }) {
-  return <p className="rounded border border-lime-300/50 bg-lime-400/10 px-2 py-1 text-xs uppercase tracking-[0.12em] text-lime-200">{health.score} - {health.bucket.replace("_", " ")}</p>;
+  return <p className="self-start rounded border border-lime-300/50 bg-lime-400/10 px-2 py-1 text-xs uppercase tracking-[0.12em] text-lime-200 break-words">{health.score} - {health.bucket.replace("_", " ")}</p>;
 }
 
 export function CareActionList({ actions }: { actions: RepoCareAction[] }) {
   return (
     <ul className="space-y-1 text-xs text-violet-100/90">
       {actions.map((action) => (
-        <li key={action} className="rounded border border-white/10 bg-black/30 px-2 py-1">{careLabels[action]}</li>
+        <li key={action} className="rounded border border-white/10 bg-black/30 px-2 py-1 break-words">{careLabels[action]}</li>
       ))}
     </ul>
   );

@@ -35,7 +35,7 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
           <p key={index} className="font-mono text-xs text-violet-100">
             <span style={{ color: entry.color }} className="mr-1">●</span>
             <span className="text-violet-300">{entry.name}:</span>{" "}
-            <span className="font-bold text-lime-300">{entry.value}</span>
+            <span className="font-bold text-lime-300">{formatCompact(entry.value)}</span>
           </p>
         ))}
       </div>
@@ -49,6 +49,10 @@ function formatAgo(timestamp: string) {
   const hours = Math.floor(minutes / 60);
   if (hours < 24) return `${hours}h ago`;
   return `${Math.floor(hours / 24)}d ago`;
+}
+
+function formatCompact(value: number) {
+  return new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(value);
 }
 
 type DashboardProps = {
@@ -136,9 +140,15 @@ export default function Dashboard({ demoData, localData }: DashboardProps) {
   const activeRepoCount = new Set(activeLocations.map((entry) => entry.repoId)).size;
   const activeMachineCount = new Set(activeLocations.map((entry) => entry.machineId)).size || activeData.machineCount;
   const dirtyCount = activeLocations.filter((location) => location.dirty).length;
+  const lineChangeSeries = trend.map((row) => row.additions + row.deletions).filter((value) => value > 0);
+  const maxLineChange = lineChangeSeries.length ? Math.max(...lineChangeSeries) : 0;
+  const medianLineChange = lineChangeSeries.length
+    ? [...lineChangeSeries].sort((a, b) => a - b)[Math.floor(lineChangeSeries.length / 2)]
+    : 0;
+  const hasLineChangeOutlier = maxLineChange > 50000 && (medianLineChange === 0 || maxLineChange >= medianLineChange * 8);
 
   return (
-    <main className="mx-auto w-full max-w-[1500px] px-3 pb-6 sm:px-4 md:px-8" style={{ paddingTop: "max(1rem, env(safe-area-inset-top))", paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}>
+    <main className="mx-auto w-full max-w-[1500px] px-3 pb-6 sm:px-4 md:px-8" style={{ paddingTop: "max(1rem, env(safe-area-inset-top))", paddingBottom: "max(5.5rem, calc(env(safe-area-inset-bottom) + 2rem))" }}>
       <header className="neon-panel mb-4 rounded-xl px-3 py-3 sm:mb-6 sm:px-5 sm:py-4">
         <p className="text-[10px] uppercase tracking-[0.25em] text-fuchsia-200/80 sm:text-xs">Slimy.ai telemetry deck</p>
         <div className="mt-1 flex flex-wrap items-end justify-between gap-3 sm:mt-2 sm:gap-4">
@@ -240,9 +250,11 @@ export default function Dashboard({ demoData, localData }: DashboardProps) {
       {habitatRows.length > 0 && (
         <section className="neon-panel mb-4 rounded-xl p-3 sm:mb-6 sm:hidden">
           <h3 className="mb-2 font-sans text-xs uppercase tracking-[0.12em] text-fuchsia-200">Habitat Quick View</h3>
-          <div className="flex gap-2 overflow-x-auto pb-1">
+          <div className="relative">
+            <div className="pointer-events-none absolute right-0 top-0 h-full w-8 bg-gradient-to-l from-[rgba(8,4,15,0.95)] to-transparent" />
+            <div className="flex snap-x gap-2 overflow-x-auto pb-1 pr-6 [scroll-padding-inline:0.75rem]">
             {habitatRows.slice(0, 4).map((row) => (
-              <div key={`${row.repoId}-${row.machineId}`} className="flex min-w-[140px] flex-shrink-0 items-center gap-2 rounded-lg border border-fuchsia-400/30 bg-black/35 p-2">
+              <div key={`${row.repoId}-${row.machineId}`} className="flex min-w-[78%] max-w-[78%] snap-start flex-shrink-0 items-center gap-2 rounded-lg border border-fuchsia-400/30 bg-black/35 p-2">
                 <RepoPetSpriteCompact species={row.pet.species} state={row.pet.animationState} />
                 <div className="min-w-0">
                   <p className="truncate text-xs font-sans uppercase tracking-[0.06em] text-white">{row.repoId}</p>
@@ -250,6 +262,7 @@ export default function Dashboard({ demoData, localData }: DashboardProps) {
                 </div>
               </div>
             ))}
+            </div>
           </div>
         </section>
       )}
@@ -344,20 +357,38 @@ export default function Dashboard({ demoData, localData }: DashboardProps) {
               <AreaChart data={trend}>
                 <CartesianGrid stroke="rgba(255,255,255,0.1)" strokeDasharray="3 3" />
                 <XAxis dataKey="day" tick={{ fill: "#d2c1f0", fontSize: 12 }} />
-                <YAxis tick={{ fill: "#d2c1f0", fontSize: 12 }} />
+                <YAxis tick={{ fill: "#d2c1f0", fontSize: 12 }} tickFormatter={(value) => formatCompact(Number(value))} />
                 <Tooltip content={<CustomTooltip />} />
                 <Area type="monotone" dataKey="additions" stackId="1" stroke="#97ff4c" fill="#97ff4c66" />
                 <Area type="monotone" dataKey="deletions" stackId="2" stroke="#ff74ae" fill="#ff74ae66" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
+          {hasLineChangeOutlier ? (
+            <p className="mt-2 text-xs text-amber-200/90">Outlier detected: at least one day has unusually large line changes. Raw values are preserved; verify generated-file noise during Phase 4B.</p>
+          ) : null}
         </article>
       </section>
 
       <section className="mb-6 grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
         <article className="neon-panel rounded-xl p-4">
           <h3 className="mb-3 font-sans text-sm uppercase tracking-[0.18em] text-fuchsia-200">Repo Locations</h3>
-          <div className="overflow-x-auto">
+          <div className="space-y-2 sm:hidden">
+            {activeLocations.map((location) => (
+              <article key={location.id} className="rounded-lg border border-white/10 bg-black/30 p-2.5 text-xs">
+                <p className="font-sans text-sm uppercase tracking-[0.06em] text-white break-words">{location.repoId}</p>
+                <p className="mt-0.5 text-[11px] uppercase tracking-[0.1em] text-violet-300">{location.machineId}</p>
+                <p className="mt-1 break-all text-violet-200/85">{location.path}</p>
+                <div className="mt-2 grid grid-cols-2 gap-1.5">
+                  <p className="rounded border border-white/10 px-1.5 py-1">Branch: <span className="text-violet-100">{location.branch || "unknown"}</span></p>
+                  <p className="rounded border border-white/10 px-1.5 py-1">Head: <span className="text-violet-100">pending</span></p>
+                  <p className="rounded border border-white/10 px-1.5 py-1">Dirty: {location.dirty ? <span className="text-rose-300">yes</span> : <span className="text-lime-300">no</span>}</p>
+                  <p className="rounded border border-white/10 px-1.5 py-1">Unpushed: <span className="text-amber-200">{location.unpushedCommits}</span></p>
+                </div>
+              </article>
+            ))}
+          </div>
+          <div className="hidden overflow-x-auto sm:block">
             <table className="w-full min-w-[900px] text-left text-sm">
               <thead className="text-violet-200">
                 <tr>
@@ -446,7 +477,9 @@ export default function Dashboard({ demoData, localData }: DashboardProps) {
           <Status label="Collector Status" value={activeData.mode === "demo" ? "not connected on public deploy" : activeData.collectorLastResult} />
           <Status label="Validation Status" value={activeData.validationStatus} />
           <Status label="Machine count" value={`${activeData.machineCount}`} />
+          <Status label="Machines loaded" value="NUC1, NUC2 (Laptop pending Phase 4B)" />
           <Status label="Repo count" value={`${activeData.repoCount}`} />
+          <Status label="GitHub health sync" value="Pending Phase 5" />
           <Status label="Source timestamp" value={activeData.sourceTimestamp} />
         </div>
       </section>
