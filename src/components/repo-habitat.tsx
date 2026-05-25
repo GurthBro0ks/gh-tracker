@@ -1,4 +1,4 @@
-import type { DashboardGithubRepoHealth } from "@/lib/dashboard-adapter";
+import type { CanonicalRepoView, DashboardGithubRepoHealth } from "@/lib/dashboard-adapter";
 import type { RepoAttentionReason, RepoCareAction, RepoHealth, RepoPet } from "@/lib/contracts";
 
 type HabitatRow = {
@@ -7,6 +7,7 @@ type HabitatRow = {
   pet: RepoPet;
   health: RepoHealth;
   github?: DashboardGithubRepoHealth | null;
+  canonicalRepo?: CanonicalRepoView;
 };
 
 const attentionLabels: Record<RepoAttentionReason, string> = {
@@ -31,32 +32,51 @@ const careLabels: Record<RepoCareAction, string> = {
   schedule_maintenance: "Schedule a maintenance block",
 };
 
-export function RepoHabitatGrid({ rows }: { rows: HabitatRow[] }) {
+export function RepoHabitatGrid({ rows, expandedRepos, onToggleExpand }: { rows: HabitatRow[]; expandedRepos: Set<string>; onToggleExpand: (repoId: string) => void }) {
   return (
     <section className="neon-panel mb-6 rounded-xl p-3 sm:p-4">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2 sm:mb-4">
         <div>
           <h3 className="font-sans text-base uppercase tracking-[0.08em] text-white sm:text-lg">Repo Habitat</h3>
-          <p className="mt-0.5 text-[10px] text-violet-300/80 sm:text-xs">Retro virtual-pet companions driven by repo health. Pixel art is placeholder until sprite-sheet phase.</p>
+          <p className="mt-0.5 text-[10px] text-violet-300/80 sm:text-xs">Grouped by canonical repo. Tap a card to expand machine details.</p>
         </div>
         <span className="rounded border border-fuchsia-400/30 bg-black/30 px-2 py-0.5 text-[9px] uppercase tracking-[0.1em] text-violet-300">Local + GitHub Health</span>
       </div>
       <div className="grid gap-3 sm:gap-4 lg:grid-cols-2">
         {rows.map((row) => (
-          <RepoPetCard key={`${row.repoId}-${row.machineId}`} row={row} />
+          <RepoPetCard
+            key={row.repoId}
+            row={row}
+            expanded={expandedRepos.has(row.repoId)}
+            onToggleExpand={() => onToggleExpand(row.repoId)}
+          />
         ))}
       </div>
     </section>
   );
 }
 
-function RepoPetCard({ row }: { row: HabitatRow }) {
+function RepoPetCard({ row, expanded, onToggleExpand }: { row: HabitatRow; expanded: boolean; onToggleExpand: () => void }) {
+  const canonical = row.canonicalRepo;
+  const hasDetails = canonical && canonical.perMachineDetails.length > 1;
+
   return (
-    <article className="rounded-xl border border-fuchsia-400/40 bg-black/35 p-2.5 sm:p-3">
+    <article
+      className="rounded-xl border border-fuchsia-400/40 bg-black/35 p-2.5 sm:p-3 cursor-pointer transition-colors hover:bg-black/45"
+      onClick={onToggleExpand}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onToggleExpand(); }}
+    >
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="text-base font-sans uppercase tracking-[0.06em] text-white break-words sm:text-lg">{row.repoId}</p>
-          <p className="text-[10px] text-violet-300 break-words sm:text-xs">{row.pet.species} · {row.pet.stage} · {row.pet.mood}</p>
+          <p className="text-[10px] text-violet-300 break-words sm:text-xs">
+            {row.pet.species} · {row.pet.stage} · {row.pet.mood}
+            {canonical && (
+              <span className="ml-1 text-cyan-200/80">· {canonical.locationCount} location{canonical.locationCount !== 1 ? "s" : ""} · {canonical.machines.join(", ").toUpperCase()}</span>
+            )}
+          </p>
         </div>
         <div className="flex flex-col gap-1 sm:items-end">
           <RepoHealthBadge health={row.health} />
@@ -68,9 +88,15 @@ function RepoPetCard({ row }: { row: HabitatRow }) {
       <div className="mt-2 flex flex-col gap-2 sm:mt-3 sm:flex-row sm:items-center sm:gap-3">
         <RepoPetSprite species={row.pet.species} state={row.pet.animationState} />
         <div className="grid min-w-0 flex-1 grid-cols-1 gap-1.5 text-[10px] text-violet-200 sm:grid-cols-2 sm:gap-2 sm:text-xs">
-          <p className="rounded border border-white/10 px-1.5 py-0.5 break-words sm:px-2 sm:py-1">Machine: {row.machineId.toUpperCase()}</p>
+          <p className="rounded border border-white/10 px-1.5 py-0.5 break-words sm:px-2 sm:py-1">
+            Dirty: {canonical ? (
+              <span className={canonical.dirtyState === "clean" ? "text-lime-300" : canonical.dirtyState === "mixed" ? "text-amber-300" : "text-rose-300"}>
+                {canonical.dirtyState}
+              </span>
+            ) : row.health.local.dirty ? <span className="text-rose-300">yes</span> : <span className="text-lime-300">no</span>}
+          </p>
+          <p className="rounded border border-white/10 px-1.5 py-0.5 break-words sm:px-2 sm:py-1">Unpushed: <span className="text-amber-200">{canonical?.unpushedTotal ?? row.health.sync.aheadCount}</span></p>
           <p className="rounded border border-white/10 px-1.5 py-0.5 break-words sm:px-2 sm:py-1">Energy: {row.pet.stats.energy}</p>
-          <p className="rounded border border-white/10 px-1.5 py-0.5 break-words sm:px-2 sm:py-1">Cleanliness: {row.pet.stats.cleanliness}</p>
           <p className="rounded border border-white/10 px-1.5 py-0.5 break-words sm:px-2 sm:py-1">Trust: {row.pet.stats.trust}</p>
         </div>
       </div>
@@ -96,6 +122,43 @@ function RepoPetCard({ row }: { row: HabitatRow }) {
         <p className="rounded border border-cyan-300/30 bg-cyan-400/10 px-1.5 py-0.5 sm:px-2 sm:py-1">PR/issue pressure: {row.github ? `${row.github.pullRequests.open ?? "?"} PR / ${row.github.issues.open ?? "?"} issues` : "not synced yet"}</p>
         <p className="rounded border border-cyan-300/30 bg-cyan-400/10 px-1.5 py-0.5 sm:px-2 sm:py-1">GitHub sync: {row.github ? row.github.sync.status : "not configured"}</p>
       </div>
+
+      {hasDetails && expanded && (
+        <div className="mt-3 rounded border border-fuchsia-400/20 bg-black/20 p-2 sm:p-3">
+          <p className="mb-2 text-[10px] uppercase tracking-[0.14em] text-fuchsia-200 sm:text-xs">Per-Machine Details</p>
+          <div className="space-y-2">
+            {canonical.perMachineDetails.map((machine) => (
+              <div key={machine.machineId} className="rounded border border-white/10 bg-black/30 p-2 text-[10px] sm:text-xs">
+                <div className="flex flex-wrap items-center justify-between gap-1">
+                  <span className="font-sans uppercase tracking-[0.08em] text-violet-100">{machine.machineId.toUpperCase()}</span>
+                  <span className={machine.dirty ? "text-rose-300" : "text-lime-300"}>{machine.dirty ? "dirty" : "clean"}</span>
+                </div>
+                <div className="mt-1 grid grid-cols-2 gap-1 text-violet-200/80 sm:grid-cols-4">
+                  <span>Commits: {machine.commits}</span>
+                  <span>Unpushed: {machine.unpushedCommits}</span>
+                  <span>Branch: {machine.branch || "unknown"}</span>
+                  <span>Pushes: {machine.pushes}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="mt-2 text-[10px] uppercase tracking-[0.12em] text-violet-300/70 sm:text-xs">Per-Location Details</p>
+          <div className="mt-1 space-y-1">
+            {canonical.perLocationDetails.map((loc) => (
+              <div key={loc.id} className="flex flex-wrap items-center justify-between gap-1 rounded border border-white/10 bg-black/30 p-1.5 text-[10px] text-violet-200/80 sm:text-xs">
+                <span className="break-all">{loc.path}</span>
+                <span className={loc.dirty ? "text-rose-300" : "text-lime-300"}>{loc.branch} · {loc.dirty ? "dirty" : "clean"}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {hasDetails && !expanded && (
+        <div className="mt-2 text-center text-[10px] text-violet-300/60 sm:text-xs">
+          Tap to expand {canonical.perMachineDetails.length} machine{canonical.perMachineDetails.length !== 1 ? "s" : ""}
+        </div>
+      )}
     </article>
   );
 }

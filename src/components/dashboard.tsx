@@ -127,8 +127,21 @@ export default function Dashboard({ demoData, localData }: DashboardProps) {
   const [viewMode, setViewMode] = useState<"combined" | "split">("combined");
   const [activityFilter, setActivityFilter] = useState<"all" | "commit" | "push" | "status">("all");
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [expandedRepos, setExpandedRepos] = useState<Set<string>>(new Set());
 
   const activeData = (mode === "local_snapshot" || mode === "aggregated") && localData ? localData : demoData;
+
+  const toggleRepoExpand = (repoId: string) => {
+    setExpandedRepos((prev) => {
+      const next = new Set(prev);
+      if (next.has(repoId)) {
+        next.delete(repoId);
+      } else {
+        next.add(repoId);
+      }
+      return next;
+    });
+  };
 
   const activeLocations = useMemo(
     () =>
@@ -177,17 +190,17 @@ export default function Dashboard({ demoData, localData }: DashboardProps) {
 
   const habitatRows = useMemo(() => {
     const repoCommitLookup = new Map(activeData.repoDistribution.map((row) => [row.repoId, row.commits]));
-    return activeLocations.slice(0, 8).map((location) => {
-      const repoMeta = activeData.repoCatalog.find((entry) => entry.repoId === location.repoId);
-      const github = repoMeta?.github ?? null;
-      const commitsLast30Days = repoCommitLookup.get(location.repoId) ?? 0;
+    return activeData.canonicalRepos.slice(0, 8).map((canonicalRepo) => {
+      const github = canonicalRepo.github;
+      const commitsLast30Days = repoCommitLookup.get(canonicalRepo.repoId) ?? canonicalRepo.combinedCommits;
+      const isDirty = canonicalRepo.dirtyState === "dirty" || canonicalRepo.dirtyState === "mixed";
       const signal = {
-        machineId: location.machineId,
-        dirty: location.dirty,
-        stagedCount: location.dirty ? 1 : 0,
-        unstagedCount: location.dirty ? 1 : 0,
-        untrackedCount: location.dirty ? 1 : 0,
-        aheadCount: location.unpushedCommits,
+        machineId: canonicalRepo.machines.join(","),
+        dirty: isDirty,
+        stagedCount: isDirty ? 1 : 0,
+        unstagedCount: isDirty ? 1 : 0,
+        untrackedCount: isDirty ? 1 : 0,
+        aheadCount: canonicalRepo.unpushedTotal,
         behindCount: 0,
         commitsToday: Math.min(4, commitsLast30Days),
         commitsLast7Days: Math.max(1, Math.floor(commitsLast30Days / 4)),
@@ -196,25 +209,26 @@ export default function Dashboard({ demoData, localData }: DashboardProps) {
       const health = mergeRemoteHealth(deriveRepoHealth(signal), github);
       const pet = generateRepoPet(
         {
-          repoId: location.repoId,
-          owner: repoMeta?.owner ?? "unknown",
-          name: repoMeta?.name ?? location.repoId,
-          canonicalRemote: repoMeta?.canonicalRemote ?? `git@github.com:unknown/${location.repoId}.git`,
-          primaryLanguage: repoMeta?.primaryLanguage ?? null,
+          repoId: canonicalRepo.repoId,
+          owner: canonicalRepo.owner ?? "unknown",
+          name: canonicalRepo.displayName ?? canonicalRepo.repoId,
+          canonicalRemote: canonicalRepo.canonicalRemote ?? `git@github.com:unknown/${canonicalRepo.repoId}.git`,
+          primaryLanguage: canonicalRepo.primaryLanguage ?? null,
         },
         signal,
         health,
       );
 
       return {
-        repoId: location.repoId,
-        machineId: location.machineId,
+        repoId: canonicalRepo.repoId,
+        machineId: canonicalRepo.machines.join(","),
         health,
         pet,
         github,
+        canonicalRepo,
       };
     });
-  }, [activeData.repoCatalog, activeData.repoDistribution, activeLocations]);
+  }, [activeData.canonicalRepos, activeData.repoDistribution]);
 
   const activeRepoCount = new Set(activeLocations.map((entry) => entry.repoId)).size;
   const activeMachineCount = new Set(activeLocations.map((entry) => entry.machineId)).size || activeData.machineCount;
@@ -415,7 +429,7 @@ export default function Dashboard({ demoData, localData }: DashboardProps) {
         ))}
       </section>
 
-      <RepoHabitatGrid rows={habitatRows} />
+      <RepoHabitatGrid rows={habitatRows} expandedRepos={expandedRepos} onToggleExpand={toggleRepoExpand} />
 
       <section className="mb-6 grid gap-4 xl:grid-cols-2">
         <article className="neon-panel rounded-xl p-4">
@@ -494,19 +508,42 @@ export default function Dashboard({ demoData, localData }: DashboardProps) {
 
       <section className="mb-6 grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
         <article className="neon-panel rounded-xl p-4">
-          <h3 className="mb-3 font-sans text-sm uppercase tracking-[0.18em] text-fuchsia-200">Repo Locations</h3>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h3 className="font-sans text-sm uppercase tracking-[0.18em] text-fuchsia-200">Repo Locations</h3>
+            <span className="text-[10px] text-violet-300/70 sm:text-xs">Grouped by canonical repo · {activeData.canonicalRepos.length} repos · {activeData.repoRows.length} locations</span>
+          </div>
           <div className="space-y-2 sm:hidden">
-            {activeLocations.map((location) => (
-              <article key={location.id} className="rounded-lg border border-white/10 bg-black/30 p-2.5 text-xs">
-                <p className="font-sans text-sm uppercase tracking-[0.06em] text-white break-words">{location.repoId}</p>
-                <p className="mt-0.5 text-[11px] uppercase tracking-[0.1em] text-violet-300">{location.machineId}</p>
-                <p className="mt-1 break-all text-violet-200/85">{location.path}</p>
+            {activeData.canonicalRepos.map((repo) => (
+              <article
+                key={repo.repoId}
+                className="rounded-lg border border-white/10 bg-black/30 p-2.5 text-xs cursor-pointer"
+                onClick={() => toggleRepoExpand(repo.repoId)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") toggleRepoExpand(repo.repoId); }}
+              >
+                <p className="font-sans text-sm uppercase tracking-[0.06em] text-white break-words">{repo.repoId}</p>
+                <p className="mt-0.5 text-[11px] text-violet-300">
+                  {repo.machines.join(", ").toUpperCase()} · {repo.locationCount} location{repo.locationCount !== 1 ? "s" : ""}
+                </p>
                 <div className="mt-2 grid grid-cols-2 gap-1.5">
-                  <p className="rounded border border-white/10 px-1.5 py-1">Branch: <span className="text-violet-100">{location.branch || "unknown"}</span></p>
-                  <p className="rounded border border-white/10 px-1.5 py-1">Head: <span className="text-violet-100">pending</span></p>
-                  <p className="rounded border border-white/10 px-1.5 py-1">Dirty: {location.dirty ? <span className="text-rose-300">yes</span> : <span className="text-lime-300">no</span>}</p>
-                  <p className="rounded border border-white/10 px-1.5 py-1">Unpushed: <span className="text-amber-200">{location.unpushedCommits}</span></p>
+                  <p className="rounded border border-white/10 px-1.5 py-1">Dirty: <span className={repo.dirtyState === "clean" ? "text-lime-300" : repo.dirtyState === "mixed" ? "text-amber-300" : "text-rose-300"}>{repo.dirtyState}</span></p>
+                  <p className="rounded border border-white/10 px-1.5 py-1">Unpushed: <span className="text-amber-200">{repo.unpushedTotal}</span></p>
+                  <p className="rounded border border-white/10 px-1.5 py-1">Commits: <span className="text-lime-300">{repo.combinedCommits}</span></p>
+                  <p className="rounded border border-white/10 px-1.5 py-1">Pushes: <span className="text-fuchsia-200">{repo.combinedPushes}</span></p>
                 </div>
+                {expandedRepos.has(repo.repoId) && (
+                  <div className="mt-2 space-y-1 border-t border-white/10 pt-2">
+                    {repo.perLocationDetails.map((loc) => (
+                      <div key={loc.id} className="text-[10px] text-violet-200/80">
+                        <span className="uppercase text-violet-300">{loc.machineId}</span> · {loc.path} · {loc.branch} · {loc.dirty ? <span className="text-rose-300">dirty</span> : <span className="text-lime-300">clean</span>} · unpushed:{loc.unpushedCommits}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {!expandedRepos.has(repo.repoId) && repo.perMachineDetails.length > 1 && (
+                  <p className="mt-1 text-center text-[10px] text-violet-300/60">Tap to expand</p>
+                )}
               </article>
             ))}
           </div>
@@ -515,23 +552,50 @@ export default function Dashboard({ demoData, localData }: DashboardProps) {
               <thead className="text-violet-200">
                 <tr>
                   <th className="pb-2">Repo</th>
-                  <th className="pb-2">Machine</th>
-                  <th className="pb-2">Path</th>
-                  <th className="pb-2">Branch</th>
+                  <th className="pb-2">Machines</th>
+                  <th className="pb-2">Locations</th>
                   <th className="pb-2">Dirty</th>
                   <th className="pb-2">Unpushed</th>
+                  <th className="pb-2">Commits</th>
                 </tr>
               </thead>
               <tbody>
-                {activeLocations.map((location) => (
-                  <tr key={location.id} className="border-t border-white/10">
-                    <td className="py-2">{location.repoId}</td>
-                    <td className="py-2 uppercase">{location.machineId}</td>
-                    <td className="py-2 text-xs text-violet-200/80">{location.path}</td>
-                    <td className="py-2">{location.branch}</td>
-                    <td className="py-2">{location.dirty ? <span className="text-rose-300">dirty</span> : <span className="text-lime-300">clean</span>}</td>
-                    <td className="py-2">{location.unpushedCommits > 0 ? <span className="text-amber-200">{location.unpushedCommits}</span> : <span className="text-violet-200/70">0</span>}</td>
-                  </tr>
+                {activeData.canonicalRepos.map((repo) => (
+                  <>
+                    <tr
+                      key={repo.repoId}
+                      className="border-t border-white/10 cursor-pointer hover:bg-white/5"
+                      onClick={() => toggleRepoExpand(repo.repoId)}
+                    >
+                      <td className="py-2 font-sans uppercase tracking-[0.04em]">{repo.repoId}</td>
+                      <td className="py-2 uppercase">{repo.machines.join(", ")}</td>
+                      <td className="py-2">{repo.locationCount}</td>
+                      <td className="py-2">
+                        <span className={repo.dirtyState === "clean" ? "text-lime-300" : repo.dirtyState === "mixed" ? "text-amber-300" : "text-rose-300"}>
+                          {repo.dirtyState}
+                        </span>
+                      </td>
+                      <td className="py-2">{repo.unpushedTotal > 0 ? <span className="text-amber-200">{repo.unpushedTotal}</span> : <span className="text-violet-200/70">0</span>}</td>
+                      <td className="py-2"><span className="text-lime-300">{repo.combinedCommits}</span></td>
+                    </tr>
+                    {expandedRepos.has(repo.repoId) && (
+                      <tr className="border-t border-white/5">
+                        <td colSpan={6} className="py-2">
+                          <div className="space-y-1 pl-4">
+                            {repo.perLocationDetails.map((loc) => (
+                              <div key={loc.id} className="flex flex-wrap items-center gap-2 text-xs text-violet-200/80">
+                                <span className="uppercase text-violet-300 w-16">{loc.machineId}</span>
+                                <span className="break-all flex-1 min-w-[200px]">{loc.path}</span>
+                                <span className="w-24">{loc.branch}</span>
+                                <span className={loc.dirty ? "text-rose-300 w-12" : "text-lime-300 w-12"}>{loc.dirty ? "dirty" : "clean"}</span>
+                                <span className="w-16">unpushed:{loc.unpushedCommits}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </>
                 ))}
               </tbody>
             </table>

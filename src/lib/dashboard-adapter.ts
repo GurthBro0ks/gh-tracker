@@ -57,6 +57,52 @@ export type DashboardGithubHealth = {
   syncAgeMinutes: number | null;
 };
 
+export type PerMachineDetail = {
+  machineId: string;
+  commits: number;
+  pushes: number;
+  additions: number;
+  deletions: number;
+  dirty: boolean;
+  unpushedCommits: number;
+  branch: string;
+  latestCommitAt: string | null;
+};
+
+export type PerLocationDetail = {
+  id: string;
+  machineId: string;
+  path: string;
+  branch: string;
+  dirty: boolean;
+  unpushedCommits: number;
+  headSha: string;
+  stagedCount: number;
+  unstagedCount: number;
+  untrackedCount: number;
+};
+
+export type CanonicalRepoView = {
+  repoId: string;
+  displayName: string;
+  owner: string;
+  canonicalRemote: string;
+  primaryLanguage: string | null;
+  machines: string[];
+  locationCount: number;
+  combinedCommits: number;
+  combinedPushes: number;
+  combinedAdditions: number;
+  combinedDeletions: number;
+  dirtyState: "clean" | "dirty" | "mixed";
+  unpushedTotal: number;
+  latestBranch: string | null;
+  latestCommitAt: string | null;
+  github: DashboardGithubRepoHealth | null;
+  perMachineDetails: PerMachineDetail[];
+  perLocationDetails: PerLocationDetail[];
+};
+
 export type DashboardData = {
   mode: DashboardDataMode;
   version: string;
@@ -85,6 +131,7 @@ export type DashboardData = {
   commitTrend: Array<{ day: string; total: number; laptop: number; nuc1: number; nuc2: number; additions: number; deletions: number }>;
   repoDistribution: Array<{ repoId: string; commits: number }>;
   heatmap: number[][];
+  canonicalRepos: CanonicalRepoView[];
 };
 
 export function buildDemoDashboardData(): DashboardData {
@@ -94,9 +141,28 @@ export function buildDemoDashboardData(): DashboardData {
   const mostActiveRepo = [...repoCommitDistribution].sort((a, b) => b.commits - a.commits)[0]?.repoId ?? "n/a";
   const mostActiveMachine = [...machines].sort((a, b) => b.commitsToday - a.commitsToday)[0]?.label ?? "n/a";
 
+  const repoCatalog = repos.map((repo) => ({
+    repoId: repo.id,
+    owner: repo.owner,
+    name: repo.name,
+    canonicalRemote: `git@github.com:${repo.owner}/${repo.name}.git`,
+    primaryLanguage: repo.primaryLanguage,
+    github: null,
+  }));
+
+  const repoRows = repoLocations.map((location) => ({
+    id: location.id,
+    repoId: location.repoId,
+    machineId: location.machineId,
+    path: location.path,
+    branch: location.branch,
+    dirty: location.dirty,
+    unpushedCommits: location.unpushedCommits,
+  }));
+
   return {
     mode: "demo",
-    version: "0.3.0-phase2",
+    version: "0.5.2-phase5c",
     sourceTimestamp: lastDemoRefresh,
     latestLocalSnapshotTime: null,
     localRepoCount: 0,
@@ -124,27 +190,13 @@ export function buildDemoDashboardData(): DashboardData {
       activeRepos: machine.activeRepos,
       streak: machine.streak,
     })),
-    repoCatalog: repos.map((repo) => ({
-      repoId: repo.id,
-      owner: repo.owner,
-      name: repo.name,
-      canonicalRemote: `git@github.com:${repo.owner}/${repo.name}.git`,
-      primaryLanguage: repo.primaryLanguage,
-      github: null,
-    })),
-    repoRows: repoLocations.map((location) => ({
-      id: location.id,
-      repoId: location.repoId,
-      machineId: location.machineId,
-      path: location.path,
-      branch: location.branch,
-      dirty: location.dirty,
-      unpushedCommits: location.unpushedCommits,
-    })),
+    repoCatalog,
+    repoRows,
     timeline: demoActivityEvents,
     commitTrend: commitsPerDay,
     repoDistribution: repoCommitDistribution,
     heatmap: heatmapWeeks,
+    canonicalRepos: buildCanonicalRepos(repoCatalog, repoRows, [], new Map()),
   };
 }
 
@@ -214,9 +266,45 @@ export function buildDashboardDataFromSnapshot(snapshot: SnapshotEnvelope): Dash
   const loadedMachineIds = Array.from(new Set(snapshot.repoLocations.map((l) => l.machineId)));
   const laptopStatus = loadedMachineIds.includes("laptop") ? "loaded" : "pending";
 
+  const repoCatalog = snapshot.repos.map((repo) => ({
+    repoId: repo.id,
+    owner: repo.owner,
+    name: repo.name,
+    canonicalRemote: repo.canonicalRemote,
+    primaryLanguage: null,
+    github: null,
+  }));
+
+  // Build stats per repo per machine from dailyRepoStats
+  const repoMachineStats = new Map<string, PerMachineDetail>();
+  for (const stat of snapshot.dailyRepoStats) {
+    const key = `${stat.repoId}:${stat.machineId}`;
+    const existing = repoMachineStats.get(key);
+    if (existing) {
+      existing.commits += stat.commits;
+      existing.pushes += stat.pushes;
+      existing.additions += stat.additions;
+      existing.deletions += stat.deletions;
+    } else {
+      repoMachineStats.set(key, {
+        machineId: stat.machineId,
+        commits: stat.commits,
+        pushes: stat.pushes,
+        additions: stat.additions,
+        deletions: stat.deletions,
+        dirty: false,
+        unpushedCommits: 0,
+        branch: "",
+        latestCommitAt: null,
+      });
+    }
+  }
+
+  const canonicalRepos = buildCanonicalRepos(repoCatalog, repoRows, snapshot.repoLocations, repoMachineStats);
+
   return {
     mode,
-    version: "0.5.1-phase5b",
+    version: "0.5.2-phase5c",
     sourceTimestamp: snapshot.createdAt,
     latestLocalSnapshotTime: snapshot.createdAt,
     localRepoCount: snapshot.repoLocations.length,
@@ -235,20 +323,150 @@ export function buildDashboardDataFromSnapshot(snapshot: SnapshotEnvelope): Dash
     laptopStatus,
     githubHealth: emptyGithubHealth(),
     machineCards,
-    repoCatalog: snapshot.repos.map((repo) => ({
-      repoId: repo.id,
-      owner: repo.owner,
-      name: repo.name,
-      canonicalRemote: repo.canonicalRemote,
-      primaryLanguage: null,
-      github: null,
-    })),
+    repoCatalog,
     repoRows,
     timeline: snapshot.activityEvents,
     commitTrend: Array.from(dateRows.values()).sort((a, b) => a.day.localeCompare(b.day)),
     repoDistribution,
     heatmap: heatmapWeeks,
+    canonicalRepos,
   };
+}
+
+export function buildCanonicalRepos(
+  repoCatalog: DashboardData["repoCatalog"],
+  repoRows: DashboardData["repoRows"],
+  repoLocations: import("@/lib/contracts").RepoLocation[],
+  repoMachineStats: Map<string, PerMachineDetail>,
+): CanonicalRepoView[] {
+  const groups = new Map<string, {
+    repoId: string;
+    owner: string;
+    canonicalRemote: string;
+    primaryLanguage: string | null;
+    machines: Set<string>;
+    locations: PerLocationDetail[];
+    machineDetails: Map<string, PerMachineDetail>;
+    dirtyCount: number;
+    cleanCount: number;
+    unpushedTotal: number;
+    latestCommitAt: string | null;
+    latestBranch: string | null;
+  }>();
+
+  for (const catalogEntry of repoCatalog) {
+    groups.set(catalogEntry.repoId, {
+      repoId: catalogEntry.repoId,
+      owner: catalogEntry.owner,
+      canonicalRemote: catalogEntry.canonicalRemote,
+      primaryLanguage: catalogEntry.primaryLanguage,
+      machines: new Set(),
+      locations: [],
+      machineDetails: new Map(),
+      dirtyCount: 0,
+      cleanCount: 0,
+      unpushedTotal: 0,
+      latestCommitAt: null,
+      latestBranch: null,
+    });
+  }
+
+  // Process repo rows (locations)
+  for (const row of repoRows) {
+    const group = groups.get(row.repoId);
+    if (!group) continue;
+
+    group.machines.add(row.machineId);
+
+    const location: PerLocationDetail = {
+      id: row.id,
+      machineId: row.machineId,
+      path: row.path,
+      branch: row.branch,
+      dirty: row.dirty,
+      unpushedCommits: row.unpushedCommits,
+      headSha: "",
+      stagedCount: 0,
+      unstagedCount: 0,
+      untrackedCount: 0,
+    };
+
+    // Enrich with location data if available
+    const fullLocation = repoLocations.find((l) => l.id === row.id);
+    if (fullLocation) {
+      location.headSha = fullLocation.headSha;
+      location.stagedCount = fullLocation.stagedCount;
+      location.unstagedCount = fullLocation.unstagedCount;
+      location.untrackedCount = fullLocation.untrackedCount;
+    }
+
+    group.locations.push(location);
+
+    if (row.dirty) {
+      group.dirtyCount++;
+    } else {
+      group.cleanCount++;
+    }
+    group.unpushedTotal += row.unpushedCommits;
+
+    // Track machine detail
+    const machineKey = `${row.repoId}:${row.machineId}`;
+    let machineDetail = group.machineDetails.get(row.machineId);
+    if (!machineDetail) {
+      const stats = repoMachineStats.get(machineKey);
+      machineDetail = stats ? { ...stats } : {
+        machineId: row.machineId,
+        commits: 0,
+        pushes: 0,
+        additions: 0,
+        deletions: 0,
+        dirty: row.dirty,
+        unpushedCommits: row.unpushedCommits,
+        branch: row.branch,
+        latestCommitAt: fullLocation?.latestCommitAt ?? null,
+      };
+      group.machineDetails.set(row.machineId, machineDetail);
+    } else {
+      machineDetail.dirty = machineDetail.dirty || row.dirty;
+      machineDetail.unpushedCommits += row.unpushedCommits;
+      if (fullLocation?.latestCommitAt && (!machineDetail.latestCommitAt || fullLocation.latestCommitAt > machineDetail.latestCommitAt)) {
+        machineDetail.latestCommitAt = fullLocation.latestCommitAt;
+      }
+    }
+  }
+
+  return Array.from(groups.values()).map((group) => {
+    let dirtyState: CanonicalRepoView["dirtyState"] = "clean";
+    if (group.dirtyCount > 0 && group.cleanCount > 0) dirtyState = "mixed";
+    else if (group.dirtyCount > 0) dirtyState = "dirty";
+
+    const perMachineDetails = Array.from(group.machineDetails.values());
+    const combinedCommits = perMachineDetails.reduce((sum, d) => sum + d.commits, 0);
+    const combinedPushes = perMachineDetails.reduce((sum, d) => sum + d.pushes, 0);
+    const combinedAdditions = perMachineDetails.reduce((sum, d) => sum + d.additions, 0);
+    const combinedDeletions = perMachineDetails.reduce((sum, d) => sum + d.deletions, 0);
+
+    return {
+      repoId: group.repoId,
+      displayName: group.repoId,
+      owner: group.owner,
+      canonicalRemote: group.canonicalRemote,
+      primaryLanguage: group.primaryLanguage,
+      machines: Array.from(group.machines),
+      locationCount: group.locations.length,
+      combinedCommits,
+      combinedPushes,
+      combinedAdditions,
+      combinedDeletions,
+      dirtyState,
+      unpushedTotal: group.unpushedTotal,
+      latestBranch: group.latestBranch,
+      latestCommitAt: group.latestCommitAt,
+      github: null,
+      perMachineDetails,
+      perLocationDetails: group.locations,
+    };
+  }).filter((repo) => repo.locationCount > 0);
 }
 
 function emptyGithubHealth(): DashboardGithubHealth {
@@ -272,9 +490,16 @@ export function mergeGithubHealth(data: DashboardData, github: DashboardGithubHe
     return { ...repo, github: githubHealth };
   });
 
+  const canonicalRepos = data.canonicalRepos.map((repo) => {
+    const fullName = `${repo.owner}/${repo.displayName}`.toLowerCase();
+    const githubHealth = github.repos[repo.repoId] ?? github.repos[fullName] ?? null;
+    return { ...repo, github: githubHealth };
+  });
+
   return {
     ...data,
     githubHealth: github,
     repoCatalog,
+    canonicalRepos,
   };
 }
