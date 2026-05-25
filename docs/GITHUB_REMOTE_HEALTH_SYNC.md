@@ -1,6 +1,6 @@
 # GitHub Remote Health Sync
 
-Phase 5A.1 adds a read-only GitHub health sync for Repo Habitat.
+Phase 5A/5B adds a read-only GitHub health sync for Repo Habitat with scheduled refresh and stale-data guards.
 
 ## Design
 - Uses GitHub CLI (`gh`) only for read-only fetches.
@@ -17,12 +17,39 @@ Phase 5A.1 adds a read-only GitHub health sync for Repo Habitat.
 ## Storage
 - Full snapshot: `data/github/remotes/latest.json`
 - Summary: `data/github/remotes/latest-summary.json`
+- Logs: `~/.local/state/gh-tracker/github-sync/logs/`
 
 ## Scripts
-- `pnpm github:sync` writes the latest read-only GitHub health snapshot.
-- `pnpm validate:github` validates shape, ownership, excluded repos, warning accounting, and secret-like strings.
+- `pnpm github:sync` — manual sync
+- `pnpm validate:github` — validate snapshot shape and content
+- `scripts/run-github-health-sync.sh` — safe wrapper with flock, logging, and pruning
+
+## Scheduled Sync (systemd --user)
+Units:
+- `gh-tracker-github-health-sync.service` — oneshot sync via wrapper
+- `gh-tracker-github-health-sync.timer` — runs every 1 hour + on boot after 3 min
+
+Install:
+```bash
+systemctl --user daemon-reload
+systemctl --user enable --now gh-tracker-github-health-sync.timer
+```
+
+Disable safely:
+```bash
+systemctl --user disable --now gh-tracker-github-health-sync.timer
+```
+
+## Stale Data Thresholds
+- **Fresh**: ≤ 2 hours since last sync
+- **Stale**: > 2 hours, ≤ 24 hours
+- **Old**: > 24 hours
+- **Missing**: never synced
+
+The dashboard shows a freshness badge (Fresh / Stale / Old) next to the sync status.
 
 ## Safety Rules
 - No GitHub mutations.
 - No issues, PRs, releases, webhooks, ingestion endpoints, token storage, or auth file commits.
 - No Caddy, Basic Auth, router, or firewall changes.
+- Generated data is runtime data and is gitignored (`data/github/remotes/`).

@@ -17,6 +17,7 @@
 /.next/
 /out/
 /data/snapshots/
+/data/github/remotes/
 
 # production
 /build

@@ -45,14 +45,30 @@ async function loadGithubHealth(): Promise<DashboardGithubHealth | null> {
       repos[repo.fullName.toLowerCase()] = repo;
     }
 
+    const latestSyncAt = latest.createdAt ?? null;
+    let freshness: import("@/lib/dashboard-adapter").GithubHealthFreshness = "missing";
+    let syncAgeMinutes: number | null = null;
+    if (latestSyncAt) {
+      syncAgeMinutes = Math.max(0, Math.floor((Date.now() - Date.parse(latestSyncAt)) / 60000));
+      if (syncAgeMinutes <= 120) {
+        freshness = "fresh";
+      } else if (syncAgeMinutes <= 1440) {
+        freshness = "stale";
+      } else {
+        freshness = "old";
+      }
+    }
+
     return {
       status: summary.dashboardStatus ?? "partial",
-      latestSyncAt: latest.createdAt ?? null,
+      latestSyncAt,
       syncedRepoCount: summary.successCount ?? latest.repos.filter((repo) => repo.sync.status === "ok").length,
       partialRepoCount: summary.partialCount ?? latest.repos.filter((repo) => repo.sync.status === "partial").length,
       failedRepoCount: summary.failedCount ?? latest.repos.filter((repo) => repo.sync.status === "failed").length,
       warningCount: summary.warningCount ?? latest.repos.reduce((sum, repo) => sum + repo.sync.warnings.length, 0),
       repos,
+      freshness,
+      syncAgeMinutes,
     };
   } catch {
     return null;

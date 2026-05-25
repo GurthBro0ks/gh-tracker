@@ -43,6 +43,8 @@ export type DashboardGithubRepoHealth = {
   sync: { status: "ok" | "partial" | "failed"; warnings: string[]; error: string | null };
 };
 
+export type GithubHealthFreshness = "fresh" | "stale" | "old" | "missing";
+
 export type DashboardGithubHealth = {
   status: "synced" | "partial" | "pending" | "failed";
   latestSyncAt: string | null;
@@ -51,6 +53,8 @@ export type DashboardGithubHealth = {
   failedRepoCount: number;
   warningCount: number;
   repos: Record<string, DashboardGithubRepoHealth>;
+  freshness: GithubHealthFreshness;
+  syncAgeMinutes: number | null;
 };
 
 export type DashboardData = {
@@ -212,7 +216,7 @@ export function buildDashboardDataFromSnapshot(snapshot: SnapshotEnvelope): Dash
 
   return {
     mode,
-    version: "0.5.0-phase5a",
+    version: "0.5.1-phase5b",
     sourceTimestamp: snapshot.createdAt,
     latestLocalSnapshotTime: snapshot.createdAt,
     localRepoCount: snapshot.repoLocations.length,
@@ -256,6 +260,8 @@ function emptyGithubHealth(): DashboardGithubHealth {
     failedRepoCount: 0,
     warningCount: 0,
     repos: {},
+    freshness: "missing",
+    syncAgeMinutes: null,
   };
 }
 

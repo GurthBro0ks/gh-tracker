@@ -63,6 +63,14 @@ function githubStatusLabel(status: DashboardData["githubHealth"]["status"]) {
   return "Pending Phase 5";
 }
 
+function formatSyncAge(minutes: number) {
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ${minutes % 60}m`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ${hours % 24}h`;
+}
+
 function bucketFromScore(score: number): RepoHealthBucket {
   if (score >= 90) return "legendary";
   if (score >= 75) return "healthy";
@@ -337,9 +345,16 @@ export default function Dashboard({ demoData, localData }: DashboardProps) {
                 Read-only sync via GitHub CLI · Latest sync {activeData.githubHealth.latestSyncAt ? formatAgo(activeData.githubHealth.latestSyncAt) : "unknown"}
               </p>
             </div>
-            <span className={`rounded border px-2 py-1 text-[10px] uppercase tracking-[0.12em] ${activeData.githubHealth.status === "synced" ? "border-lime-300/50 bg-lime-400/10 text-lime-200" : activeData.githubHealth.status === "partial" ? "border-amber-300/50 bg-amber-400/10 text-amber-200" : "border-rose-300/50 bg-rose-400/10 text-rose-200"}`}>
-              {githubStatusLabel(activeData.githubHealth.status)}
-            </span>
+            <div className="flex flex-wrap gap-1">
+              <span className={`rounded border px-2 py-1 text-[10px] uppercase tracking-[0.12em] ${activeData.githubHealth.status === "synced" ? "border-lime-300/50 bg-lime-400/10 text-lime-200" : activeData.githubHealth.status === "partial" ? "border-amber-300/50 bg-amber-400/10 text-amber-200" : "border-rose-300/50 bg-rose-400/10 text-rose-200"}`}>
+                {githubStatusLabel(activeData.githubHealth.status)}
+              </span>
+              {activeData.githubHealth.freshness !== "missing" && (
+                <span className={`rounded border px-2 py-1 text-[10px] uppercase tracking-[0.12em] ${activeData.githubHealth.freshness === "fresh" ? "border-lime-300/50 bg-lime-400/10 text-lime-200" : activeData.githubHealth.freshness === "stale" ? "border-amber-300/50 bg-amber-400/10 text-amber-200" : "border-rose-300/50 bg-rose-400/10 text-rose-200"}`}>
+                  {activeData.githubHealth.freshness === "fresh" ? "Fresh" : activeData.githubHealth.freshness === "stale" ? "Stale" : "Old"}
+                </span>
+              )}
+            </div>
           </div>
           <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2 xl:grid-cols-4">
             <Status label="Repos synced" value={`${activeData.githubHealth.syncedRepoCount}/${githubRepos.length}`} />
@@ -348,7 +363,7 @@ export default function Dashboard({ demoData, localData }: DashboardProps) {
             <Status label="CI pressure" value={githubFailingCi > 0 ? `${githubFailingCi} failing` : "no failures in latest runs"} />
             <Status label="Open PRs" value={`${githubOpenPrs}`} />
             <Status label="Open issues" value={`${githubOpenIssues}`} />
-            <Status label="Warnings" value={`${activeData.githubHealth.warningCount}`} />
+            <Status label="Sync age" value={activeData.githubHealth.syncAgeMinutes != null ? formatSyncAge(activeData.githubHealth.syncAgeMinutes) : "unknown"} />
             <Status label="Data source" value="ownership-filtered aggregate" />
           </div>
         </section>
@@ -595,9 +610,9 @@ export default function Dashboard({ demoData, localData }: DashboardProps) {
           <Status label="Ownership filter" value={activeData.mode === "demo" ? "N/A (demo)" : "enabled"} />
           <Status label="Excluded repos" value={activeData.mode === "demo" ? "N/A (demo)" : `${activeData.excludedReposCount ?? "unknown"}`} />
           <Status label="GitHub health sync" value={githubStatusLabel(activeData.githubHealth.status)} />
-          <Status label="GitHub latest sync" value={activeData.githubHealth.latestSyncAt ?? "not synced"} />
+          <Status label="GitHub sync freshness" value={activeData.githubHealth.freshness === "missing" ? "not synced" : activeData.githubHealth.freshness} />
+          <Status label="GitHub sync age" value={activeData.githubHealth.syncAgeMinutes != null ? formatSyncAge(activeData.githubHealth.syncAgeMinutes) : "unknown"} />
           <Status label="GitHub synced repos" value={`${activeData.githubHealth.syncedRepoCount}`} />
-          <Status label="Source timestamp" value={activeData.sourceTimestamp} />
         </div>
       </section>
     </main>

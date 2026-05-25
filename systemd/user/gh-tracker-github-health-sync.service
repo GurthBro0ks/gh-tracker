@@ -1,0 +1,11 @@
+[Unit]
+Description=GH Tracker — GitHub Remote Health Sync
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/slimy/gh-tracker/scripts/run-github-health-sync.sh
+WorkingDirectory=/opt/slimy/gh-tracker
+StandardOutput=journal
+StandardError=journal
