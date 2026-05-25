@@ -212,7 +212,7 @@ export function buildDashboardDataFromSnapshot(snapshot: SnapshotEnvelope): Dash
 
   return {
     mode,
-    version: "0.4.0-phase4b",
+    version: "0.5.0-phase5a",
     sourceTimestamp: snapshot.createdAt,
     latestLocalSnapshotTime: snapshot.createdAt,
     localRepoCount: snapshot.repoLocations.length,
