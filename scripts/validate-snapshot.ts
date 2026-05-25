@@ -4,16 +4,20 @@ import { buildDashboardDataFromSnapshot } from "../src/lib/dashboard-adapter";
 import type { SnapshotEnvelope } from "../src/lib/contracts";
 import { snapshotEnvelopeSchema } from "../src/lib/snapshot-schema";
 
-const SNAPSHOT_PATH = path.join(process.cwd(), "data", "snapshots", "nuc2", "latest.json");
-const CREDENTIAL_IN_URL = /(https?:\/\/)[^/@\s]+@/i;
+const SNAPSHOT_PATH = path.join(process.cwd(), "data", "snapshots", "machines", "nuc1", "latest.json");
+const CREDENTIAL_IN_URL = /(https?:\/\/)[^\/@\s]+@/i;
 const UNSAFE_QUERY_VALUE = /([?&][^=]{1,40}=)(?!<redacted>)[^&\s]+/i;
 
 async function main() {
+  const args = process.argv.slice(2);
+  const explicitPath = args.find((arg) => !arg.startsWith("--"));
+  const snapshotPath = explicitPath ? path.resolve(explicitPath) : SNAPSHOT_PATH;
+
   let raw = "";
   try {
-    raw = await readFile(SNAPSHOT_PATH, "utf8");
+    raw = await readFile(snapshotPath, "utf8");
   } catch {
-    throw new Error(`latest snapshot missing: ${SNAPSHOT_PATH}`);
+    throw new Error(`latest snapshot missing: ${snapshotPath}`);
   }
 
   const parsed = JSON.parse(raw) as SnapshotEnvelope;

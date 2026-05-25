@@ -16,7 +16,16 @@ import { snapshotEnvelopeSchema } from "../src/lib/snapshot-schema";
 const COLLECTOR_VERSION = "phase1-local-1";
 const DEFAULT_ROOTS = ["/opt/slimy", "/home/slimy"];
 const DEFAULT_DEPTH_LIMIT = 4;
-const SNAPSHOT_BASE = path.join(process.cwd(), "data", "snapshots", "nuc2");
+const MACHINE_ID = normalizeMachineId(process.env.GH_TRACKER_MACHINE_ID || os.hostname());
+const SNAPSHOT_BASE = path.join(process.cwd(), "data", "snapshots", "machines", MACHINE_ID);
+
+function normalizeMachineId(raw: string): string {
+  const lowered = raw.toLowerCase().trim();
+  if (lowered === "slimy-nuc1" || lowered === "nuc1") return "nuc1";
+  if (lowered === "slimy-nuc2" || lowered === "nuc2") return "nuc2";
+  if (lowered.includes("laptop")) return "laptop";
+  return lowered.replace(/[^a-z0-9_-]/g, "").slice(0, 32);
+}
 const SKIP_DIR_NAMES = new Set([
   "node_modules",
   ".next",
@@ -245,7 +254,7 @@ function aggregateDailyMachineStats(
 
 async function main() {
   const startedAt = nowIso();
-  const machineId = process.env.GH_TRACKER_MACHINE_ID || "nuc2";
+  const machineId = MACHINE_ID;
   const scanRoots = (process.env.GH_TRACKER_SCAN_ROOTS || DEFAULT_ROOTS.join(","))
     .split(",")
     .map((value) => value.trim())

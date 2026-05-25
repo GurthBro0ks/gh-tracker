@@ -10,7 +10,7 @@ import {
 } from "@/lib/demo-data";
 import type { SnapshotEnvelope } from "@/lib/contracts";
 
-export type DashboardDataMode = "demo" | "local_snapshot";
+export type DashboardDataMode = "demo" | "local_snapshot" | "aggregated";
 
 export type DashboardData = {
   mode: DashboardDataMode;
@@ -95,6 +95,9 @@ export function buildDemoDashboardData(): DashboardData {
 }
 
 export function buildDashboardDataFromSnapshot(snapshot: SnapshotEnvelope): DashboardData {
+  const isAggregate = snapshot.machine.id === "aggregate";
+  const mode: DashboardDataMode = isAggregate ? "aggregated" : "local_snapshot";
+
   const repoRows = snapshot.repoLocations.map((location) => ({
     id: location.id,
     repoId: location.repoId,
@@ -126,15 +129,19 @@ export function buildDashboardDataFromSnapshot(snapshot: SnapshotEnvelope): Dash
     dateRows.set(dayRow.date, entry);
   }
 
-  const machineCards = [snapshot.machine.id].map((machineId) => {
+  // Build machine cards from all unique machine IDs in repoLocations
+  const machineIdSet = new Set(snapshot.repoLocations.map((l) => l.machineId));
+  const machineCards = Array.from(machineIdSet).map((machineId) => {
+    const machineLocs = snapshot.repoLocations.filter((l) => l.machineId === machineId);
     const today = snapshot.dailyMachineStats.find((entry) => entry.machineId === machineId && entry.date === snapshot.createdAt.slice(0, 10));
+    const machineMeta = snapshot.machine.id === machineId ? snapshot.machine : undefined;
     return {
-      id: snapshot.machine.id,
-      label: snapshot.machine.label,
-      host: snapshot.machine.host,
+      id: machineId,
+      label: machineMeta?.label ?? machineId.toUpperCase(),
+      host: machineMeta?.host ?? machineId,
       commitsToday: today?.commits ?? 0,
       pushesToday: today?.pushes ?? 0,
-      activeRepos: today?.activeRepos ?? snapshot.repoLocations.length,
+      activeRepos: today?.activeRepos ?? machineLocs.length,
       streak: 1,
     };
   });
@@ -144,12 +151,15 @@ export function buildDashboardDataFromSnapshot(snapshot: SnapshotEnvelope): Dash
     .sort((a, b) => b.commits - a.commits);
 
   const mostActiveRepo = repoDistribution[0]?.repoId ?? "n/a";
-  const mostActiveMachine = snapshot.machine.label;
-  const todayStats = snapshot.dailyMachineStats.find((entry) => entry.machineId === snapshot.machine.id && entry.date === snapshot.createdAt.slice(0, 10));
+  const mostActiveMachine = machineCards.sort((a, b) => b.commitsToday - a.commitsToday)[0]?.label ?? "n/a";
+
+  const todayStats = snapshot.dailyMachineStats.filter((entry) => entry.date === snapshot.createdAt.slice(0, 10));
+  const totalCommitsToday = todayStats.reduce((sum, entry) => sum + entry.commits, 0);
+  const pushesToday = todayStats.reduce((sum, entry) => sum + entry.pushes, 0);
 
   return {
-    mode: "local_snapshot",
-    version: "0.3.0-phase2",
+    mode,
+    version: "0.4.0-phase4a",
     sourceTimestamp: snapshot.createdAt,
     latestLocalSnapshotTime: snapshot.createdAt,
     localRepoCount: snapshot.repoLocations.length,
@@ -157,10 +167,10 @@ export function buildDashboardDataFromSnapshot(snapshot: SnapshotEnvelope): Dash
     unpushedRepoCount,
     collectorLastResult: snapshot.collectorRun.result,
     validationStatus: "validated",
-    machineCount: 1,
+    machineCount: machineCards.length,
     repoCount: snapshot.repos.length,
-    totalCommitsToday: todayStats?.commits ?? 0,
-    pushesToday: todayStats?.pushes ?? 0,
+    totalCommitsToday,
+    pushesToday,
     codingStreakDays: 1,
     mostActiveRepo,
     mostActiveMachine,

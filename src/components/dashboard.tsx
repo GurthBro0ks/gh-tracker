@@ -57,7 +57,7 @@ type DashboardProps = {
 };
 
 export default function Dashboard({ demoData, localData }: DashboardProps) {
-  const [mode, setMode] = useState<DashboardDataMode>("demo");
+  const [mode, setMode] = useState<DashboardDataMode>(localData?.mode === "aggregated" ? "aggregated" : "demo");
   const [dateRange, setDateRange] = useState("14d");
   const [machineFilter, setMachineFilter] = useState<string>("all");
   const [repoFilter, setRepoFilter] = useState("all");
@@ -65,7 +65,7 @@ export default function Dashboard({ demoData, localData }: DashboardProps) {
   const [activityFilter, setActivityFilter] = useState<"all" | "commit" | "push" | "status">("all");
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  const activeData = mode === "local_snapshot" && localData ? localData : demoData;
+  const activeData = (mode === "local_snapshot" || mode === "aggregated") && localData ? localData : demoData;
 
   const activeLocations = useMemo(
     () =>
@@ -160,7 +160,15 @@ export default function Dashboard({ demoData, localData }: DashboardProps) {
               className={`rounded border px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] sm:px-3 sm:text-xs sm:tracking-[0.15em] ${mode === "local_snapshot" ? "border-lime-300 bg-lime-300/20 text-lime-200" : "border-fuchsia-400/50 bg-black/30 text-violet-200"} ${!localData ? "cursor-not-allowed opacity-50" : ""}`}
               onClick={() => setMode("local_snapshot")}
             >
-              {mode === "local_snapshot" ? "● NUC2 Snapshot" : "NUC2 Snapshot"}
+              {mode === "local_snapshot" ? "● Local Snapshot" : "Local Snapshot"}
+            </button>
+            <button
+              type="button"
+              disabled={!localData || localData.mode !== "aggregated"}
+              className={`rounded border px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] sm:px-3 sm:text-xs sm:tracking-[0.15em] ${mode === "aggregated" ? "border-lime-300 bg-lime-300/20 text-lime-200" : "border-fuchsia-400/50 bg-black/30 text-violet-200"} ${(!localData || localData.mode !== "aggregated") ? "cursor-not-allowed opacity-50" : ""}`}
+              onClick={() => setMode("aggregated")}
+            >
+              {mode === "aggregated" ? "● Aggregated" : "Aggregated"}
             </button>
           </div>
         </div>
@@ -430,7 +438,7 @@ export default function Dashboard({ demoData, localData }: DashboardProps) {
         <h3 className="mb-2 font-sans text-sm uppercase tracking-[0.18em] text-fuchsia-200">Debug / Status Dock</h3>
         <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
           <Status label="App version" value={activeData.version} />
-          <Status label="Data Mode" value={activeData.mode === "demo" ? "Demo (simulated)" : "Local Snapshot"} />
+          <Status label="Data Mode" value={activeData.mode === "demo" ? "Demo (simulated)" : activeData.mode === "aggregated" ? "Aggregated Live Snapshots" : "Local Snapshot"} />
           <Status label="Latest Local Snapshot" value={activeData.latestLocalSnapshotTime ?? "pending Phase 4 collector"} />
           <Status label="Local Repo Count" value={activeData.mode === "demo" ? "0 (demo mode)" : `${activeData.localRepoCount}`} />
           <Status label="Dirty Repo Count" value={activeData.mode === "demo" ? "0 (demo mode)" : `${activeData.dirtyRepoCount}`} />

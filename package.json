@@ -9,7 +9,10 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "collect:local": "tsx scripts/collect-local.ts",
-    "validate:snapshot": "tsx scripts/validate-snapshot.ts"
+    "validate:snapshot": "tsx scripts/validate-snapshot.ts",
+    "import:snapshot": "tsx scripts/import-snapshot.ts",
+    "aggregate:snapshots": "tsx scripts/aggregate-snapshots.ts",
+    "validate:aggregate": "tsx scripts/validate-aggregate.ts"
   },
   "dependencies": {
     "next": "16.2.6",

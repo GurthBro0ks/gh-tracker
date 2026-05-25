@@ -43,7 +43,21 @@ Small mobile UX polish pass before Phase 4:
 - Preserved full desktop layout with responsive CSS.
 
 ## Phase 4
-Add optional GitHub API sync (token-based, secure local-only secrets handling).
+Multi-machine snapshot ingestion and aggregation.
+
+### Phase 4A — Multi-Machine Ingestion
+- Central snapshot storage layout: `data/snapshots/machines/<machineId>/`
+- Import/aggregate/validate CLI scripts
+- Real NUC1 + NUC2 snapshot collection via SSH
+- Aggregate dashboard mode with computed cross-machine stats
+- Security: CLI-only ingestion, no public HTTP endpoint
+
+### Phase 4B — Laptop Sync
+- Laptop snapshot collection and import
+- Automated sync via cron/systemd timer (documented)
 
 ## Phase 5
-Refine visual analytics, filtering, and cross-machine historical insights.
+GitHub API sync for release/CI/PR/issue health:
+- Token-based, secure local-only secrets handling
+- Merge remote health into RepoHealth score
+- Expand pixel-pet states with sprite-sheet assets
