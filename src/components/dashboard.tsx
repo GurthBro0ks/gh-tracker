@@ -71,6 +71,15 @@ function formatSyncAge(minutes: number) {
   return `${days}d ${hours % 24}h`;
 }
 
+function toUtcDateKey(timestamp: string) {
+  return timestamp.slice(0, 10);
+}
+
+function formatDateLabel(dateKey: string) {
+  const parsed = new Date(`${dateKey}T00:00:00Z`);
+  return new Intl.DateTimeFormat("en", { month: "short", day: "2-digit", year: "numeric", timeZone: "UTC" }).format(parsed);
+}
+
 function bucketFromScore(score: number): RepoHealthBucket {
   if (score >= 90) return "legendary";
   if (score >= 75) return "healthy";
@@ -130,6 +139,7 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [expandedRepos, setExpandedRepos] = useState<Set<string>>(new Set());
+  const [selectedHeatmapCellKey, setSelectedHeatmapCellKey] = useState<string | null>(null);
 
   const activeData = (mode === "local_snapshot" || mode === "aggregated") && localData ? localData : demoData;
 
@@ -183,6 +193,53 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
       .sort((a, b) => b.event.timestamp.localeCompare(a.event.timestamp))
       .slice(0, 20);
   }, [events]);
+
+  const heatmapCells = useMemo(() => {
+    const totalCells = activeData.heatmap.reduce((sum, week) => sum + week.length, 0);
+    const endDate = new Date(activeData.sourceTimestamp);
+    endDate.setUTCHours(0, 0, 0, 0);
+    const startDate = new Date(endDate);
+    startDate.setUTCDate(endDate.getUTCDate() - Math.max(0, totalCells - 1));
+
+    const eventsByDate = new Map<string, { total: number; commits: number; machines: Set<string>; repos: Set<string> }>();
+    for (const event of events) {
+      const dateKey = toUtcDateKey(event.timestamp);
+      const existing = eventsByDate.get(dateKey) ?? { total: 0, commits: 0, machines: new Set<string>(), repos: new Set<string>() };
+      existing.total += 1;
+      if (event.type === "commit") existing.commits += 1;
+      existing.machines.add(event.machineId);
+      existing.repos.add(event.repoId);
+      eventsByDate.set(dateKey, existing);
+    }
+
+    let dayOffset = 0;
+    return activeData.heatmap.flatMap((week, weekIndex) =>
+      week.map((intensity, dayIndex) => {
+        const date = new Date(startDate);
+        date.setUTCDate(startDate.getUTCDate() + dayOffset);
+        dayOffset += 1;
+        const dateKey = date.toISOString().slice(0, 10);
+        const eventSummary = eventsByDate.get(dateKey);
+        const key = `${weekIndex}-${dayIndex}`;
+        return {
+          key,
+          weekIndex,
+          dayIndex,
+          intensity,
+          dateKey,
+          totalActivity: eventSummary?.total ?? 0,
+          commitCount: eventSummary?.commits ?? 0,
+          machines: eventSummary ? Array.from(eventSummary.machines).sort() : [],
+          repos: eventSummary ? Array.from(eventSummary.repos).sort() : [],
+        };
+      }),
+    );
+  }, [activeData.heatmap, activeData.sourceTimestamp, events]);
+
+  const selectedHeatmapCell = useMemo(
+    () => heatmapCells.find((cell) => cell.key === selectedHeatmapCellKey) ?? null,
+    [heatmapCells, selectedHeatmapCellKey],
+  );
 
   const trend = useMemo(() => {
     if (dateRange === "7d") return activeData.commitTrend.slice(-7);
@@ -613,23 +670,49 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
 
         <article className="neon-panel rounded-xl p-4">
           <h3 className="mb-3 font-sans text-sm uppercase tracking-[0.18em] text-fuchsia-200">Activity Heatmap</h3>
+          <p className="mb-3 text-xs text-violet-300">Tap a day to inspect activity</p>
           <div className="space-y-1">
             {activeData.heatmap.map((week, weekIndex) => (
               <div key={`week-${weekIndex}`} className="grid grid-cols-7 gap-1">
                 {week.map((value, dayIndex) => (
-                  <div
+                  <button
                     key={`cell-${weekIndex}-${dayIndex}`}
-                    className="h-6 rounded"
+                    type="button"
+                    className="h-6 rounded transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-300"
                     style={{
                       background: `rgba(151,255,76,${0.1 + value * 0.11})`,
-                      border: "1px solid rgba(215,23,255,0.25)",
+                      border: selectedHeatmapCellKey === `${weekIndex}-${dayIndex}` ? "2px solid rgba(151,255,76,0.95)" : "1px solid rgba(215,23,255,0.25)",
+                      boxShadow: selectedHeatmapCellKey === `${weekIndex}-${dayIndex}` ? "0 0 12px rgba(151,255,76,0.45)" : "none",
                     }}
                     title={`Activity level ${value}`}
+                    aria-label={`Heatmap day week ${weekIndex + 1}, day ${dayIndex + 1}, activity ${value}`}
+                    aria-pressed={selectedHeatmapCellKey === `${weekIndex}-${dayIndex}`}
+                    onClick={() => setSelectedHeatmapCellKey(`${weekIndex}-${dayIndex}`)}
                   />
                 ))}
               </div>
             ))}
           </div>
+          {selectedHeatmapCell && (
+            <div className="mt-4 rounded border border-white/10 bg-black/35 p-3 text-xs">
+              <p className="font-sans uppercase tracking-[0.14em] text-fuchsia-200">Selected Day</p>
+              <p className="mt-1 text-violet-100">{formatDateLabel(selectedHeatmapCell.dateKey)}</p>
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                <p className="text-violet-200">Heatmap intensity: <span className="text-lime-300">{selectedHeatmapCell.intensity}</span></p>
+                <p className="text-violet-200">Total activity events: <span className="text-lime-300">{selectedHeatmapCell.totalActivity}</span></p>
+                <p className="text-violet-200">Commit events: <span className="text-lime-300">{selectedHeatmapCell.commitCount}</span></p>
+                <p className="text-violet-200">Repos involved: <span className="text-lime-300">{selectedHeatmapCell.repos.length}</span></p>
+              </div>
+              {selectedHeatmapCell.totalActivity > 0 ? (
+                <div className="mt-2 space-y-1">
+                  <p className="text-violet-200">Machines: <span className="text-violet-100">{selectedHeatmapCell.machines.join(", ")}</span></p>
+                  <p className="text-violet-200">Repos: <span className="text-violet-100">{selectedHeatmapCell.repos.join(", ")}</span></p>
+                </div>
+              ) : (
+                <p className="mt-2 text-violet-300">No activity details for this day</p>
+              )}
+            </div>
+          )}
         </article>
       </section>
 
