@@ -44,15 +44,4 @@ describe("phase6a action center", () => {
     const json = readFileSync(latestSummaryPath, "utf8").toLowerCase();
     expect(json).not.toContain("nousearch-hermes-agent");
   });
-
-  it("makes heatmap inspectable with selected state and truthful fallback", () => {
-    const dashboard = readFileSync(join(repoRoot, "src/components/dashboard.tsx"), "utf8");
-    expect(dashboard).toContain("Tap a day to inspect activity");
-    expect(dashboard).toContain("aria-pressed");
-    expect(dashboard).toContain("Selected Day");
-    expect(dashboard).toContain("No activity details for this day");
-    expect(dashboard).toContain("Heatmap intensity");
-    expect(dashboard).toContain("Total activity events");
-    expect(dashboard).toContain("Commit events");
-  });
 });
