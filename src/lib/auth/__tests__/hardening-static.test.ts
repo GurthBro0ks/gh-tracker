@@ -4,10 +4,10 @@ import { join } from "path";
 
 const repoRoot = process.cwd();
 
-describe("phase 5e hardening static checks", () => {
-  it("uses phase 5e app version in dashboard adapter", () => {
+describe("auth hardening static checks", () => {
+  it("uses current app version in dashboard adapter", () => {
     const dashboardAdapter = readFileSync(join(repoRoot, "src/lib/dashboard-adapter.ts"), "utf8");
-    expect(dashboardAdapter).toContain('version: "0.5.4-phase5e-auth-hardening"');
+    expect(dashboardAdapter).toContain('version: "0.6.0-phase6a-action-center"');
   });
 
   it("keeps forgot/reset link pointed to Slimy auth flow", () => {

@@ -86,22 +86,22 @@ function RepoPetCard({ row, expanded, onToggleExpand, onOpenActionCenter }: { ro
 
   return (
     <article
-      className="rounded-xl border border-fuchsia-400/40 bg-black/35 p-2.5 sm:p-3 cursor-pointer transition-colors hover:bg-black/45"
+      className="overflow-hidden rounded-xl border border-fuchsia-400/40 bg-black/35 p-2.5 sm:p-3 cursor-pointer transition-colors hover:bg-black/45"
       onClick={onToggleExpand}
       role="button"
       tabIndex={0}
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onToggleExpand(); }}
     >
-      <div className="mb-2 flex justify-end">
+      <div className="mb-2">
         <button
           type="button"
-          className="rounded border border-cyan-300/40 bg-cyan-400/10 px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-cyan-100"
+          className="w-full rounded border border-cyan-300/50 bg-cyan-400/15 px-3 py-2 text-xs font-medium uppercase tracking-[0.12em] text-cyan-100"
           onClick={(e) => {
             e.stopPropagation();
             onOpenActionCenter();
           }}
         >
-          Action Center
+          Open Action Center
         </button>
       </div>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -232,11 +232,11 @@ export function CareActionList({ actions }: { actions: RepoCareAction[] }) {
 function ActionCenterDrawer({ row, onClose }: { row: HabitatRow; onClose: () => void }) {
   const model = buildActionCenterModel(row);
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 p-3 sm:p-6" role="dialog" aria-modal="true" aria-label="Repo Action Center">
-      <div className="mx-auto max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-xl border border-fuchsia-400/40 bg-[rgba(10,6,18,0.98)] p-3 sm:p-5">
+    <div className="fixed inset-0 z-50 bg-black/75 p-2 sm:p-6" role="dialog" aria-modal="true" aria-label="Repo Action Center">
+      <div className="mx-auto max-h-[94vh] w-full max-w-4xl overflow-y-auto rounded-xl border border-fuchsia-400/40 bg-[rgba(10,6,18,0.98)] p-3 sm:p-5">
         <div className="mb-3 flex items-center justify-between gap-2">
           <div>
-            <p className="text-[10px] uppercase tracking-[0.14em] text-fuchsia-200">Action Center</p>
+            <p className="text-[10px] uppercase tracking-[0.14em] text-fuchsia-200">Repo Action Center</p>
             <h4 className="text-base font-sans uppercase tracking-[0.08em] text-white sm:text-lg">{model.displayName}</h4>
           </div>
           <button type="button" className="rounded border border-white/20 bg-black/30 px-3 py-1 text-xs text-violet-100" onClick={onClose}>Close</button>
@@ -270,8 +270,19 @@ function ActionCenterDrawer({ row, onClose }: { row: HabitatRow; onClose: () => 
           <div className="space-y-2">
             {model.safeCommandGroups.map((group) => (
               <div key={`${group.machineId}:${group.path}`} className="rounded border border-white/10 bg-black/25 p-2 text-[10px] sm:text-xs">
-                <p className="mb-1 text-violet-200">{group.machineId.toUpperCase()} · {group.runLabel} · {group.path}</p>
-                <pre className="overflow-x-auto whitespace-pre-wrap break-all text-lime-200">{group.commands.join("\n")}</pre>
+                <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-violet-200 break-all">{group.machineId.toUpperCase()} · {group.runLabel} · {group.path}</p>
+                  <button
+                    type="button"
+                    className="rounded border border-cyan-300/40 bg-cyan-400/10 px-2 py-1 text-[10px] uppercase tracking-[0.1em] text-cyan-100"
+                    onClick={() => {
+                      void navigator.clipboard?.writeText(group.commands.join("\n"));
+                    }}
+                  >
+                    Copy
+                  </button>
+                </div>
+                <pre className="overflow-x-auto whitespace-pre text-lime-200">{group.commands.join("\n")}</pre>
               </div>
             ))}
           </div>
