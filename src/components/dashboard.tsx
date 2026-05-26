@@ -212,12 +212,11 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
       eventsByDate.set(dateKey, existing);
     }
 
-    let dayOffset = 0;
     return activeData.heatmap.flatMap((week, weekIndex) =>
       week.map((intensity, dayIndex) => {
+        const dayOffset = weekIndex * 7 + dayIndex;
         const date = new Date(startDate);
         date.setUTCDate(startDate.getUTCDate() + dayOffset);
-        dayOffset += 1;
         const dateKey = date.toISOString().slice(0, 10);
         const eventSummary = eventsByDate.get(dateKey);
         const key = `${weekIndex}-${dayIndex}`;
