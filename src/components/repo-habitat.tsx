@@ -1,5 +1,6 @@
 import type { CanonicalRepoView, DashboardGithubRepoHealth } from "@/lib/dashboard-adapter";
 import type { RepoAttentionReason, RepoCareAction, RepoHealth, RepoPet } from "@/lib/contracts";
+import * as React from "react";
 
 type HabitatRow = {
   repoId: string;
@@ -8,6 +9,26 @@ type HabitatRow = {
   health: RepoHealth;
   github?: DashboardGithubRepoHealth | null;
   canonicalRepo?: CanonicalRepoView;
+};
+
+type ActionCenterModel = {
+  canonicalRepo: string;
+  displayName: string;
+  machines: string[];
+  locations: Array<{ machineId: string; path: string; branch: string; dirty: boolean; unpushedCommits: number; headSha: string }>;
+  dirtyStatus: "clean" | "dirty" | "mixed" | "unknown";
+  dirtyLocations: string[];
+  unpushedTotal: number;
+  aheadBehindSummary: string;
+  branches: string[];
+  githubHealthSummary: string;
+  prCount: number | null;
+  issueCount: number | null;
+  ciStatus: string;
+  releaseStatus: string;
+  attentionReasons: string[];
+  careActions: string[];
+  safeCommandGroups: Array<{ machineId: string; path: string; runLabel: string; commands: string[] }>;
 };
 
 const attentionLabels: Record<RepoAttentionReason, string> = {
@@ -33,6 +54,7 @@ const careLabels: Record<RepoCareAction, string> = {
 };
 
 export function RepoHabitatGrid({ rows, expandedRepos, onToggleExpand }: { rows: HabitatRow[]; expandedRepos: Set<string>; onToggleExpand: (repoId: string) => void }) {
+  const [actionCenterFor, setActionCenterFor] = React.useState<HabitatRow | null>(null);
   return (
     <section className="neon-panel mb-6 rounded-xl p-3 sm:p-4">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2 sm:mb-4">
@@ -49,14 +71,16 @@ export function RepoHabitatGrid({ rows, expandedRepos, onToggleExpand }: { rows:
             row={row}
             expanded={expandedRepos.has(row.repoId)}
             onToggleExpand={() => onToggleExpand(row.repoId)}
+            onOpenActionCenter={() => setActionCenterFor(row)}
           />
         ))}
       </div>
+      {actionCenterFor ? <ActionCenterDrawer row={actionCenterFor} onClose={() => setActionCenterFor(null)} /> : null}
     </section>
   );
 }
 
-function RepoPetCard({ row, expanded, onToggleExpand }: { row: HabitatRow; expanded: boolean; onToggleExpand: () => void }) {
+function RepoPetCard({ row, expanded, onToggleExpand, onOpenActionCenter }: { row: HabitatRow; expanded: boolean; onToggleExpand: () => void; onOpenActionCenter: () => void }) {
   const canonical = row.canonicalRepo;
   const hasDetails = canonical && canonical.perMachineDetails.length > 1;
 
@@ -68,6 +92,18 @@ function RepoPetCard({ row, expanded, onToggleExpand }: { row: HabitatRow; expan
       tabIndex={0}
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onToggleExpand(); }}
     >
+      <div className="mb-2 flex justify-end">
+        <button
+          type="button"
+          className="rounded border border-cyan-300/40 bg-cyan-400/10 px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-cyan-100"
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpenActionCenter();
+          }}
+        >
+          Action Center
+        </button>
+      </div>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1">
           <p className="text-base font-sans uppercase tracking-[0.06em] text-white break-words sm:text-lg">{row.repoId}</p>
@@ -191,6 +227,121 @@ export function CareActionList({ actions }: { actions: RepoCareAction[] }) {
       ))}
     </ul>
   );
+}
+
+function ActionCenterDrawer({ row, onClose }: { row: HabitatRow; onClose: () => void }) {
+  const model = buildActionCenterModel(row);
+  return (
+    <div className="fixed inset-0 z-50 bg-black/70 p-3 sm:p-6" role="dialog" aria-modal="true" aria-label="Repo Action Center">
+      <div className="mx-auto max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-xl border border-fuchsia-400/40 bg-[rgba(10,6,18,0.98)] p-3 sm:p-5">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.14em] text-fuchsia-200">Action Center</p>
+            <h4 className="text-base font-sans uppercase tracking-[0.08em] text-white sm:text-lg">{model.displayName}</h4>
+          </div>
+          <button type="button" className="rounded border border-white/20 bg-black/30 px-3 py-1 text-xs text-violet-100" onClick={onClose}>Close</button>
+        </div>
+
+        <Section title="Overview" lines={[
+          `Repo: ${model.canonicalRepo}`,
+          `Dirty state: ${model.dirtyStatus}`,
+          `Unpushed commits: ${model.unpushedTotal}`,
+          `Ahead/behind: ${model.aheadBehindSummary}`,
+        ]} />
+        <Section title="Machines & Locations" lines={model.locations.map((loc) => `${loc.machineId.toUpperCase()} · ${loc.path} · ${loc.branch} · ${loc.dirty ? "dirty" : "clean"}`)} />
+        <Section title="Local Git State" lines={[
+          `Branches: ${model.branches.join(", ") || "unknown"}`,
+          `Dirty locations: ${model.dirtyLocations.length > 0 ? model.dirtyLocations.join("; ") : "none"}`,
+        ]} />
+        <Section title="GitHub Remote Health" lines={[
+          model.githubHealthSummary,
+          `PRs open: ${model.prCount ?? "unknown"}`,
+          `Issues open: ${model.issueCount ?? "unknown"}`,
+          `CI: ${model.ciStatus}`,
+          `Release: ${model.releaseStatus}`,
+        ]} />
+        <Section title="Care Plan" lines={[
+          ...model.attentionReasons.map((r) => `Needs care: ${r}`),
+          ...model.careActions.map((a) => `Action: ${a}`),
+          "All actions are manual operator actions. This app does not execute commands.",
+        ]} />
+        <div className="mt-3 rounded border border-cyan-300/30 bg-black/30 p-2.5 sm:p-3">
+          <p className="mb-2 text-[10px] uppercase tracking-[0.14em] text-cyan-200 sm:text-xs">Copy Commands</p>
+          <div className="space-y-2">
+            {model.safeCommandGroups.map((group) => (
+              <div key={`${group.machineId}:${group.path}`} className="rounded border border-white/10 bg-black/25 p-2 text-[10px] sm:text-xs">
+                <p className="mb-1 text-violet-200">{group.machineId.toUpperCase()} · {group.runLabel} · {group.path}</p>
+                <pre className="overflow-x-auto whitespace-pre-wrap break-all text-lime-200">{group.commands.join("\n")}</pre>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Section({ title, lines }: { title: string; lines: string[] }) {
+  return (
+    <div className="mt-3 rounded border border-fuchsia-400/20 bg-black/25 p-2.5 sm:p-3">
+      <p className="mb-1 text-[10px] uppercase tracking-[0.14em] text-violet-300 sm:text-xs">{title}</p>
+      <ul className="space-y-1 text-[10px] text-violet-100/90 sm:text-xs">
+        {lines.map((line, idx) => <li key={`${title}:${idx}`} className="rounded border border-white/10 bg-black/30 px-2 py-1 break-words">{line}</li>)}
+      </ul>
+    </div>
+  );
+}
+
+function buildActionCenterModel(row: HabitatRow): ActionCenterModel {
+  const canonical = row.canonicalRepo;
+  const locations = canonical?.perLocationDetails ?? [];
+  const dirtyLocations = locations.filter((loc) => loc.dirty).map((loc) => `${loc.machineId}:${loc.path}`);
+  const branches = Array.from(new Set(locations.map((loc) => loc.branch).filter(Boolean)));
+  const github = row.github;
+  const safeCommandGroups = locations.map((loc) => {
+    const remote = machineRemotePrefix(loc.machineId);
+    const commands = [
+      ...(remote ? [remote] : []),
+      `cd ${loc.path}`,
+      "git status --branch --short",
+      "git diff --stat",
+      "git log --oneline -5",
+      "git branch --show-current",
+    ];
+    return {
+      machineId: loc.machineId,
+      path: loc.path,
+      runLabel: loc.machineId === "laptop" ? "Run on laptop" : "Run on machine",
+      commands,
+    };
+  });
+
+  return {
+    canonicalRepo: row.repoId,
+    displayName: canonical?.displayName ?? row.repoId,
+    machines: canonical?.machines ?? [row.machineId],
+    locations: locations.map((loc) => ({ machineId: loc.machineId, path: loc.path, branch: loc.branch, dirty: loc.dirty, unpushedCommits: loc.unpushedCommits, headSha: loc.headSha })),
+    dirtyStatus: canonical?.dirtyState ?? "unknown",
+    dirtyLocations,
+    unpushedTotal: canonical?.unpushedTotal ?? row.health.sync.aheadCount,
+    aheadBehindSummary: `ahead ${canonical?.unpushedTotal ?? row.health.sync.aheadCount}, behind unknown`,
+    branches,
+    githubHealthSummary: github ? `GitHub health ${github.health.score} (${github.health.label}) · sync ${github.sync.status}` : "GitHub health not synced yet",
+    prCount: github?.pullRequests.open ?? null,
+    issueCount: github?.issues.open ?? null,
+    ciStatus: github?.ci.status ?? "unknown",
+    releaseStatus: github?.latestRelease.status ?? "unknown",
+    attentionReasons: row.health.attentionReasons.map((r) => attentionLabels[r]),
+    careActions: row.health.careActions.map((a) => careLabels[a]),
+    safeCommandGroups,
+  };
+}
+
+function machineRemotePrefix(machineId: string): string | null {
+  if (machineId === "nuc1") return "ssh nuc1";
+  if (machineId === "nuc2") return "ssh nuc2";
+  if (machineId === "laptop") return null;
+  return "SSH alias unknown";
 }
 
 export function RepoPetSprite({ species, state }: { species: string; state: string }) {

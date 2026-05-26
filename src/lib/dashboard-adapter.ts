@@ -162,7 +162,7 @@ export function buildDemoDashboardData(): DashboardData {
 
   return {
     mode: "demo",
-    version: "0.5.4-phase5e-auth-hardening",
+    version: "0.6.0-phase6a-action-center",
     sourceTimestamp: lastDemoRefresh,
     latestLocalSnapshotTime: null,
     localRepoCount: 0,
@@ -304,7 +304,7 @@ export function buildDashboardDataFromSnapshot(snapshot: SnapshotEnvelope): Dash
 
   return {
     mode,
-    version: "0.5.4-phase5e-auth-hardening",
+    version: "0.6.0-phase6a-action-center",
     sourceTimestamp: snapshot.createdAt,
     latestLocalSnapshotTime: snapshot.createdAt,
     localRepoCount: snapshot.repoLocations.length,
