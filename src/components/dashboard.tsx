@@ -117,9 +117,10 @@ function mergeRemoteHealth(base: RepoHealth, github?: DashboardGithubRepoHealth 
 type DashboardProps = {
   demoData: DashboardData;
   localData: DashboardData | null;
+  session?: { email: string; role: string } | null;
 };
 
-export default function Dashboard({ demoData, localData }: DashboardProps) {
+export default function Dashboard({ demoData, localData, session }: DashboardProps) {
   const [mode, setMode] = useState<DashboardDataMode>(localData?.mode === "aggregated" ? "aggregated" : "demo");
   const [dateRange, setDateRange] = useState("14d");
   const [machineFilter, setMachineFilter] = useState<string>("all");
@@ -127,6 +128,7 @@ export default function Dashboard({ demoData, localData }: DashboardProps) {
   const [viewMode, setViewMode] = useState<"combined" | "split">("combined");
   const [activityFilter, setActivityFilter] = useState<"all" | "commit" | "push" | "status">("all");
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [expandedRepos, setExpandedRepos] = useState<Set<string>>(new Set());
 
   const activeData = (mode === "local_snapshot" || mode === "aggregated") && localData ? localData : demoData;
@@ -282,6 +284,13 @@ export default function Dashboard({ demoData, localData }: DashboardProps) {
               onClick={() => setMode("aggregated")}
             >
               {mode === "aggregated" ? "● Aggregated" : "Aggregated"}
+            </button>
+            <button
+              type="button"
+              className="rounded border border-fuchsia-400/50 bg-black/30 px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-violet-200 sm:px-3 sm:text-xs sm:tracking-[0.15em]"
+              onClick={() => setSettingsOpen(true)}
+            >
+              Settings
             </button>
           </div>
         </div>
@@ -679,6 +688,66 @@ export default function Dashboard({ demoData, localData }: DashboardProps) {
           <Status label="GitHub synced repos" value={`${activeData.githubHealth.syncedRepoCount}`} />
         </div>
       </section>
+
+      {settingsOpen && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-4 pt-16 sm:items-center sm:pt-0">
+          <div className="w-full max-w-md rounded-xl border border-fuchsia-400/50 bg-gradient-to-b from-[rgba(18,9,32,0.98)] to-[rgba(8,4,15,0.98)] p-5 shadow-[0_0_40px_rgba(215,23,255,0.2)]">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="font-sans text-lg uppercase tracking-[0.08em] text-fuchsia-200">Settings</h2>
+              <button
+                type="button"
+                onClick={() => setSettingsOpen(false)}
+                className="rounded border border-fuchsia-400/50 bg-black/30 px-2 py-1 text-xs text-violet-200 hover:text-fuchsia-200"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="rounded border border-white/10 bg-black/30 px-3 py-2">
+                <p className="text-violet-300">App version</p>
+                <p className="text-violet-100">{activeData.version}</p>
+              </div>
+
+              <div className="rounded border border-white/10 bg-black/30 px-3 py-2">
+                <p className="text-violet-300">Auth source</p>
+                <p className="text-violet-100">Slimy owner email/password</p>
+              </div>
+
+              <div className="rounded border border-white/10 bg-black/30 px-3 py-2">
+                <p className="text-violet-300">Signed in as</p>
+                <p className="text-violet-100">{session ? session.email : "Unknown"}</p>
+              </div>
+
+              <div className="rounded border border-white/10 bg-black/30 px-3 py-2">
+                <p className="text-violet-300">Role</p>
+                <p className="text-violet-100">{session ? session.role : "Unknown"}</p>
+              </div>
+
+              <div className="rounded border border-white/10 bg-black/30 px-3 py-2">
+                <p className="text-violet-300">Outer gate</p>
+                <p className="text-violet-100">Basic Auth still enabled</p>
+              </div>
+
+              <div className="rounded border border-white/10 bg-black/30 px-3 py-2">
+                <p className="text-violet-300">GitHub sync status</p>
+                <p className="text-violet-100">{githubStatusLabel(activeData.githubHealth.status)} — {activeData.githubHealth.syncedRepoCount} repos synced</p>
+              </div>
+
+              <button
+                type="button"
+                onClick={async () => {
+                  await fetch("/api/auth/logout", { method: "POST" });
+                  window.location.href = "/login";
+                }}
+                className="w-full rounded border border-rose-400/50 bg-rose-950/30 px-3 py-2 text-xs font-medium text-rose-200 hover:bg-rose-900/40"
+              >
+                Sign Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
