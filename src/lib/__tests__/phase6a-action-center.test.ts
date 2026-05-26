@@ -37,9 +37,9 @@ describe("phase6a action center", () => {
     expect(source).toContain("perLocationDetails");
   });
 
-  it("uses phase6a version and excludes nousearch-hermes-agent", () => {
+  it("uses phase6c version and excludes nousearch-hermes-agent", () => {
     const adapter = readFileSync(join(repoRoot, "src/lib/dashboard-adapter.ts"), "utf8");
-    expect(adapter).toContain("0.6.0-phase6a-action-center");
+    expect(adapter).toContain("0.6.1-phase6c-cleanup-planner");
     const latestSummaryPath = join(repoRoot, "data/github/remotes/latest-summary.json");
     const json = readFileSync(latestSummaryPath, "utf8").toLowerCase();
     expect(json).not.toContain("nousearch-hermes-agent");
@@ -51,5 +51,12 @@ describe("phase6a action center", () => {
     expect(dashboard).toContain("Activity Day Inspector");
     expect(dashboard).toContain("No detailed activity available for this day.");
     expect(dashboard).toContain("onClick={() => setSelectedHeatmapDay(weekIndex * 7 + dayIndex)}");
+  });
+
+  it("renders repo cleanup planner hooks", () => {
+    const dashboard = readFileSync(join(repoRoot, "src/components/dashboard.tsx"), "utf8");
+    expect(dashboard).toContain("Repo Cleanup Planner");
+    expect(dashboard).toContain("Copy Inspection Commands");
+    expect(dashboard).toContain("Ranked, read-only cleanup priorities");
   });
 });

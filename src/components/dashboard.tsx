@@ -22,6 +22,7 @@ import type { RepoHealth, RepoHealthBucket } from "@/lib/contracts";
 import { generateRepoPet, deriveRepoHealth } from "@/lib/repo-habitat";
 import { RepoHabitatGrid } from "@/components/repo-habitat";
 import { buildHeatmapInspectorCells } from "@/lib/heatmap-inspector";
+import { buildCleanupPlanner } from "@/lib/cleanup-planner";
 
 const PIE_COLORS = ["#d717ff", "#97ff4c", "#53b4ff", "#ff74ae", "#ffc44d", "#a98dff"];
 
@@ -132,6 +133,7 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [expandedRepos, setExpandedRepos] = useState<Set<string>>(new Set());
   const [selectedHeatmapDay, setSelectedHeatmapDay] = useState(0);
+  const [actionCenterRepoId, setActionCenterRepoId] = useState<string | null>(null);
 
   const activeData = (mode === "local_snapshot" || mode === "aggregated") && localData ? localData : demoData;
 
@@ -251,6 +253,14 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
   const githubNoRelease = githubRepos.filter((repo) => repo.latestRelease.status === "none").length;
   const heatmapCells = useMemo(() => buildHeatmapInspectorCells(activeData.heatmap, activeData.commitTrend, activeData.timeline), [activeData.heatmap, activeData.commitTrend, activeData.timeline]);
   const selectedHeatmapCell = heatmapCells[selectedHeatmapDay] ?? null;
+  const cleanupPlanner = useMemo(() => buildCleanupPlanner(activeData.canonicalRepos), [activeData.canonicalRepos]);
+  const plannerTop = cleanupPlanner.slice(0, 5);
+  const plannerCounts = {
+    critical: cleanupPlanner.filter((item) => item.priorityBand === "critical").length,
+    high: cleanupPlanner.filter((item) => item.priorityBand === "high").length,
+    medium: cleanupPlanner.filter((item) => item.priorityBand === "medium").length,
+  };
+  const plannerByRepo = new Map(cleanupPlanner.map((entry) => [entry.repoId, entry]));
 
   return (
     <main className="mx-auto w-full max-w-[1500px] px-3 pb-6 sm:px-4 md:px-8" style={{ paddingTop: "max(1rem, env(safe-area-inset-top))", paddingBottom: "max(5.5rem, calc(env(safe-area-inset-bottom) + 2rem))" }}>
@@ -442,7 +452,69 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
         ))}
       </section>
 
-      <RepoHabitatGrid rows={habitatRows} expandedRepos={expandedRepos} onToggleExpand={toggleRepoExpand} />
+      <RepoHabitatGrid
+        rows={habitatRows}
+        expandedRepos={expandedRepos}
+        onToggleExpand={toggleRepoExpand}
+        actionCenterRepoId={actionCenterRepoId}
+        onActionCenterChange={setActionCenterRepoId}
+        cleanupPriorityMap={plannerByRepo}
+      />
+
+      <section className="neon-panel mb-6 rounded-xl p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="font-sans text-sm uppercase tracking-[0.18em] text-fuchsia-200">Repo Cleanup Planner</h3>
+            <p className="mt-1 text-xs text-violet-200/85">Ranked, read-only cleanup priorities. Commands are copy-only and never executed by this app.</p>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+            <Status label="Repos needing attention" value={`${cleanupPlanner.filter((item) => item.priorityScore > 0).length}`} />
+            <Status label="Critical" value={`${plannerCounts.critical}`} />
+            <Status label="High" value={`${plannerCounts.high}`} />
+            <Status label="Medium" value={`${plannerCounts.medium}`} />
+          </div>
+        </div>
+        <div className="mt-3 grid gap-3 lg:grid-cols-2">
+          {plannerTop.map((item) => (
+            <article key={item.repoId} className="rounded-xl border border-fuchsia-400/30 bg-black/30 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="font-sans text-sm uppercase tracking-[0.08em] text-white">{item.displayName}</p>
+                <span className={`rounded border px-2 py-1 text-[10px] uppercase tracking-[0.12em] ${item.priorityBand === "critical" ? "border-rose-300/60 bg-rose-400/10 text-rose-200" : item.priorityBand === "high" ? "border-amber-300/60 bg-amber-400/10 text-amber-200" : item.priorityBand === "medium" ? "border-cyan-300/60 bg-cyan-400/10 text-cyan-200" : "border-violet-300/60 bg-violet-400/10 text-violet-200"}`}>
+                  {item.priorityBand} · {item.priorityScore}
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-violet-200/80">Machines: {item.affectedMachines.join(", ").toUpperCase()}</p>
+              <p className="mt-1 text-xs text-violet-200/80">Locations: {item.affectedLocations.map((loc) => `${loc.machineId}:${loc.path}`).join("; ") || "none"}</p>
+              <ul className="mt-2 space-y-1 text-xs text-violet-100/90">
+                {item.reasons.slice(0, 3).map((reason, idx) => (
+                  <li key={`${item.repoId}:reason:${idx}`} className="rounded border border-white/10 bg-black/35 px-2 py-1">{reason}</li>
+                ))}
+              </ul>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {item.recommendedActions.slice(0, 3).map((action) => (
+                  <span key={`${item.repoId}:action:${action}`} className="rounded border border-cyan-300/35 bg-cyan-400/10 px-2 py-1 text-[10px] uppercase tracking-[0.1em] text-cyan-100">{action}</span>
+                ))}
+              </div>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <button type="button" className="rounded border border-fuchsia-300/45 bg-fuchsia-400/10 px-3 py-1 text-[10px] uppercase tracking-[0.12em] text-fuchsia-100" onClick={() => setActionCenterRepoId(item.repoId)}>
+                  Open Action Center
+                </button>
+                {item.safeCommandGroups[0] ? (
+                  <button
+                    type="button"
+                    className="rounded border border-cyan-300/45 bg-cyan-400/10 px-3 py-1 text-[10px] uppercase tracking-[0.12em] text-cyan-100"
+                    onClick={() => {
+                      void navigator.clipboard?.writeText(item.safeCommandGroups[0].commands.join("\n"));
+                    }}
+                  >
+                    Copy Inspection Commands
+                  </button>
+                ) : null}
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
 
       <section className="mb-6 grid gap-4 xl:grid-cols-2">
         <article className="neon-panel rounded-xl p-4">

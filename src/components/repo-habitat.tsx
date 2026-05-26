@@ -1,4 +1,5 @@
 import type { CanonicalRepoView, DashboardGithubRepoHealth } from "@/lib/dashboard-adapter";
+import type { CleanupPlannerEntry } from "@/lib/cleanup-planner";
 import type { RepoAttentionReason, RepoCareAction, RepoHealth, RepoPet } from "@/lib/contracts";
 import * as React from "react";
 
@@ -53,8 +54,26 @@ const careLabels: Record<RepoCareAction, string> = {
   schedule_maintenance: "Schedule a maintenance block",
 };
 
-export function RepoHabitatGrid({ rows, expandedRepos, onToggleExpand }: { rows: HabitatRow[]; expandedRepos: Set<string>; onToggleExpand: (repoId: string) => void }) {
-  const [actionCenterFor, setActionCenterFor] = React.useState<HabitatRow | null>(null);
+export function RepoHabitatGrid({
+  rows,
+  expandedRepos,
+  onToggleExpand,
+  actionCenterRepoId,
+  onActionCenterChange,
+  cleanupPriorityMap,
+}: {
+  rows: HabitatRow[];
+  expandedRepos: Set<string>;
+  onToggleExpand: (repoId: string) => void;
+  actionCenterRepoId?: string | null;
+  onActionCenterChange?: (repoId: string | null) => void;
+  cleanupPriorityMap?: Map<string, CleanupPlannerEntry>;
+}) {
+  const [localActionCenterRepoId, setLocalActionCenterRepoId] = React.useState<string | null>(null);
+  const selectedRepoId = actionCenterRepoId !== undefined ? actionCenterRepoId : localActionCenterRepoId;
+  const setSelectedRepoId = onActionCenterChange ?? setLocalActionCenterRepoId;
+  const actionCenterFor = selectedRepoId ? rows.find((row) => row.repoId === selectedRepoId) ?? null : null;
+
   return (
     <section className="neon-panel mb-6 rounded-xl p-3 sm:p-4">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2 sm:mb-4">
@@ -71,11 +90,11 @@ export function RepoHabitatGrid({ rows, expandedRepos, onToggleExpand }: { rows:
             row={row}
             expanded={expandedRepos.has(row.repoId)}
             onToggleExpand={() => onToggleExpand(row.repoId)}
-            onOpenActionCenter={() => setActionCenterFor(row)}
+            onOpenActionCenter={() => setSelectedRepoId(row.repoId)}
           />
         ))}
       </div>
-      {actionCenterFor ? <ActionCenterDrawer row={actionCenterFor} onClose={() => setActionCenterFor(null)} /> : null}
+      {actionCenterFor ? <ActionCenterDrawer row={actionCenterFor} planner={cleanupPriorityMap?.get(actionCenterFor.repoId) ?? null} onClose={() => setSelectedRepoId(null)} /> : null}
     </section>
   );
 }
@@ -229,7 +248,7 @@ export function CareActionList({ actions }: { actions: RepoCareAction[] }) {
   );
 }
 
-function ActionCenterDrawer({ row, onClose }: { row: HabitatRow; onClose: () => void }) {
+function ActionCenterDrawer({ row, planner, onClose }: { row: HabitatRow; planner: CleanupPlannerEntry | null; onClose: () => void }) {
   const model = buildActionCenterModel(row);
   return (
     <div className="fixed inset-0 z-50 bg-black/75 p-2 sm:p-6" role="dialog" aria-modal="true" aria-label="Repo Action Center">
@@ -247,6 +266,7 @@ function ActionCenterDrawer({ row, onClose }: { row: HabitatRow; onClose: () => 
           `Dirty state: ${model.dirtyStatus}`,
           `Unpushed commits: ${model.unpushedTotal}`,
           `Ahead/behind: ${model.aheadBehindSummary}`,
+          ...(planner ? [`Cleanup priority: ${planner.priorityBand} (${planner.priorityScore})`] : []),
         ]} />
         <Section title="Machines & Locations" lines={model.locations.map((loc) => `${loc.machineId.toUpperCase()} · ${loc.path} · ${loc.branch} · ${loc.dirty ? "dirty" : "clean"}`)} />
         <Section title="Local Git State" lines={[
@@ -261,6 +281,7 @@ function ActionCenterDrawer({ row, onClose }: { row: HabitatRow; onClose: () => 
           `Release: ${model.releaseStatus}`,
         ]} />
         <Section title="Care Plan" lines={[
+          ...(planner ? planner.reasons.map((reason) => `Priority reason: ${reason}`) : []),
           ...model.attentionReasons.map((r) => `Needs care: ${r}`),
           ...model.careActions.map((a) => `Action: ${a}`),
           "All actions are manual operator actions. This app does not execute commands.",

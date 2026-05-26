@@ -1,0 +1,158 @@
+import type { CanonicalRepoView } from "@/lib/dashboard-adapter";
+
+export type CleanupPriorityBand = "critical" | "high" | "medium" | "low" | "info";
+
+export type CleanupPlannerEntry = {
+  repoId: string;
+  displayName: string;
+  priorityScore: number;
+  priorityBand: CleanupPriorityBand;
+  reasons: string[];
+  recommendedActions: string[];
+  affectedMachines: string[];
+  affectedLocations: Array<{
+    machineId: string;
+    path: string;
+    branch: string;
+    dirty: boolean;
+    unpushedCommits: number;
+  }>;
+  safeCommandGroups: Array<{
+    machineId: string;
+    path: string;
+    runLabel: string;
+    commands: string[];
+  }>;
+};
+
+function machineRemotePrefix(machineId: string): string | null {
+  if (machineId === "nuc1") return "ssh nuc1";
+  if (machineId === "nuc2") return "ssh nuc2";
+  if (machineId === "laptop") return null;
+  return "SSH alias unknown";
+}
+
+function bandFromScore(score: number): CleanupPriorityBand {
+  if (score >= 80) return "critical";
+  if (score >= 55) return "high";
+  if (score >= 30) return "medium";
+  if (score >= 10) return "low";
+  return "info";
+}
+
+export function buildCleanupPlanner(canonicalRepos: CanonicalRepoView[]): CleanupPlannerEntry[] {
+  const entries = canonicalRepos.map((repo) => {
+    let priorityScore = 0;
+    const reasons: string[] = [];
+    const recommended = new Set<string>();
+
+    const dirtyLocations = repo.perLocationDetails.filter((loc) => loc.dirty);
+    const isDirty = repo.dirtyState === "dirty" || repo.dirtyState === "mixed";
+    const hasUnpushed = repo.unpushedTotal > 0;
+
+    if (isDirty && hasUnpushed) {
+      priorityScore += 50;
+      reasons.push("Dirty working tree with unpushed commits");
+      recommended.add("Review and commit or stash local changes");
+      recommended.add("Push local commits after review");
+    }
+    if (repo.unpushedTotal > 10) {
+      priorityScore += 35;
+      reasons.push(`Large unpushed backlog (${repo.unpushedTotal})`);
+      recommended.add("Push local commits after review");
+    } else if (hasUnpushed) {
+      priorityScore += 25;
+      reasons.push(`Unpushed commits present (${repo.unpushedTotal})`);
+      recommended.add("Push local commits after review");
+    }
+    if (dirtyLocations.length > 1) {
+      priorityScore += 25;
+      reasons.push("Dirty state spans multiple locations");
+      recommended.add("Review and commit or stash local changes");
+    }
+    if (repo.dirtyState === "mixed") {
+      priorityScore += 20;
+      reasons.push("Mixed state across machines");
+    }
+    if (repo.dirtyState === "dirty") {
+      priorityScore += 15;
+      reasons.push("Dirty working tree");
+      recommended.add("Review and commit or stash local changes");
+    }
+
+    const github = repo.github;
+    if ((github?.pullRequests.open ?? 0) > 0) {
+      priorityScore += 15;
+      reasons.push(`Open pull requests (${github?.pullRequests.open})`);
+      recommended.add("Triage PRs/issues");
+    }
+    if ((github?.issues.open ?? 0) > 0) {
+      priorityScore += 10;
+      reasons.push(`Open issues (${github?.issues.open})`);
+      recommended.add("Triage PRs/issues");
+    }
+    if (github?.ci.status === "none") {
+      priorityScore += 10;
+      reasons.push("No CI runs found");
+      recommended.add("Configure CI");
+    }
+    if (github?.latestRelease.status === "none") {
+      priorityScore += 10;
+      reasons.push("No release found");
+      recommended.add("Plan release");
+    }
+    if (repo.combinedCommits < 3) {
+      priorityScore += 5;
+      reasons.push("Maintenance momentum is low");
+      recommended.add("Schedule maintenance block");
+    }
+
+    if (reasons.length === 0) {
+      reasons.push("No immediate cleanup pressure detected");
+      recommended.add("Monitor repository health");
+    }
+
+    const safeCommandGroups = repo.perLocationDetails.map((loc) => {
+      const remote = machineRemotePrefix(loc.machineId);
+      const commands = [
+        ...(remote ? [remote] : []),
+        `cd ${loc.path}`,
+        "git status --branch --short",
+        "git diff --stat",
+        "git log --oneline -5",
+        "git branch --show-current",
+        "git remote -v",
+      ];
+      return {
+        machineId: loc.machineId,
+        path: loc.path,
+        runLabel: loc.machineId === "laptop" ? "Run on laptop" : "Run on machine",
+        commands,
+      };
+    });
+
+    return {
+      repoId: repo.repoId,
+      displayName: repo.displayName,
+      priorityScore,
+      priorityBand: bandFromScore(priorityScore),
+      reasons,
+      recommendedActions: Array.from(recommended),
+      affectedMachines: repo.machines,
+      affectedLocations: repo.perLocationDetails.map((loc) => ({
+        machineId: loc.machineId,
+        path: loc.path,
+        branch: loc.branch,
+        dirty: loc.dirty,
+        unpushedCommits: loc.unpushedCommits,
+      })),
+      safeCommandGroups,
+    };
+  });
+
+  return entries.sort((a, b) => {
+    if (b.priorityScore !== a.priorityScore) return b.priorityScore - a.priorityScore;
+    if (b.affectedLocations.length !== a.affectedLocations.length) return b.affectedLocations.length - a.affectedLocations.length;
+    return a.repoId.localeCompare(b.repoId);
+  });
+}
