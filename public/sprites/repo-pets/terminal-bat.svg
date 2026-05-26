@@ -1,4 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="crispEdges" role="img" aria-label="Terminal Bat pixel pet">
+  <!-- phase6d-creature-art: terminal-bat wings ears body fangs -->
   <g id="wing-shadow" fill="#0a0612">
     <rect x="2" y="22" width="10" height="22"/>
     <rect x="12" y="26" width="8" height="18"/>

@@ -34,6 +34,7 @@ describe("phase6d pixel pet sprites", () => {
     for (const [fileName, requiredParts] of creatureSpriteFiles) {
       const asset = readFileSync(join(repoRoot, "public/sprites/repo-pets", fileName), "utf8");
       expect(asset).toContain("shape-rendering=\"crispEdges\"");
+      expect(asset).toContain("phase6d-creature-art");
       expect(asset).toContain("<rect");
       expect(asset).not.toMatch(/<text\b/i);
       expect(asset).not.toMatch(/font-family|font-size/i);

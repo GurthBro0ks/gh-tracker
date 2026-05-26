@@ -1,4 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="crispEdges" role="img" aria-label="Data Frog pixel pet">
+  <!-- phase6d-creature-art: data-frog frog head body eyes legs feet -->
   <g id="shadow" fill="#06110c">
     <rect x="14" y="50" width="36" height="4"/>
     <rect x="18" y="54" width="28" height="2" opacity=".7"/>
