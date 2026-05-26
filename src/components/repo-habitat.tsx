@@ -1,6 +1,7 @@
 import type { CanonicalRepoView, DashboardGithubRepoHealth } from "@/lib/dashboard-adapter";
 import type { CleanupPlannerEntry } from "@/lib/cleanup-planner";
 import type { RepoAttentionReason, RepoCareAction, RepoHealth, RepoPet } from "@/lib/contracts";
+import { RepoPetSprite, type RepoPetSpriteStatus } from "@/components/repo-pet-sprite";
 import * as React from "react";
 
 type HabitatRow = {
@@ -102,6 +103,7 @@ export function RepoHabitatGrid({
 function RepoPetCard({ row, expanded, onToggleExpand, onOpenActionCenter }: { row: HabitatRow; expanded: boolean; onToggleExpand: () => void; onOpenActionCenter: () => void }) {
   const canonical = row.canonicalRepo;
   const hasDetails = canonical && canonical.perMachineDetails.length > 1;
+  const spriteStatus = getPetSpriteStatus(row);
 
   return (
     <article
@@ -141,7 +143,7 @@ function RepoPetCard({ row, expanded, onToggleExpand, onOpenActionCenter }: { ro
       <p className="mt-1 text-xs text-lime-200 sm:text-sm">{row.pet.petName}</p>
 
       <div className="mt-2 flex flex-col gap-2 sm:mt-3 sm:flex-row sm:items-center sm:gap-3">
-        <RepoPetSprite species={row.pet.species} state={row.pet.animationState} />
+        <RepoPetSprite species={row.pet.species} state={row.pet.animationState} status={spriteStatus} />
         <div className="grid min-w-0 flex-1 grid-cols-1 gap-1.5 text-[10px] text-violet-200 sm:grid-cols-2 sm:gap-2 sm:text-xs">
           <p className="rounded border border-white/10 px-1.5 py-0.5 break-words sm:px-2 sm:py-1">
             Dirty: {canonical ? (
@@ -216,6 +218,15 @@ function RepoPetCard({ row, expanded, onToggleExpand, onOpenActionCenter }: { ro
       )}
     </article>
   );
+}
+
+function getPetSpriteStatus(row: HabitatRow): RepoPetSpriteStatus {
+  const dirty = row.canonicalRepo ? row.canonicalRepo.dirtyState !== "clean" : row.health.local.dirty;
+  const unpushed = row.canonicalRepo?.unpushedTotal ?? row.health.sync.aheadCount;
+  if (unpushed > 0) return "alert";
+  if (dirty || row.health.bucket === "needs_care" || row.health.bucket === "stressed" || row.health.bucket === "sick") return "needs-care";
+  if (row.pet.mood === "focused") return "focused";
+  return "healthy";
 }
 
 export function RepoHealthBadge({ health }: { health: RepoHealth }) {
@@ -374,15 +385,4 @@ function machineRemotePrefix(machineId: string): string | null {
   if (machineId === "nuc2") return "ssh nuc2";
   if (machineId === "laptop") return null;
   return "SSH alias unknown";
-}
-
-export function RepoPetSprite({ species, state }: { species: string; state: string }) {
-  const glyph = species.includes("Snail") ? "@" : species.includes("Slime") ? "o" : species.includes("Moth") ? "^" : species.includes("Crab") ? "#" : species.includes("Frog") ? "8" : species.includes("Bat") ? "M" : species.includes("Turtle") ? "Q" : species.includes("Mantis") ? "A" : species.includes("Golem") ? "H" : "U";
-  return (
-    <div className={`sprite-wrap sprite-${state}`} aria-label={`${species} sprite`}>
-      <div className="pixel-grid" role="img">
-        <span>{glyph}</span>
-      </div>
-    </div>
-  );
 }

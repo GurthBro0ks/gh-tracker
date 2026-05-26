@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="crispEdges" role="img" aria-label="Paper Owl pixel pet">
+  <path fill="#12051f" d="M20 16h8v4h8v-4h8v8h4v24h-4v4H20v-4h-4V24h4z"/>
+  <path fill="#f3ecff" d="M20 24h8v-4h8v4h8v24H20z"/>
+  <path fill="#c8b8e4" d="M24 28h8v8h-8zm8 0h8v8h-8z"/>
+  <path fill="#53b4ff" d="M28 32h4v4h-4zm8 0h4v4h-4z"/>
+  <path fill="#ffc44d" d="M32 40h4v4h-4z"/>
+  <path fill="#d717ff" d="M20 16h8v4h-8zm16 0h8v4h-8z"/>
+  <path fill="#97ff4c" d="M24 48h4v4h-4zm12 0h4v4h-4z"/>
+</svg>

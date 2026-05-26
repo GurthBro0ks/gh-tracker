@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="crispEdges" role="img" aria-label="Pixel Crab pixel pet">
+  <path fill="#12051f" d="M20 28h24v16H20z"/>
+  <path fill="#ff5e94" d="M20 24h24v20H20z"/>
+  <path fill="#ffc44d" d="M24 20h4v8h-4zm12 0h4v8h-4z"/>
+  <path fill="#12051f" d="M24 32h4v4h-4zm12 0h4v4h-4z"/>
+  <path fill="#97ff4c" d="M28 40h8v4h-8z"/>
+  <path fill="#d717ff" d="M8 20h8v4h-4v8H8zm40 0h8v12h-4v-8h-4z"/>
+  <path fill="#53b4ff" d="M12 44h12v4h-8v4h-4zm28 0h12v8h-4v-4h-8z"/>
+</svg>

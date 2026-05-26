@@ -7,7 +7,7 @@ const repoRoot = process.cwd();
 describe("auth hardening static checks", () => {
   it("uses current app version in dashboard adapter", () => {
     const dashboardAdapter = readFileSync(join(repoRoot, "src/lib/dashboard-adapter.ts"), "utf8");
-    expect(dashboardAdapter).toContain('version: "0.6.1-phase6c-cleanup-planner"');
+    expect(dashboardAdapter).toContain('version: "0.6.2-phase6d-pixel-pets"');
   });
 
   it("keeps forgot/reset link pointed to Slimy auth flow", () => {

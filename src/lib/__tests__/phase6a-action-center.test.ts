@@ -37,9 +37,9 @@ describe("phase6a action center", () => {
     expect(source).toContain("perLocationDetails");
   });
 
-  it("uses phase6c version and excludes nousearch-hermes-agent", () => {
+  it("uses phase6d version and excludes nousearch-hermes-agent", () => {
     const adapter = readFileSync(join(repoRoot, "src/lib/dashboard-adapter.ts"), "utf8");
-    expect(adapter).toContain("0.6.1-phase6c-cleanup-planner");
+    expect(adapter).toContain("0.6.2-phase6d-pixel-pets");
     const latestSummaryPath = join(repoRoot, "data/github/remotes/latest-summary.json");
     const json = readFileSync(latestSummaryPath, "utf8").toLowerCase();
     expect(json).not.toContain("nousearch-hermes-agent");

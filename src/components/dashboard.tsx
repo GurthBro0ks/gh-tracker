@@ -17,10 +17,11 @@ import {
   YAxis,
 } from "recharts";
 import { useMemo, useState } from "react";
-import type { DashboardData, DashboardDataMode, DashboardGithubRepoHealth } from "@/lib/dashboard-adapter";
-import type { RepoHealth, RepoHealthBucket } from "@/lib/contracts";
+import type { CanonicalRepoView, DashboardData, DashboardDataMode, DashboardGithubRepoHealth } from "@/lib/dashboard-adapter";
+import type { RepoHealth, RepoHealthBucket, RepoPet } from "@/lib/contracts";
 import { generateRepoPet, deriveRepoHealth } from "@/lib/repo-habitat";
 import { RepoHabitatGrid } from "@/components/repo-habitat";
+import { RepoPetSprite, type RepoPetSpriteStatus } from "@/components/repo-pet-sprite";
 import { buildHeatmapInspectorCells } from "@/lib/heatmap-inspector";
 import { buildCleanupPlanner } from "@/lib/cleanup-planner";
 
@@ -79,6 +80,15 @@ function bucketFromScore(score: number): RepoHealthBucket {
   if (score >= 55) return "needs_care";
   if (score >= 35) return "stressed";
   return "sick";
+}
+
+function getPetSpriteStatus(row: { health: RepoHealth; pet: RepoPet; canonicalRepo?: CanonicalRepoView }): RepoPetSpriteStatus {
+  const dirty = row.canonicalRepo ? row.canonicalRepo.dirtyState !== "clean" : row.health.local.dirty;
+  const unpushed = row.canonicalRepo?.unpushedTotal ?? row.health.sync.aheadCount;
+  if (unpushed > 0) return "alert";
+  if (dirty || row.health.bucket === "needs_care" || row.health.bucket === "stressed" || row.health.bucket === "sick") return "needs-care";
+  if (row.pet.mood === "focused") return "focused";
+  return "healthy";
 }
 
 function mergeRemoteHealth(base: RepoHealth, github?: DashboardGithubRepoHealth | null): RepoHealth {
@@ -414,7 +424,7 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
             <div className="flex snap-x gap-2 overflow-x-auto pb-1 pr-6 [scroll-padding-inline:0.75rem]">
             {habitatRows.slice(0, 4).map((row) => (
               <div key={`${row.repoId}-${row.machineId}`} className="flex min-w-[78%] max-w-[78%] snap-start flex-shrink-0 items-center gap-2 rounded-lg border border-fuchsia-400/30 bg-black/35 p-2">
-                <RepoPetSpriteCompact species={row.pet.species} state={row.pet.animationState} />
+                <RepoPetSprite species={row.pet.species} state={row.pet.animationState} status={getPetSpriteStatus(row)} mode="compact" />
                 <div className="min-w-0">
                   <p className="truncate text-xs font-sans uppercase tracking-[0.06em] text-white">{row.repoId}</p>
                   <p className="text-[10px] text-violet-300">{row.pet.species} · {row.health.score} pts</p>
@@ -865,17 +875,6 @@ function Metric({ label, value, danger = false, compact = false }: { label: stri
       <p className="text-xs uppercase tracking-[0.18em] text-violet-200">{label}</p>
       <p className={`mt-2 font-sans text-2xl uppercase ${danger ? "text-rose-300" : "metric-glow text-lime-300"}`}>{value}</p>
     </article>
-  );
-}
-
-function RepoPetSpriteCompact({ species, state }: { species: string; state: string }) {
-  const glyph = species.includes("Snail") ? "@" : species.includes("Slime") ? "o" : species.includes("Moth") ? "^" : species.includes("Crab") ? "#" : species.includes("Frog") ? "8" : species.includes("Bat") ? "M" : species.includes("Turtle") ? "Q" : species.includes("Mantis") ? "A" : species.includes("Golem") ? "H" : "U";
-  return (
-    <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-md border border-fuchsia-400/40 bg-gradient-to-b from-[rgba(39,20,63,0.9)] to-[rgba(10,6,19,0.95)] sprite-${state}`} aria-label={`${species} sprite`}>
-      <div className="flex h-7 w-7 items-center justify-center rounded border border-white/10 bg-[length:8px_8px] font-sans text-lg text-[#99ff60]" style={{ backgroundImage: "linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px)" }}>
-        <span>{glyph}</span>
-      </div>
-    </div>
   );
 }
 

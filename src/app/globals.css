@@ -70,7 +70,7 @@ body::before {
   background: rgba(151, 255, 76, 0.08);
 }
 
-.sprite-wrap {
+.repo-pet-sprite {
   width: 86px;
   height: 86px;
   border: 1px solid rgba(151, 255, 76, 0.5);
@@ -78,23 +78,74 @@ body::before {
   background: linear-gradient(180deg, rgba(39, 20, 63, 0.9), rgba(10, 6, 19, 0.95));
   display: grid;
   place-items: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  position: relative;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
-.pixel-grid {
-  width: 56px;
-  height: 56px;
-  display: grid;
-  place-items: center;
+.repo-pet-sprite::before {
+  content: "";
+  position: absolute;
+  inset: 8px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background-image:
     linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
   background-size: 8px 8px;
-  font-family: var(--font-sans), monospace;
-  font-size: 32px;
-  color: #99ff60;
-  text-shadow: 0 0 14px rgba(153, 255, 96, 0.45);
+}
+
+.repo-pet-sprite__image {
+  width: 74px;
+  height: 74px;
+  image-rendering: pixelated;
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(0 0 10px rgba(151, 255, 76, 0.28));
+}
+
+.repo-pet-sprite--compact {
+  width: 42px;
+  height: 42px;
+  border-radius: 7px;
+}
+
+.repo-pet-sprite--compact::before {
+  inset: 5px;
+  background-size: 6px 6px;
+}
+
+.repo-pet-sprite--compact .repo-pet-sprite__image {
+  width: 36px;
+  height: 36px;
+}
+
+.repo-pet-sprite--healthy {
+  border-color: rgba(151, 255, 76, 0.58);
+  box-shadow: 0 0 18px rgba(151, 255, 76, 0.18), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.repo-pet-sprite--focused {
+  border-color: rgba(83, 180, 255, 0.65);
+  box-shadow: 0 0 18px rgba(83, 180, 255, 0.2), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.repo-pet-sprite--needs-care,
+.repo-pet-sprite--dirty {
+  border-color: rgba(255, 94, 148, 0.7);
+  box-shadow: 0 0 18px rgba(255, 94, 148, 0.22), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.repo-pet-sprite--alert,
+.repo-pet-sprite--unpushed {
+  border-color: rgba(255, 196, 77, 0.72);
+  box-shadow: 0 0 18px rgba(255, 196, 77, 0.24), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.repo-pet-sprite--unknown {
+  border-color: rgba(169, 141, 255, 0.38);
+  filter: saturate(0.72);
+  opacity: 0.88;
 }
 
 .sprite-idle {
@@ -190,4 +241,17 @@ body::before {
 @keyframes sprite-evolve {
   0%, 100% { filter: hue-rotate(0deg); transform: scale(1); }
   50% { filter: hue-rotate(45deg); transform: scale(1.08); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sprite-idle,
+  .sprite-wobble,
+  .sprite-hatch,
+  .sprite-happy,
+  .sprite-stressed,
+  .sprite-sleep,
+  .sprite-sick,
+  .sprite-evolve {
+    animation: none;
+  }
 }

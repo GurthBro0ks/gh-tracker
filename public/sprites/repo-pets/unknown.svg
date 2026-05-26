@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="crispEdges" role="img" aria-label="Unknown repo pet pixel sprite">
+  <path fill="#12051f" d="M20 16h24v4h4v24h-4v4H20v-4h-4V20h4z"/>
+  <path fill="#2b0f45" d="M20 20h24v24H20z"/>
+  <path fill="#a98dff" d="M28 24h12v4h4v8h-4v4h-8v-4h4v-4h4v-4H28z"/>
+  <path fill="#53b4ff" d="M28 44h8v4h-8z"/>
+  <path fill="#97ff4c" d="M16 52h32v4H16z" opacity=".55"/>
+</svg>

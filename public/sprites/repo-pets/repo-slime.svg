@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="crispEdges" role="img" aria-label="Repo Slime pixel pet">
+  <path fill="#07200c" d="M20 24h4v-4h16v4h4v4h4v16h-4v4H20v-4h-4V28h4z"/>
+  <path fill="#97ff4c" d="M20 28h4v-4h16v4h4v16h-4v4H24v-4h-4z"/>
+  <path fill="#c9ff8a" d="M24 28h8v4h-8zm-4 8h4v4h-4z"/>
+  <path fill="#12051f" d="M28 36h4v4h-4zm12 0h4v4h-4z"/>
+  <path fill="#d717ff" d="M28 44h12v4H28z"/>
+  <path fill="#53b4ff" d="M16 52h32v4H16z" opacity=".75"/>
+</svg>
