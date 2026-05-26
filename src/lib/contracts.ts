@@ -182,7 +182,7 @@ export type PetSpecies =
   | "Arcade Golem"
   | "Paper Owl";
 
-export type PetStage = "unknown" | "egg" | "hatchling" | "juvenile" | "mature" | "guardian" | "legendary";
+export type PetStage = "unknown" | "egg" | "hatchling" | "juvenile" | "adult";
 
 export type PetMood = "curious" | "happy" | "focused" | "sleepy" | "stressed" | "sick" | "legendary";
 

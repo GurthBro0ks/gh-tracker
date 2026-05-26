@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="crispEdges" role="img" aria-label="Unknown mystery hatchling stage">
+  <!-- phase6d-creature-art phase6d1-pet-evolution: unknown hatchling hood blob eyes feet -->
+  <g id="antennae" fill="#53b4ff"><path d="M28 17h-5v-5h-8V9h13z"/><path d="M36 17h5v-5h8V9H36z"/></g>
+  <g id="hood" fill="#2b0f45"><path d="M22 19h20v7h6v23h-5v7H21v-7h-5V26h6z"/></g>
+  <g id="hood-edge" fill="#a98dff"><rect x="21" y="26" width="22" height="4"/><rect x="18" y="31" width="5" height="13"/><rect x="41" y="31" width="5" height="13"/></g>
+  <g id="creature-face" fill="#12051f"><path d="M24 32h16v13h4v6H20v-6h4z"/></g>
+  <g id="eyes" fill="#97ff4c"><rect x="26" y="36" width="4" height="4"/><rect x="34" y="36" width="4" height="4"/></g>
+  <g id="tiny-feet" fill="#d717ff"><rect x="20" y="54" width="9" height="4"/><rect x="35" y="54" width="9" height="4"/></g>
+</svg>

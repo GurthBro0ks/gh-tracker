@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="crispEdges" role="img" aria-label="Pixel Crab egg stage">
+  <!-- phase6d-creature-art phase6d1-pet-evolution: pixel-crab egg claws eye hints -->
+  <g id="shadow" fill="#06110c"><ellipse cx="32" cy="53" rx="19" ry="5"/></g>
+  <g id="crab-egg" fill="#ff5e94"><path d="M22 15h20v7h5v22h-5v8H22v-8h-5V22h5z"/></g>
+  <g id="shell-shadow" fill="#d73872"><rect x="18" y="38" width="28" height="7"/></g>
+  <g id="tiny-claws" fill="#d717ff"><rect x="10" y="34" width="8" height="6"/><rect x="46" y="34" width="8" height="6"/></g>
+  <g id="eye-hints" fill="#12051f"><rect x="25" y="28" width="4" height="4"/><rect x="35" y="28" width="4" height="4"/></g>
+</svg>

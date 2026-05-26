@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="crispEdges" role="img" aria-label="Data Frog hatchling stage">
+  <!-- phase6d-creature-art phase6d1-pet-evolution: data-frog hatchling baby frog eyes tiny legs -->
+  <g id="shadow" fill="#06110c"><ellipse cx="32" cy="53" rx="23" ry="5"/></g>
+  <g id="tiny-legs" fill="#39d86c"><rect x="12" y="43" width="13" height="6"/><rect x="39" y="43" width="13" height="6"/><rect x="9" y="49" width="17" height="4"/><rect x="38" y="49" width="17" height="4"/></g>
+  <g id="body" fill="#97ff4c"><path d="M18 26h28v8h6v14H12V34h6z"/></g>
+  <g id="eye-bumps" fill="#97ff4c"><rect x="15" y="18" width="13" height="12"/><rect x="36" y="18" width="13" height="12"/></g>
+  <g id="eyes" fill="#12051f"><rect x="19" y="22" width="5" height="5"/><rect x="40" y="22" width="5" height="5"/></g>
+  <g id="belly" fill="#53b4ff"><rect x="25" y="38" width="14" height="6"/></g>
+</svg>

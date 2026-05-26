@@ -16,6 +16,9 @@ type HabitatRow = {
 type ActionCenterModel = {
   canonicalRepo: string;
   displayName: string;
+  petSpecies: string;
+  petStage: string;
+  evolutionSummary: string;
   machines: string[];
   locations: Array<{ machineId: string; path: string; branch: string; dirty: boolean; unpushedCommits: number; headSha: string }>;
   dirtyStatus: "clean" | "dirty" | "mixed" | "unknown";
@@ -143,7 +146,7 @@ function RepoPetCard({ row, expanded, onToggleExpand, onOpenActionCenter }: { ro
       <p className="mt-1 text-xs text-lime-200 sm:text-sm">{row.pet.petName}</p>
 
       <div className="mt-2 flex flex-col gap-2 sm:mt-3 sm:flex-row sm:items-center sm:gap-3">
-        <RepoPetSprite species={row.pet.species} state={row.pet.animationState} status={spriteStatus} />
+        <RepoPetSprite species={row.pet.species} stage={row.pet.stage} state={row.pet.animationState} status={spriteStatus} />
         <div className="grid min-w-0 flex-1 grid-cols-1 gap-1.5 text-[10px] text-violet-200 sm:grid-cols-2 sm:gap-2 sm:text-xs">
           <p className="rounded border border-white/10 px-1.5 py-0.5 break-words sm:px-2 sm:py-1">
             Dirty: {canonical ? (
@@ -157,6 +160,9 @@ function RepoPetCard({ row, expanded, onToggleExpand, onOpenActionCenter }: { ro
           <p className="rounded border border-white/10 px-1.5 py-0.5 break-words sm:px-2 sm:py-1">Trust: {row.pet.stats.trust}</p>
         </div>
       </div>
+      <p className="mt-2 rounded border border-lime-300/25 bg-lime-400/10 px-2 py-1 text-[10px] text-lime-100 sm:text-xs">
+        Evolution: {row.pet.stage} from {canonical?.combinedCommits ?? row.health.activity.commitsLast30Days} commits and {row.health.activity.commitsLast7Days} recent activity signals
+      </p>
 
       <div className="mt-2 grid gap-2 sm:mt-3 md:grid-cols-2">
         <div>
@@ -274,6 +280,8 @@ function ActionCenterDrawer({ row, planner, onClose }: { row: HabitatRow; planne
 
         <Section title="Overview" lines={[
           `Repo: ${model.canonicalRepo}`,
+          `Pet: ${model.petSpecies} · ${model.petStage}`,
+          model.evolutionSummary,
           `Dirty state: ${model.dirtyStatus}`,
           `Unpushed commits: ${model.unpushedTotal}`,
           `Ahead/behind: ${model.aheadBehindSummary}`,
@@ -362,6 +370,9 @@ function buildActionCenterModel(row: HabitatRow): ActionCenterModel {
   return {
     canonicalRepo: row.repoId,
     displayName: canonical?.displayName ?? row.repoId,
+    petSpecies: row.pet.species,
+    petStage: row.pet.stage,
+    evolutionSummary: `Evolution: ${row.pet.stage} from ${canonical?.combinedCommits ?? row.health.activity.commitsLast30Days} commits and active history`,
     machines: canonical?.machines ?? [row.machineId],
     locations: locations.map((loc) => ({ machineId: loc.machineId, path: loc.path, branch: loc.branch, dirty: loc.dirty, unpushedCommits: loc.unpushedCommits, headSha: loc.headSha })),
     dirtyStatus: canonical?.dirtyState ?? "unknown",

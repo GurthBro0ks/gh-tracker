@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="crispEdges" role="img" aria-label="Repo Slime goo pod stage">
+  <!-- phase6d-creature-art phase6d1-pet-evolution: repo-slime egg goo pod eyes drip -->
+  <g id="shadow" fill="#06110c"><ellipse cx="32" cy="53" rx="19" ry="5"/></g>
+  <g id="goo-pod" fill="#97ff4c"><path d="M24 14h16v6h6v22h-5v8H23v-8h-5V20h6z"/></g>
+  <g id="pod-depth" fill="#39d86c"><rect x="19" y="37" width="26" height="7"/><rect x="27" y="44" width="7" height="8"/></g>
+  <g id="tiny-eyes" fill="#12051f"><rect x="25" y="30" width="4" height="4"/><rect x="35" y="30" width="4" height="4"/></g>
+  <g id="shine" fill="#c9ff8a"><rect x="25" y="22" width="10" height="5"/></g>
+</svg>

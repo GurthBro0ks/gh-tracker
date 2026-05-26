@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="crispEdges" role="img" aria-label="Data Frog juvenile stage">
+  <!-- phase6d-creature-art phase6d1-pet-evolution: data-frog juvenile frog legs eyes body -->
+  <g id="shadow" fill="#06110c"><ellipse cx="32" cy="54" rx="26" ry="5"/></g>
+  <g id="hind-legs" fill="#1f9f51"><path d="M11 39h14v8H9v6H3v-9h8z"/><path d="M39 39h14v5h8v9h-6v-6H39z"/></g>
+  <g id="body" fill="#39d86c"><path d="M14 30h36v16h-5v7H19v-7h-5z"/></g>
+  <g id="head" fill="#97ff4c"><rect x="13" y="20" width="38" height="16"/><rect x="20" y="15" width="24" height="8"/></g>
+  <g id="eye-bumps" fill="#97ff4c"><rect x="13" y="12" width="14" height="12"/><rect x="37" y="12" width="14" height="12"/></g>
+  <g id="eyes" fill="#12051f"><rect x="17" y="16" width="6" height="6"/><rect x="41" y="16" width="6" height="6"/></g>
+  <g id="data-belly" fill="#53b4ff"><rect x="24" y="37" width="16" height="8"/></g>
+</svg>

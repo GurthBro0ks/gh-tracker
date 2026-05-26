@@ -135,13 +135,39 @@ export function deriveRepoHealth(location: RepoSignal): RepoHealth {
   };
 }
 
-function stageFromSignals(location: RepoSignal, healthScore: number): PetStage {
-  if (healthScore >= 95 && location.commitsLast30Days > 20) return "legendary";
-  if (location.commitsLast30Days > 15) return "guardian";
-  if (location.commitsLast30Days > 8) return "mature";
-  if (location.commitsLast30Days > 3) return "juvenile";
-  if (location.commitsLast30Days > 0) return "hatchling";
+export type PetEvolutionStage = Exclude<PetStage, "unknown">;
+
+export type PetEvolutionInput = {
+  commitsTotal: number;
+  recentActivity: number;
+  healthScore: number;
+  githubSynced: boolean;
+};
+
+export function calculatePetMaturityScore(input: PetEvolutionInput) {
+  const commitsTotal = Math.max(0, Math.floor(input.commitsTotal));
+  const recentActivity = Math.max(0, Math.floor(input.recentActivity));
+  const activeRepoBonus = commitsTotal > 0 || recentActivity > 0;
+  const healthBonus = activeRepoBonus ? Math.floor(Math.max(0, input.healthScore) / 25) : 0;
+  const githubBonus = activeRepoBonus && input.githubSynced ? 2 : 0;
+  return commitsTotal + recentActivity * 2 + healthBonus + githubBonus;
+}
+
+export function petStageFromMaturityScore(score: number): PetEvolutionStage {
+  if (score >= 61) return "adult";
+  if (score >= 16) return "juvenile";
+  if (score >= 3) return "hatchling";
   return "egg";
+}
+
+function stageFromSignals(location: RepoSignal, health: RepoHealth): PetEvolutionStage {
+  const maturityScore = calculatePetMaturityScore({
+    commitsTotal: location.commitsLast30Days,
+    recentActivity: location.commitsToday + location.commitsLast7Days,
+    healthScore: health.score,
+    githubSynced: health.sync.githubSyncConfigured,
+  });
+  return petStageFromMaturityScore(maturityScore);
 }
 
 function moodFromHealth(health: RepoHealth): PetMood {
@@ -181,7 +207,7 @@ export function generateRepoPet(seed: RepoSeedInput, location: RepoSignal, healt
   const seedHash = hashStable(stableSeed);
   const languageBias = seed.primaryLanguage ? hashStable(seed.primaryLanguage) : 0;
   const species = SPECIES[(seedHash + languageBias) % SPECIES.length];
-  const stage = stageFromSignals(location, health.score);
+  const stage = stageFromSignals(location, health);
   const mood = moodFromHealth(health);
   const animationState = animationFromMood(mood, stage);
 
@@ -207,7 +233,7 @@ export function generateRepoPet(seed: RepoSeedInput, location: RepoSignal, healt
     },
     evolution: {
       currentStage: stage,
-      nextStage: stage === "legendary" ? null : stage === "guardian" ? "legendary" : stage === "mature" ? "guardian" : stage === "juvenile" ? "mature" : stage === "hatchling" ? "juvenile" : "hatchling",
+      nextStage: stage === "adult" ? null : stage === "juvenile" ? "adult" : stage === "hatchling" ? "juvenile" : "hatchling",
       progressPct: clamp((maturity + trust) / 2),
     },
     careActions: petCareFromRepoActions(health.careActions),

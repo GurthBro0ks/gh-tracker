@@ -424,10 +424,10 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
             <div className="flex snap-x gap-2 overflow-x-auto pb-1 pr-6 [scroll-padding-inline:0.75rem]">
             {habitatRows.slice(0, 4).map((row) => (
               <div key={`${row.repoId}-${row.machineId}`} className="flex min-w-[78%] max-w-[78%] snap-start flex-shrink-0 items-center gap-2 rounded-lg border border-fuchsia-400/30 bg-black/35 p-2">
-                <RepoPetSprite species={row.pet.species} state={row.pet.animationState} status={getPetSpriteStatus(row)} mode="compact" />
+                <RepoPetSprite species={row.pet.species} stage={row.pet.stage} state={row.pet.animationState} status={getPetSpriteStatus(row)} mode="compact" />
                 <div className="min-w-0">
                   <p className="truncate text-xs font-sans uppercase tracking-[0.06em] text-white">{row.repoId}</p>
-                  <p className="text-[10px] text-violet-300">{row.pet.species} · {row.health.score} pts</p>
+                  <p className="text-[10px] text-violet-300">{row.pet.species} · {row.pet.stage} · {row.health.score} pts</p>
                 </div>
               </div>
             ))}

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="crispEdges" role="img" aria-label="Unknown mystery egg stage">
+  <!-- phase6d-creature-art phase6d1-pet-evolution: unknown egg mystery pod glowing eyes antennae -->
+  <g id="shadow" fill="#090511"><ellipse cx="32" cy="53" rx="18" ry="5"/></g>
+  <g id="mystery-pod" fill="#2b0f45"><path d="M23 15h18v6h6v24h-6v8H23v-8h-6V21h6z"/></g>
+  <g id="pod-edge" fill="#a98dff"><rect x="21" y="24" width="22" height="5"/><rect x="20" y="31" width="5" height="13"/><rect x="39" y="31" width="5" height="13"/></g>
+  <g id="antennae" fill="#53b4ff"><path d="M28 18h-6v-5h-7V9h13z"/><path d="M36 18h6v-5h7V9H36z"/></g>
+  <g id="eyes" fill="#97ff4c"><rect x="26" y="33" width="4" height="4"/><rect x="34" y="33" width="4" height="4"/></g>
+</svg>

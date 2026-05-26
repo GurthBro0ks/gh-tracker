@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="crispEdges" role="img" aria-label="Terminal Bat cocoon stage">
+  <!-- phase6d-creature-art phase6d1-pet-evolution: terminal-bat egg cocoon tiny ears wings -->
+  <g id="shadow" fill="#07030d"><ellipse cx="32" cy="53" rx="18" ry="5"/></g>
+  <g id="cocoon" fill="#2b0f45"><path d="M22 15h20v7h5v23h-5v8H22v-8h-5V22h5z"/></g>
+  <g id="ear-hints" fill="#ff74ae"><polygon points="23,18 28,8 31,21"/><polygon points="41,18 36,8 33,21"/></g>
+  <g id="wing-hints" fill="#d717ff"><rect x="14" y="34" width="8" height="7"/><rect x="42" y="34" width="8" height="7"/></g>
+  <g id="eyes" fill="#53b4ff"><rect x="26" y="29" width="4" height="4"/><rect x="34" y="29" width="4" height="4"/></g>
+</svg>

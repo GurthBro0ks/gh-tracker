@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="crispEdges" role="img" aria-label="Market Mantis hatchling stage">
+  <!-- phase6d-creature-art phase6d1-pet-evolution: market-mantis hatchling tiny arms antennae -->
+  <g id="legs" fill="#1d7f38"><rect x="17" y="45" width="10" height="4"/><rect x="37" y="45" width="10" height="4"/><rect x="12" y="49" width="12" height="4"/><rect x="40" y="49" width="12" height="4"/></g>
+  <g id="body" fill="#97ff4c"><rect x="28" y="25" width="8" height="26"/><rect x="24" y="35" width="16" height="11"/></g>
+  <g id="head" fill="#39d86c"><path d="M21 18h22v9H21z"/><rect x="17" y="23" width="30" height="7"/></g>
+  <g id="eyes" fill="#53b4ff"><rect x="18" y="23" width="6" height="6"/><rect x="40" y="23" width="6" height="6"/></g>
+  <g id="antennae" fill="#ffc44d"><path d="M26 18h-7v-4h-5v-3h12z"/><path d="M38 18h7v-4h5v-3H38z"/></g>
+  <g id="raptor-arms" fill="#d717ff"><rect x="11" y="33" width="15" height="4"/><rect x="8" y="37" width="5" height="12"/><rect x="38" y="33" width="15" height="4"/><rect x="51" y="37" width="5" height="12"/></g>
+</svg>

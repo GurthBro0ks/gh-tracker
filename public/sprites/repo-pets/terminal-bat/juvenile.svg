@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="crispEdges" role="img" aria-label="Terminal Bat juvenile stage">
+  <!-- phase6d-creature-art phase6d1-pet-evolution: terminal-bat juvenile wings ears fangs -->
+  <g id="wings" fill="#2b0f45"><path d="M4 23h12v6h7v7h7v16h-8v-6H12v-7H4z"/><path d="M60 23H48v6h-7v7h-7v16h8v-6h10v-7h8z"/></g>
+  <g id="ears" fill="#ff74ae"><polygon points="23,18 29,6 31,24"/><polygon points="41,18 35,6 33,24"/></g>
+  <g id="body" fill="#12051f"><path d="M23 22h18v28h-5v8h-8v-8h-5z"/><rect x="18" y="34" width="28" height="14"/></g>
+  <g id="eyes" fill="#53b4ff"><rect x="25" y="29" width="5" height="5"/><rect x="34" y="29" width="5" height="5"/></g>
+  <g id="fangs" fill="#f3ecff"><polygon points="28,40 32,40 30,47"/><polygon points="32,40 36,40 34,47"/></g>
+</svg>

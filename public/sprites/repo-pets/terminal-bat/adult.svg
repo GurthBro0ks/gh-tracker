@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" shape-rendering="crispEdges" role="img" aria-label="Terminal Bat adult stage">
+  <!-- phase6d-creature-art phase6d1-pet-evolution: terminal-bat adult wings ears body fangs -->
+  <g id="wings" fill="#2b0f45"><path d="M6 30h16v8h8v8h8v20H28v-8H16v-8H6z"/><path d="M90 30H74v8h-8v8h-8v20h10v-8h12v-8h10z"/><polygon points="18,58 30,58 22,72"/><polygon points="78,58 66,58 74,72"/></g>
+  <g id="wing-neon" fill="#d717ff"><rect x="12" y="34" width="14" height="4"/><rect x="70" y="34" width="14" height="4"/></g>
+  <g id="ears" fill="#ff74ae"><polygon points="34,18 42,6 44,26"/><polygon points="62,18 54,6 52,26"/><rect x="37" y="16" width="6" height="14"/><rect x="53" y="16" width="6" height="14"/></g>
+  <g id="body" fill="#12051f"><path d="M34 27h28v36h-6v12H40V63h-6z"/><rect x="28" y="40" width="40" height="22"/></g>
+  <g id="terminal-face" fill="#2b0f45"><rect x="34" y="31" width="28" height="20"/></g>
+  <g id="eyes" fill="#53b4ff"><rect x="38" y="36" width="8" height="8"/><rect x="50" y="36" width="8" height="8"/></g>
+  <g id="fangs" fill="#f3ecff"><polygon points="42,51 47,51 45,60"/><polygon points="49,51 54,51 51,60"/></g>
+</svg>

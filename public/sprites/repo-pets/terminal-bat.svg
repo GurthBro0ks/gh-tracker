@@ -1,51 +1,44 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="crispEdges" role="img" aria-label="Terminal Bat pixel pet">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" shape-rendering="crispEdges" role="img" aria-label="Terminal Bat pixel pet">
   <!-- phase6d-creature-art: terminal-bat wings ears body fangs -->
-  <g id="wing-shadow" fill="#0a0612">
-    <rect x="2" y="22" width="10" height="22"/>
-    <rect x="12" y="26" width="8" height="18"/>
-    <rect x="44" y="26" width="8" height="18"/>
-    <rect x="52" y="22" width="10" height="22"/>
+  <g id="wing-shadow" fill="#07030d">
+    <polygon points="4,32 24,24 42,44 42,68 30,62 20,76 14,58 4,62"/>
+    <polygon points="92,32 72,24 54,44 54,68 66,62 76,76 82,58 92,62"/>
   </g>
   <g id="wings" fill="#2b0f45">
-    <rect x="4" y="20" width="10" height="8"/>
-    <rect x="8" y="28" width="10" height="8"/>
-    <rect x="12" y="36" width="10" height="8"/>
-    <rect x="18" y="30" width="8" height="10"/>
-    <rect x="50" y="20" width="10" height="8"/>
-    <rect x="46" y="28" width="10" height="8"/>
-    <rect x="42" y="36" width="10" height="8"/>
-    <rect x="38" y="30" width="8" height="10"/>
+    <path d="M6 30h16v8h8v8h8v20H28v-8H16v-8H6z"/>
+    <path d="M90 30H74v8h-8v8h-8v20h10v-8h12v-8h10z"/>
+    <polygon points="18,58 30,58 22,72"/>
+    <polygon points="78,58 66,58 74,72"/>
   </g>
   <g id="wing-neon" fill="#d717ff">
-    <rect x="6" y="22" width="6" height="2"/>
-    <rect x="10" y="30" width="6" height="2"/>
-    <rect x="48" y="30" width="6" height="2"/>
-    <rect x="52" y="22" width="6" height="2"/>
-  </g>
-  <g id="body" fill="#12051f">
-    <rect x="24" y="20" width="16" height="24"/>
-    <rect x="20" y="28" width="24" height="14"/>
-    <rect x="26" y="44" width="12" height="6"/>
+    <rect x="12" y="34" width="14" height="4"/>
+    <rect x="20" y="46" width="14" height="4"/>
+    <rect x="62" y="46" width="14" height="4"/>
+    <rect x="70" y="34" width="14" height="4"/>
   </g>
   <g id="ears" fill="#ff74ae">
-    <rect x="22" y="12" width="6" height="12"/>
-    <rect x="36" y="12" width="6" height="12"/>
-    <rect x="24" y="10" width="2" height="2"/>
-    <rect x="38" y="10" width="2" height="2"/>
+    <polygon points="34,18 42,6 44,26"/>
+    <polygon points="62,18 54,6 52,26"/>
+    <rect x="37" y="16" width="6" height="14"/>
+    <rect x="53" y="16" width="6" height="14"/>
   </g>
-  <g id="face" fill="#2b0f45">
-    <rect x="24" y="22" width="16" height="14"/>
+  <g id="body" fill="#12051f">
+    <path d="M34 27h28v36h-6v12H40V63h-6z"/>
+    <rect x="28" y="40" width="40" height="22"/>
+  </g>
+  <g id="terminal-face" fill="#2b0f45">
+    <rect x="34" y="31" width="28" height="20"/>
   </g>
   <g id="eyes" fill="#53b4ff">
-    <rect x="26" y="26" width="4" height="4"/>
-    <rect x="34" y="26" width="4" height="4"/>
+    <rect x="38" y="36" width="8" height="8"/>
+    <rect x="50" y="36" width="8" height="8"/>
   </g>
   <g id="fangs" fill="#f3ecff">
-    <rect x="29" y="34" width="2" height="4"/>
-    <rect x="33" y="34" width="2" height="4"/>
+    <polygon points="42,51 47,51 45,60"/>
+    <polygon points="49,51 54,51 51,60"/>
   </g>
   <g id="terminal-belly" fill="#97ff4c">
-    <rect x="28" y="40" width="8" height="2"/>
-    <rect x="30" y="44" width="4" height="2"/>
+    <rect x="40" y="62" width="16" height="5"/>
+    <rect x="44" y="69" width="8" height="5"/>
   </g>
 </svg>

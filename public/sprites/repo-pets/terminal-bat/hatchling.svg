@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="crispEdges" role="img" aria-label="Terminal Bat hatchling stage">
+  <!-- phase6d-creature-art phase6d1-pet-evolution: terminal-bat hatchling baby bat wings ears body -->
+  <g id="wing-buds" fill="#2b0f45"><path d="M7 31h13v6h6v10H16v-5H7z"/><path d="M57 31H44v6h-6v10h10v-5h9z"/></g>
+  <g id="ears" fill="#ff74ae"><polygon points="24,20 29,9 31,24"/><polygon points="40,20 35,9 33,24"/></g>
+  <g id="body" fill="#12051f"><path d="M23 23h18v25h-5v7h-8v-7h-5z"/><rect x="20" y="33" width="24" height="13"/></g>
+  <g id="face" fill="#2b0f45"><rect x="24" y="27" width="16" height="12"/></g>
+  <g id="eyes" fill="#53b4ff"><rect x="27" y="31" width="4" height="4"/><rect x="34" y="31" width="4" height="4"/></g>
+  <g id="fangs" fill="#f3ecff"><polygon points="29,40 32,40 30,45"/><polygon points="33,40 36,40 34,45"/></g>
+</svg>

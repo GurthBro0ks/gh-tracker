@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="crispEdges" role="img" aria-label="Repo Slime juvenile stage">
+  <!-- phase6d-creature-art phase6d1-pet-evolution: repo-slime juvenile blob goo drip eyes -->
+  <g id="shadow" fill="#06110c"><ellipse cx="32" cy="54" rx="26" ry="5"/></g>
+  <g id="slime-body" fill="#97ff4c"><path d="M21 17h22v6h7v8h5v19h-6v6H15v-6H9V31h5v-8h7z"/></g>
+  <g id="goo-drips" fill="#39d86c"><rect x="15" y="45" width="8" height="12"/><rect x="42" y="45" width="8" height="10"/><rect x="29" y="49" width="7" height="8"/></g>
+  <g id="shine" fill="#c9ff8a"><path d="M22 25h16v5H29v5H18v-6h4z"/></g>
+  <g id="eyes" fill="#12051f"><rect x="24" y="37" width="6" height="6"/><rect x="38" y="37" width="6" height="6"/></g>
+  <g id="mouth" fill="#12051f"><rect x="28" y="48" width="12" height="3"/></g>
+</svg>

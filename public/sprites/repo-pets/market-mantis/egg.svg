@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="crispEdges" role="img" aria-label="Market Mantis egg case stage">
+  <!-- phase6d-creature-art phase6d1-pet-evolution: market-mantis egg case antennae claw hints -->
+  <g id="shadow" fill="#06110c"><ellipse cx="32" cy="53" rx="18" ry="5"/></g>
+  <g id="egg-case" fill="#97ff4c"><path d="M24 13h16v6h6v27h-6v7H24v-7h-6V19h6z"/></g>
+  <g id="case-ridges" fill="#39d86c"><rect x="24" y="23" width="16" height="4"/><rect x="22" y="34" width="20" height="4"/><rect x="28" y="44" width="8" height="5"/></g>
+  <g id="antenna-hints" fill="#ffc44d"><path d="M27 16h-7v-4h-6V9h13z"/><path d="M37 16h7v-4h6V9H37z"/></g>
+  <g id="claw-hints" fill="#d717ff"><rect x="13" y="38" width="7" height="4"/><rect x="44" y="38" width="7" height="4"/></g>
+</svg>

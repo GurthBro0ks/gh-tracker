@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" shape-rendering="crispEdges" role="img" aria-label="Market Mantis adult stage">
+  <!-- phase6d-creature-art phase6d1-pet-evolution: market-mantis adult head body long arms claws antennae -->
+  <g id="back-legs" fill="#1d7f38"><path d="M30 58h10v8H28v8H16v-8h8v-8z"/><path d="M56 58h10v8h8v8H62v-8H56z"/></g>
+  <g id="body" fill="#97ff4c"><path d="M40 31h16v42H40z"/><rect x="34" y="42" width="28" height="18"/><rect x="38" y="72" width="20" height="8"/></g>
+  <g id="head" fill="#39d86c"><path d="M31 19h34v16H31z"/><rect x="24" y="25" width="48" height="14"/></g>
+  <g id="eyes" fill="#53b4ff"><ellipse cx="30" cy="29" rx="8" ry="9"/><ellipse cx="66" cy="29" rx="8" ry="9"/></g>
+  <g id="antennae" fill="#ffc44d"><path d="M36 17h-5v-5h-9V8h14z"/><path d="M60 17h5v-5h9V8H60z"/><circle cx="21" cy="8" r="3"/><circle cx="75" cy="8" r="3"/></g>
+  <g id="raptor-arms" fill="#d717ff"><path d="M34 40H18v8h-6v20h8V54h14z"/><path d="M62 40h16v8h6v20h-8V54H62z"/></g>
+  <g id="forearm-blades" fill="#97ff4c"><polygon points="12,50 22,50 14,76 8,76"/><polygon points="84,50 74,50 82,76 88,76"/></g>
+</svg>

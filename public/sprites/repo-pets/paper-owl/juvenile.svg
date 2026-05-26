@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="crispEdges" role="img" aria-label="Paper Owl juvenile stage">
+  <!-- phase6d-creature-art phase6d1-pet-evolution: paper-owl juvenile body eyes ears wings -->
+  <g id="body" fill="#f3ecff"><path d="M21 16h22v8h8v25h-6v8H19v-8h-6V24h8z"/></g>
+  <g id="paper-folds" fill="#c8b8e4"><rect x="30" y="19" width="4" height="34"/><polygon points="21,32 31,32 24,51"/><polygon points="43,32 33,32 40,51"/></g>
+  <g id="ear-tufts" fill="#d717ff"><polygon points="18,18 26,6 30,22"/><polygon points="46,18 38,6 34,22"/></g>
+  <g id="wings" fill="#97ff4c"><path d="M10 34h10v19H10v-5H6V39h4z"/><path d="M54 34H44v19h10v-5h4v-9h-4z"/></g>
+  <g id="face-discs" fill="#53b4ff"><rect x="21" y="27" width="14" height="14"/><rect x="35" y="27" width="14" height="14"/></g>
+  <g id="eyes" fill="#12051f"><circle cx="29" cy="34" r="4"/><circle cx="43" cy="34" r="4"/></g>
+  <g id="beak-and-feet" fill="#ffc44d"><polygon points="36,42 28,42 32,48"/><rect x="25" y="57" width="6" height="4"/><rect x="35" y="57" width="6" height="4"/></g>
+</svg>

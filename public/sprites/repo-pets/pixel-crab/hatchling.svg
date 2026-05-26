@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="crispEdges" role="img" aria-label="Pixel Crab hatchling stage">
+  <!-- phase6d-creature-art phase6d1-pet-evolution: pixel-crab hatchling claws legs eyes -->
+  <g id="legs" fill="#53b4ff"><rect x="14" y="44" width="9" height="4"/><rect x="41" y="44" width="9" height="4"/><rect x="9" y="48" width="9" height="4"/><rect x="46" y="48" width="9" height="4"/></g>
+  <g id="shell" fill="#ff5e94"><path d="M22 27h20v6h7v17H15V33h7z"/></g>
+  <g id="eye-stalks" fill="#ffc44d"><rect x="23" y="19" width="4" height="9"/><rect x="37" y="19" width="4" height="9"/></g>
+  <g id="eyes" fill="#12051f"><rect x="20" y="16" width="9" height="5"/><rect x="35" y="16" width="9" height="5"/></g>
+  <g id="claws" fill="#d717ff"><rect x="6" y="30" width="10" height="7"/><rect x="48" y="30" width="10" height="7"/></g>
+  <g id="front-legs" fill="#97ff4c"><rect x="25" y="50" width="5" height="5"/><rect x="35" y="50" width="5" height="5"/></g>
+</svg>

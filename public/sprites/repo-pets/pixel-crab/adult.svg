@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" shape-rendering="crispEdges" role="img" aria-label="Pixel Crab adult stage">
+  <!-- phase6d-creature-art phase6d1-pet-evolution: pixel-crab adult crab body claws legs eyes -->
+  <g id="legs-back" fill="#53b4ff"><path d="M21 60h12v7H19v7H8v-7h8v-7z"/><path d="M63 60h12v7h5v7H69v-7h-6z"/><path d="M31 66h8v11H25v-6h6z"/><path d="M57 66h8v5h6v6H57z"/></g>
+  <g id="shell" fill="#ff5e94"><path d="M28 31h40v8h10v24H68v8H28v-8H18V39h10z"/><rect x="24" y="43" width="48" height="22"/></g>
+  <g id="eye-stalks" fill="#ffc44d"><rect x="33" y="21" width="6" height="14"/><rect x="57" y="21" width="6" height="14"/></g>
+  <g id="eyes" fill="#12051f"><rect x="29" y="16" width="14" height="9"/><rect x="53" y="16" width="14" height="9"/></g>
+  <g id="claws" fill="#d717ff"><path d="M12 29h14v12H12z"/><path d="M5 20h15v10H5z"/><polygon points="18,16 29,20 19,25"/><path d="M70 29h14v12H70z"/><path d="M76 20h15v10H76z"/><polygon points="78,16 67,20 77,25"/></g>
+  <g id="front-legs" fill="#97ff4c"><rect x="25" y="67" width="9" height="9"/><rect x="43" y="68" width="10" height="10"/><rect x="62" y="67" width="9" height="9"/></g>
+</svg>

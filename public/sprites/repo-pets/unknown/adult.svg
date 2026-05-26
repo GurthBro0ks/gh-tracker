@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" shape-rendering="crispEdges" role="img" aria-label="Unknown mystery adult stage">
+  <!-- phase6d-creature-art phase6d1-pet-evolution: unknown adult mystery creature blob hood eyes antennae -->
+  <g id="antennae" fill="#53b4ff"><path d="M39 22h-6v-8H20v-5h19z"/><path d="M57 22h6v-8h13V9H57z"/><circle cx="19" cy="9" r="4"/><circle cx="77" cy="9" r="4"/></g>
+  <g id="hood" fill="#2b0f45"><path d="M31 21h34v9h9v34h-8v10H30V64h-8V30h9z"/><rect x="27" y="38" width="42" height="31"/></g>
+  <g id="hood-edge" fill="#a98dff"><path d="M31 28h34v8H31z"/><rect x="25" y="36" width="7" height="24"/><rect x="64" y="36" width="7" height="24"/></g>
+  <g id="creature-face" fill="#12051f"><path d="M34 38h28v21h6v9H28v-9h6z"/></g>
+  <g id="eyes" fill="#97ff4c"><polygon points="36,45 47,45 43,52 36,52"/><polygon points="60,45 49,45 53,52 60,52"/></g>
+  <g id="blob-body" fill="#39d86c"><rect x="34" y="64" width="28" height="11"/><rect x="40" y="75" width="16" height="6"/></g>
+  <g id="tiny-feet" fill="#d717ff"><rect x="29" y="74" width="13" height="6"/><rect x="54" y="74" width="13" height="6"/></g>
+</svg>
