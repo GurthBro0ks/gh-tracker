@@ -21,6 +21,7 @@ import type { DashboardData, DashboardDataMode, DashboardGithubRepoHealth } from
 import type { RepoHealth, RepoHealthBucket } from "@/lib/contracts";
 import { generateRepoPet, deriveRepoHealth } from "@/lib/repo-habitat";
 import { RepoHabitatGrid } from "@/components/repo-habitat";
+import { buildHeatmapInspectorCells } from "@/lib/heatmap-inspector";
 
 const PIE_COLORS = ["#d717ff", "#97ff4c", "#53b4ff", "#ff74ae", "#ffc44d", "#a98dff"];
 
@@ -130,6 +131,7 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [expandedRepos, setExpandedRepos] = useState<Set<string>>(new Set());
+  const [selectedHeatmapDay, setSelectedHeatmapDay] = useState(0);
 
   const activeData = (mode === "local_snapshot" || mode === "aggregated") && localData ? localData : demoData;
 
@@ -247,6 +249,8 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
   const githubOpenIssues = githubRepos.reduce((sum, repo) => sum + (repo.issues.open ?? 0), 0);
   const githubFailingCi = githubRepos.filter((repo) => repo.ci.status === "failure").length;
   const githubNoRelease = githubRepos.filter((repo) => repo.latestRelease.status === "none").length;
+  const heatmapCells = useMemo(() => buildHeatmapInspectorCells(activeData.heatmap, activeData.commitTrend, activeData.timeline), [activeData.heatmap, activeData.commitTrend, activeData.timeline]);
+  const selectedHeatmapCell = heatmapCells[selectedHeatmapDay] ?? null;
 
   return (
     <main className="mx-auto w-full max-w-[1500px] px-3 pb-6 sm:px-4 md:px-8" style={{ paddingTop: "max(1rem, env(safe-area-inset-top))", paddingBottom: "max(5.5rem, calc(env(safe-area-inset-bottom) + 2rem))" }}>
@@ -613,22 +617,40 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
 
         <article className="neon-panel rounded-xl p-4">
           <h3 className="mb-3 font-sans text-sm uppercase tracking-[0.18em] text-fuchsia-200">Activity Heatmap</h3>
+          <p className="mb-2 text-xs text-violet-200/90">Tap a day to inspect activity.</p>
           <div className="space-y-1">
             {activeData.heatmap.map((week, weekIndex) => (
               <div key={`week-${weekIndex}`} className="grid grid-cols-7 gap-1">
                 {week.map((value, dayIndex) => (
-                  <div
+                  <button
                     key={`cell-${weekIndex}-${dayIndex}`}
-                    className="h-6 rounded"
+                    type="button"
+                    aria-label={`Heatmap day ${weekIndex + 1}-${dayIndex + 1}`}
+                    className="h-7 rounded border transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
                     style={{
                       background: `rgba(151,255,76,${0.1 + value * 0.11})`,
-                      border: "1px solid rgba(215,23,255,0.25)",
+                      border: selectedHeatmapDay === weekIndex * 7 + dayIndex ? "2px solid rgba(83,180,255,0.95)" : "1px solid rgba(215,23,255,0.25)",
                     }}
                     title={`Activity level ${value}`}
+                    onClick={() => setSelectedHeatmapDay(weekIndex * 7 + dayIndex)}
                   />
                 ))}
               </div>
             ))}
+          </div>
+          <div className="mt-3 rounded border border-cyan-300/35 bg-black/30 p-3">
+            <p className="text-[10px] uppercase tracking-[0.14em] text-cyan-200">Activity Day Inspector</p>
+            {selectedHeatmapCell?.detailsAvailable ? (
+              <div className="mt-2 space-y-1 text-xs text-violet-100">
+                <p>Date: <span className="text-lime-200">{selectedHeatmapCell.dateLabel}</span></p>
+                <p>Intensity: <span className="text-lime-200">{selectedHeatmapCell.intensity}</span></p>
+                <p>Commits: <span className="text-lime-200">{selectedHeatmapCell.commitCount ?? "unknown"}</span></p>
+                <p>Machines: <span className="text-lime-200">{selectedHeatmapCell.machineSummary ?? "unknown"}</span></p>
+                <p>Repo summary: <span className="text-lime-200">{selectedHeatmapCell.repoSummary ?? "No detailed activity available for this day"}</span></p>
+              </div>
+            ) : (
+              <p className="mt-2 text-xs text-violet-200/80">No detailed activity available for this day.</p>
+            )}
           </div>
         </article>
       </section>

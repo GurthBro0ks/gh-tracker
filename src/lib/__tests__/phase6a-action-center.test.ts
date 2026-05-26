@@ -44,4 +44,12 @@ describe("phase6a action center", () => {
     const json = readFileSync(latestSummaryPath, "utf8").toLowerCase();
     expect(json).not.toContain("nousearch-hermes-agent");
   });
+
+  it("keeps stable heatmap inspector UX hooks", () => {
+    const dashboard = readFileSync(join(repoRoot, "src/components/dashboard.tsx"), "utf8");
+    expect(dashboard).toContain("Tap a day to inspect activity.");
+    expect(dashboard).toContain("Activity Day Inspector");
+    expect(dashboard).toContain("No detailed activity available for this day.");
+    expect(dashboard).toContain("onClick={() => setSelectedHeatmapDay(weekIndex * 7 + dayIndex)}");
+  });
 });
