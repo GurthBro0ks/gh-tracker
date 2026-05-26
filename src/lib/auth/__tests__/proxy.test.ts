@@ -53,4 +53,23 @@ describe("proxy auth route protection", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("location")).toBeNull();
   });
+
+  it("redirects when session is expired", () => {
+    const now = Math.floor(Date.now() / 1000);
+    const token = createSessionToken({
+      sub: "owner-1",
+      email: "owner@example.com",
+      role: "owner",
+      iat: now - 7200,
+      exp: now - 3600,
+    });
+    const request = new NextRequest("http://127.0.0.1:5055/", {
+      headers: {
+        cookie: `habitat_session=${token}`,
+      },
+    });
+    const response = proxy(request);
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")?.endsWith("/login")).toBe(true);
+  });
 });

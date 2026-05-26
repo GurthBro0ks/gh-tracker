@@ -734,6 +734,11 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
                 <p className="text-violet-100">{githubStatusLabel(activeData.githubHealth.status)} — {activeData.githubHealth.syncedRepoCount} repos synced</p>
               </div>
 
+              <div className="rounded border border-white/10 bg-black/30 px-3 py-2">
+                <p className="text-violet-300">Session status</p>
+                <p className="text-violet-100">{session?.role === "owner" ? "Active (owner verified)" : "Unknown"}</p>
+              </div>
+
               <button
                 type="button"
                 onClick={async () => {

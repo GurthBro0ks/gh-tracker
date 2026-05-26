@@ -9,6 +9,8 @@ import { setSessionCookie } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
 
+const GENERIC_LOGIN_ERROR = "Invalid email or password";
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -22,12 +24,12 @@ export async function POST(request: NextRequest) {
     const result = await verifySlimyCredentials(email, password);
 
     if (!result.ok) {
-      return NextResponse.json({ error: result.error }, { status: result.status });
+      return NextResponse.json({ error: GENERIC_LOGIN_ERROR }, { status: 401 });
     }
 
     // Owner-only gate
     if (result.user.role !== "owner") {
-      return NextResponse.json({ error: "Owner access required" }, { status: 403 });
+      return NextResponse.json({ error: GENERIC_LOGIN_ERROR }, { status: 401 });
     }
 
     // Create local session
