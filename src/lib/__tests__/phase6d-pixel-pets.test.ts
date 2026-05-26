@@ -6,6 +6,16 @@ import { normalizeRepoPetSpriteStatus, repoPetSpriteAsset } from "../../componen
 const repoRoot = process.cwd();
 
 describe("phase6d pixel pet sprites", () => {
+  const creatureSpriteFiles = [
+    ["terminal-bat.svg", ["wing", "ears", "fangs"]],
+    ["market-mantis.svg", ["raptor-arms", "forearm-blades", "antennae"]],
+    ["repo-slime.svg", ["slime-body", "shine", "neon-drip"]],
+    ["paper-owl.svg", ["ear-tufts", "face-discs", "beak-and-feet"]],
+    ["pixel-crab.svg", ["claws", "eye-stalks", "front-legs"]],
+    ["data-frog.svg", ["hind-legs", "eye-bumps", "data-belly"]],
+    ["unknown.svg", ["hood", "creature-face", "antennae"]],
+  ] as const;
+
   it("maps required known pet types to local sprite assets", () => {
     expect(repoPetSpriteAsset("Terminal Bat")).toBe("/sprites/repo-pets/terminal-bat.svg");
     expect(repoPetSpriteAsset("Market Mantis")).toBe("/sprites/repo-pets/market-mantis.svg");
@@ -18,6 +28,20 @@ describe("phase6d pixel pet sprites", () => {
   it("uses fallback sprite for unknown pet types", () => {
     expect(repoPetSpriteAsset("Cyber Snail")).toBe("/sprites/repo-pets/unknown.svg");
     expect(repoPetSpriteAsset(null)).toBe("/sprites/repo-pets/unknown.svg");
+  });
+
+  it("uses creature-shaped SVG assets instead of text glyph placeholders", () => {
+    for (const [fileName, requiredParts] of creatureSpriteFiles) {
+      const asset = readFileSync(join(repoRoot, "public/sprites/repo-pets", fileName), "utf8");
+      expect(asset).toContain("shape-rendering=\"crispEdges\"");
+      expect(asset).toContain("<rect");
+      expect(asset).not.toMatch(/<text\b/i);
+      expect(asset).not.toMatch(/font-family|font-size/i);
+      expect(asset).not.toMatch(/>\s*[@#^A-Za-z0-9?]\s*</);
+      for (const part of requiredParts) {
+        expect(asset).toContain(part);
+      }
+    }
   });
 
   it("supports required status treatments", () => {
@@ -38,8 +62,12 @@ describe("phase6d pixel pet sprites", () => {
     expect(habitat).toContain("<RepoPetSprite");
     expect(renderer).toContain("repo-pet-sprite__image");
     expect(renderer).toContain("<img");
+    expect(renderer).toContain("/sprites/repo-pets/data-frog.svg");
+    expect(renderer).toContain("/sprites/repo-pets/unknown.svg");
     expect(dashboard).not.toContain("const glyph");
     expect(habitat).not.toContain("const glyph");
+    expect(dashboard).not.toMatch(/<span>\{glyph\}<\/span>/);
+    expect(habitat).not.toMatch(/<span>\{glyph\}<\/span>/);
   });
 
   it("keeps action center, cleanup planner, heatmap, safety, and version regressions covered", () => {

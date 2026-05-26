@@ -1,8 +1,34 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="crispEdges" role="img" aria-label="Repo Slime pixel pet">
-  <path fill="#07200c" d="M20 24h4v-4h16v4h4v4h4v16h-4v4H20v-4h-4V28h4z"/>
-  <path fill="#97ff4c" d="M20 28h4v-4h16v4h4v16h-4v4H24v-4h-4z"/>
-  <path fill="#c9ff8a" d="M24 28h8v4h-8zm-4 8h4v4h-4z"/>
-  <path fill="#12051f" d="M28 36h4v4h-4zm12 0h4v4h-4z"/>
-  <path fill="#d717ff" d="M28 44h12v4H28z"/>
-  <path fill="#53b4ff" d="M16 52h32v4H16z" opacity=".75"/>
+  <g id="shadow" fill="#06110c">
+    <rect x="14" y="52" width="36" height="4"/>
+  </g>
+  <g id="slime-body" fill="#97ff4c">
+    <rect x="20" y="18" width="24" height="6"/>
+    <rect x="16" y="24" width="32" height="8"/>
+    <rect x="12" y="32" width="40" height="14"/>
+    <rect x="16" y="46" width="32" height="6"/>
+    <rect x="20" y="52" width="8" height="4"/>
+    <rect x="36" y="52" width="8" height="4"/>
+  </g>
+  <g id="slime-depth" fill="#39d86c">
+    <rect x="12" y="40" width="40" height="6"/>
+    <rect x="16" y="46" width="32" height="4"/>
+    <rect x="42" y="30" width="6" height="10"/>
+  </g>
+  <g id="shine" fill="#c9ff8a">
+    <rect x="20" y="24" width="12" height="4"/>
+    <rect x="16" y="30" width="6" height="4"/>
+  </g>
+  <g id="face" fill="#12051f">
+    <rect x="24" y="34" width="5" height="5"/>
+    <rect x="38" y="34" width="5" height="5"/>
+    <rect x="28" y="44" width="12" height="3"/>
+  </g>
+  <g id="repo-chip" fill="#53b4ff">
+    <rect x="28" y="18" width="8" height="4"/>
+    <rect x="30" y="14" width="4" height="4"/>
+  </g>
+  <g id="neon-drip" fill="#d717ff">
+    <rect x="46" y="44" width="4" height="8"/>
+  </g>
 </svg>

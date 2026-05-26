@@ -1,6 +1,6 @@
 # Pixel Pets
 
-Phase 6D replaces placeholder glyph pets with original local SVG pixel sprites.
+Phase 6D replaces placeholder glyph pets with original local SVG pixel creature sprites. The assets are intentionally built from blocky SVG shapes for recognizable silhouettes rather than letters, initials, numbers, or symbols.
 
 ## Sprite Assets
 - `public/sprites/repo-pets/terminal-bat.svg`
@@ -34,7 +34,7 @@ Unknown, missing, or not-yet-sprited species render `unknown.svg`. This covers o
 Animations stay lightweight and reuse the existing small CSS idle/wobble states. Reduced-motion users get animation disabled.
 
 ## Asset Policy
-All sprites are original simple SVG pixel art committed in this repository. No external URLs, fetched images, copyrighted game sprites, or large binary sprite sheets are used.
+All sprites are original simple SVG pixel art committed in this repository. No external URLs, fetched images, copyrighted game sprites, text glyphs, repo initials, or large binary sprite sheets are used.
 
 ## Adding A New Sprite Safely
 1. Add a small original SVG under `public/sprites/repo-pets/`.

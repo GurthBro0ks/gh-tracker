@@ -1,8 +1,46 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="crispEdges" role="img" aria-label="Market Mantis pixel pet">
-  <path fill="#0b1f12" d="M28 12h8v8h8v12h-4v12h-4v8h-8v-8h-4V32h-4V20h8z"/>
-  <path fill="#97ff4c" d="M28 16h8v8h4v8h-4v8h-8v-8h-4v-8h4z"/>
-  <path fill="#53b4ff" d="M24 24h4v4h-4zm12 0h4v4h-4z"/>
-  <path fill="#d717ff" d="M12 16h8v4h-4v8h-4zm32 0h8v12h-4v-8h-4z"/>
-  <path fill="#ffc44d" d="M8 36h12v4h-8v4H8zm36 0h12v8h-4v-4h-8z"/>
-  <path fill="#041108" d="M28 40h8v4h-8z"/>
+  <g id="back-legs" fill="#1d7f38">
+    <rect x="14" y="40" width="8" height="4"/>
+    <rect x="10" y="44" width="8" height="4"/>
+    <rect x="42" y="40" width="8" height="4"/>
+    <rect x="46" y="44" width="8" height="4"/>
+  </g>
+  <g id="body" fill="#97ff4c">
+    <rect x="28" y="18" width="8" height="28"/>
+    <rect x="24" y="24" width="16" height="18"/>
+    <rect x="26" y="46" width="12" height="6"/>
+  </g>
+  <g id="thorax-shadow" fill="#0b1f12">
+    <rect x="30" y="24" width="4" height="24" opacity=".45"/>
+  </g>
+  <g id="head" fill="#39d86c">
+    <rect x="22" y="12" width="20" height="10"/>
+    <rect x="18" y="16" width="28" height="8"/>
+  </g>
+  <g id="eyes" fill="#53b4ff">
+    <rect x="20" y="16" width="6" height="6"/>
+    <rect x="38" y="16" width="6" height="6"/>
+  </g>
+  <g id="pupils" fill="#12051f">
+    <rect x="22" y="18" width="2" height="2"/>
+    <rect x="40" y="18" width="2" height="2"/>
+  </g>
+  <g id="antennae" fill="#ffc44d">
+    <rect x="22" y="8" width="4" height="4"/>
+    <rect x="38" y="8" width="4" height="4"/>
+    <rect x="18" y="6" width="4" height="2"/>
+    <rect x="42" y="6" width="4" height="2"/>
+  </g>
+  <g id="raptor-arms" fill="#d717ff">
+    <rect x="12" y="24" width="12" height="4"/>
+    <rect x="8" y="28" width="6" height="14"/>
+    <rect x="6" y="38" width="6" height="4"/>
+    <rect x="40" y="24" width="12" height="4"/>
+    <rect x="50" y="28" width="6" height="14"/>
+    <rect x="52" y="38" width="6" height="4"/>
+  </g>
+  <g id="forearm-blades" fill="#97ff4c">
+    <rect x="8" y="30" width="4" height="10"/>
+    <rect x="52" y="30" width="4" height="10"/>
+  </g>
 </svg>
