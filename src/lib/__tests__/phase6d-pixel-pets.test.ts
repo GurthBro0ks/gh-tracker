@@ -118,8 +118,18 @@ describe("phase6d pixel pet sprites", () => {
     const dashboard = readFileSync(join(repoRoot, "src/components/dashboard.tsx"), "utf8");
     const habitat = readFileSync(join(repoRoot, "src/components/repo-habitat.tsx"), "utf8");
     const adapter = readFileSync(join(repoRoot, "src/lib/dashboard-adapter.ts"), "utf8");
+    const globals = readFileSync(join(repoRoot, "src/app/globals.css"), "utf8");
     expect(dashboard).toContain("Repo Cleanup Planner");
+    expect(dashboard).toContain("Repo Locations");
+    expect(dashboard).toContain("dashboard-shell");
+    expect(dashboard).toContain("repo-locations-layout");
+    expect(dashboard).toContain("repo-location-mobile-card");
+    expect(dashboard).toContain("repo-location-line");
     expect(dashboard).toContain("Activity Day Inspector");
+    expect(dashboard).toContain("Activity Heatmap");
+    expect(dashboard).toContain("Tap a day to inspect activity.");
+    expect(dashboard).toContain("HEATMAP_STATUS");
+    expect(dashboard).toContain("rendered_visible");
     expect(habitat).toContain("Repo Action Center");
     expect(habitat).toContain("Evolution:");
     expect(habitat).toContain("navigator.clipboard?.writeText");
@@ -132,6 +142,9 @@ describe("phase6d pixel pet sprites", () => {
     expect(dashboard).toContain("ACTION_CENTER_REGRESSION");
     expect(dashboard).toContain("HEATMAP_REGRESSION");
     expect(dashboard).toContain("CLEANUP_PLANNER_REGRESSION");
+    expect(globals).toContain("overflow-x: hidden");
+    expect(globals).toContain(".repo-locations-layout");
+    expect(globals).toContain("overflow-wrap: anywhere");
     expect(adapter).toContain("0.6.3-phase6d1-pet-evolution");
     expect([dashboard, habitat, adapter].join("\n").toLowerCase()).not.toContain("nousearch-hermes");
   });

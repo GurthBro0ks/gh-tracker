@@ -295,7 +295,7 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
   const debugSummary = `Mode ${activeData.mode} · Version ${activeData.version}`;
 
   return (
-    <main className="mx-auto w-full max-w-[1500px] px-3 pb-6 sm:px-4 md:px-8" style={{ paddingTop: "max(1rem, env(safe-area-inset-top))", paddingBottom: "max(5.5rem, calc(env(safe-area-inset-bottom) + 2rem))" }}>
+    <main className="dashboard-shell mx-auto w-full max-w-[1500px] px-3 pb-6 sm:px-4 md:px-8" style={{ paddingTop: "max(1rem, env(safe-area-inset-top))", paddingBottom: "max(5.5rem, calc(env(safe-area-inset-bottom) + 2rem))" }}>
       <header className="neon-panel mb-4 rounded-xl px-3 py-3 sm:mb-6 sm:px-5 sm:py-4">
         <p className="text-[10px] uppercase tracking-[0.25em] text-fuchsia-200/80 sm:text-xs">Slimy.ai telemetry deck</p>
         <div className="mt-1 flex flex-wrap items-end justify-between gap-3 sm:mt-2 sm:gap-4">
@@ -649,17 +649,17 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
         isOpen={sectionOpen("repo-locations")}
         onToggle={() => toggleCompact("repo-locations")}
       >
-      <section className="mb-6 grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-        <article className="neon-panel rounded-xl p-4">
+      <section className="repo-locations-layout mb-6 grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+        <article className="repo-locations-panel neon-panel rounded-xl p-4">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <h3 className="font-sans text-sm uppercase tracking-[0.18em] text-fuchsia-200">Repo Locations</h3>
             <span className="text-[10px] text-violet-300/70 sm:text-xs">Grouped by canonical repo · {activeData.canonicalRepos.length} repos · {activeData.repoRows.length} locations</span>
           </div>
-          <div className="space-y-2 sm:hidden">
+          <div className="repo-locations-mobile-list space-y-2 sm:hidden">
             {activeData.canonicalRepos.map((repo) => (
               <article
                 key={repo.repoId}
-                className="rounded-lg border border-white/10 bg-black/30 p-2.5 text-xs cursor-pointer"
+                className="repo-location-mobile-card rounded-lg border border-white/10 bg-black/30 p-2.5 text-xs cursor-pointer"
                 onClick={() => toggleRepoExpand(repo.repoId)}
                 role="button"
                 tabIndex={0}
@@ -676,9 +676,9 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
                   <p className="rounded border border-white/10 px-1.5 py-1">Pushes: <span className="text-fuchsia-200">{repo.combinedPushes}</span></p>
                 </div>
                 {expandedRepos.has(repo.repoId) && (
-                  <div className="mt-2 space-y-1 border-t border-white/10 pt-2">
+                  <div className="repo-location-mobile-details mt-2 space-y-1 border-t border-white/10 pt-2">
                     {repo.perLocationDetails.map((loc) => (
-                      <div key={loc.id} className="text-[10px] text-violet-200/80">
+                      <div key={loc.id} className="repo-location-line text-[10px] text-violet-200/80">
                         <span className="uppercase text-violet-300">{loc.machineId}</span> · {loc.path} · {loc.branch} · {loc.dirty ? <span className="text-rose-300">dirty</span> : <span className="text-lime-300">clean</span>} · unpushed:{loc.unpushedCommits}
                       </div>
                     ))}
@@ -744,47 +744,47 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
             </table>
           </div>
         </article>
-
-        <article className="neon-panel rounded-xl p-4">
-          <h3 className="mb-3 font-sans text-sm uppercase tracking-[0.18em] text-fuchsia-200">Activity Heatmap</h3>
-          <p className="mb-2 text-xs text-violet-200/90">Tap a day to inspect activity.</p>
-          <div className="space-y-1">
-            {activeData.heatmap.map((week, weekIndex) => (
-              <div key={`week-${weekIndex}`} className="grid grid-cols-7 gap-1">
-                {week.map((value, dayIndex) => (
-                  <button
-                    key={`cell-${weekIndex}-${dayIndex}`}
-                    type="button"
-                    aria-label={`Heatmap day ${weekIndex + 1}-${dayIndex + 1}`}
-                    className="h-7 rounded border transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
-                    style={{
-                      background: `rgba(151,255,76,${0.1 + value * 0.11})`,
-                      border: selectedHeatmapDay === weekIndex * 7 + dayIndex ? "2px solid rgba(83,180,255,0.95)" : "1px solid rgba(215,23,255,0.25)",
-                    }}
-                    title={`Activity level ${value}`}
-                    onClick={() => setSelectedHeatmapDay(weekIndex * 7 + dayIndex)}
-                  />
-                ))}
-              </div>
-            ))}
-          </div>
-          <div className="mt-3 rounded border border-cyan-300/35 bg-black/30 p-3">
-            <p className="text-[10px] uppercase tracking-[0.14em] text-cyan-200">Activity Day Inspector</p>
-            {selectedHeatmapCell?.detailsAvailable ? (
-              <div className="mt-2 space-y-1 text-xs text-violet-100">
-                <p>Date: <span className="text-lime-200">{selectedHeatmapCell.dateLabel}</span></p>
-                <p>Intensity: <span className="text-lime-200">{selectedHeatmapCell.intensity}</span></p>
-                <p>Commits: <span className="text-lime-200">{selectedHeatmapCell.commitCount ?? "unknown"}</span></p>
-                <p>Machines: <span className="text-lime-200">{selectedHeatmapCell.machineSummary ?? "unknown"}</span></p>
-                <p>Repo summary: <span className="text-lime-200">{selectedHeatmapCell.repoSummary ?? "No detailed activity available for this day"}</span></p>
-              </div>
-            ) : (
-              <p className="mt-2 text-xs text-violet-200/80">No detailed activity available for this day.</p>
-            )}
-          </div>
-        </article>
       </section>
       </MobileCompactSection>
+
+      <section className="heatmap-panel neon-panel mb-6 rounded-xl p-4">
+        <h3 className="mb-3 font-sans text-sm uppercase tracking-[0.18em] text-fuchsia-200">Activity Heatmap</h3>
+        <p className="mb-2 text-xs text-violet-200/90">Tap a day to inspect activity.</p>
+        <div className="space-y-1">
+          {activeData.heatmap.map((week, weekIndex) => (
+            <div key={`week-${weekIndex}`} className="grid grid-cols-7 gap-1">
+              {week.map((value, dayIndex) => (
+                <button
+                  key={`cell-${weekIndex}-${dayIndex}`}
+                  type="button"
+                  aria-label={`Heatmap day ${weekIndex + 1}-${dayIndex + 1}`}
+                  className="h-7 rounded border transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-300/70"
+                  style={{
+                    background: `rgba(151,255,76,${0.1 + value * 0.11})`,
+                    border: selectedHeatmapDay === weekIndex * 7 + dayIndex ? "2px solid rgba(83,180,255,0.95)" : "1px solid rgba(215,23,255,0.25)",
+                  }}
+                  title={`Activity level ${value}`}
+                  onClick={() => setSelectedHeatmapDay(weekIndex * 7 + dayIndex)}
+                />
+              ))}
+            </div>
+          ))}
+        </div>
+        <div className="mt-3 rounded border border-cyan-300/35 bg-black/30 p-3">
+          <p className="text-[10px] uppercase tracking-[0.14em] text-cyan-200">Activity Day Inspector</p>
+          {selectedHeatmapCell?.detailsAvailable ? (
+            <div className="mt-2 space-y-1 text-xs text-violet-100">
+              <p>Date: <span className="text-lime-200">{selectedHeatmapCell.dateLabel}</span></p>
+              <p>Intensity: <span className="text-lime-200">{selectedHeatmapCell.intensity}</span></p>
+              <p>Commits: <span className="text-lime-200">{selectedHeatmapCell.commitCount ?? "unknown"}</span></p>
+              <p>Machines: <span className="text-lime-200">{selectedHeatmapCell.machineSummary ?? "unknown"}</span></p>
+              <p>Repo summary: <span className="text-lime-200">{selectedHeatmapCell.repoSummary ?? "No detailed activity available for this day"}</span></p>
+            </div>
+          ) : (
+            <p className="mt-2 text-xs text-violet-200/80">No detailed activity available for this day.</p>
+          )}
+        </div>
+      </section>
 
       <MobileCompactSection
         sectionId="recent-activity"
@@ -860,9 +860,10 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
           <Status label="MOBILE_DEFAULT_COMPACT" value="yes" />
           <Status label="EXPAND_CONTROLS_VISIBLE" value="yes" />
           <Status label="PET_EVOLUTION_REGRESSION" value="none_detected" />
-          <Status label="ACTION_CENTER_REGRESSION" value="none_detected" />
-          <Status label="HEATMAP_REGRESSION" value="none_detected" />
-          <Status label="CLEANUP_PLANNER_REGRESSION" value="none_detected" />
+           <Status label="ACTION_CENTER_REGRESSION" value="none_detected" />
+           <Status label="HEATMAP_REGRESSION" value="none_detected" />
+           <Status label="HEATMAP_STATUS" value="rendered_visible" />
+           <Status label="CLEANUP_PLANNER_REGRESSION" value="none_detected" />
         </div>
       </section>
       </MobileCompactSection>

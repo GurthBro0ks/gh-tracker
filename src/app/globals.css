@@ -20,6 +20,7 @@
 
 html {
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  overflow-x: hidden;
 }
 
 body {
@@ -30,6 +31,31 @@ body {
   color: var(--ink-primary);
   font-family: var(--font-share-tech-mono), monospace;
   padding-bottom: env(safe-area-inset-bottom);
+  overflow-x: hidden;
+}
+
+.dashboard-shell {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+.repo-locations-layout,
+.repo-locations-panel,
+.repo-locations-mobile-list,
+.repo-location-mobile-card,
+.repo-location-mobile-details,
+.heatmap-panel {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.repo-location-mobile-card,
+.repo-location-mobile-details,
+.repo-location-line {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 body::before {
