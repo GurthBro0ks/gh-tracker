@@ -31,17 +31,16 @@ type RepoSeedInput = {
   primaryLanguage: string | null;
 };
 
-const SPECIES: PetSpecies[] = [
-  "Cyber Snail",
-  "Repo Slime",
-  "Circuit Moth",
-  "Pixel Crab",
-  "Data Frog",
-  "Terminal Bat",
-  "Gear Turtle",
-  "Market Mantis",
-  "Arcade Golem",
-  "Paper Owl",
+const ACTIVE_SPECIES: PetSpecies[] = ["Data Frog", "Terminal Bat", "Market Mantis", "Repo Slime", "Paper Owl", "Pixel Crab", "Gear Turtle"];
+
+const SPECIES_KEYWORDS: Array<{ species: PetSpecies; keywords: string[] }> = [
+  { species: "Market Mantis", keywords: ["market", "trading", "scanner", "exchange", "signal", "orderbook"] },
+  { species: "Data Frog", keywords: ["tracker", "telemetry", "metrics", "analytics", "monitor", "collector"] },
+  { species: "Terminal Bat", keywords: ["bot", "chat", "discord", "ops", "agent", "automation", "cli"] },
+  { species: "Gear Turtle", keywords: ["sbuild", "builder", "ui", "editor", "frontend", "web", "shell"] },
+  { species: "Paper Owl", keywords: ["kb", "wiki", "docs", "knowledge", "memory", "notebook"] },
+  { species: "Repo Slime", keywords: ["monorepo", "git", "harness", "workflow", "pipeline"] },
+  { species: "Pixel Crab", keywords: ["crab", "rust", "infra", "core", "mailbox"] },
 ];
 
 function hashStable(input: string): number {
@@ -51,6 +50,26 @@ function hashStable(input: string): number {
     hash = Math.imul(hash, 16777619);
   }
   return hash >>> 0;
+}
+
+function normalizeSeedText(seed: RepoSeedInput) {
+  return `${seed.repoId} ${seed.name} ${seed.canonicalRemote} ${seed.owner}`.toLowerCase();
+}
+
+function choosePetSpecies(seed: RepoSeedInput): PetSpecies {
+  const normalized = normalizeSeedText(seed);
+  for (const { species, keywords } of SPECIES_KEYWORDS) {
+    if (keywords.some((keyword) => normalized.includes(keyword))) {
+      return species;
+    }
+  }
+
+  const language = (seed.primaryLanguage ?? "").toLowerCase();
+  if (language.includes("typescript") || language.includes("javascript")) return "Terminal Bat";
+  if (language.includes("rust")) return "Pixel Crab";
+  if (language.includes("python")) return "Data Frog";
+
+  return ACTIVE_SPECIES[hashStable(`${seed.owner}/${seed.name}|${seed.repoId}`) % ACTIVE_SPECIES.length];
 }
 
 function clamp(value: number) {
@@ -203,10 +222,7 @@ function petCareFromRepoActions(actions: RepoCareAction[]): PetCareAction[] {
 }
 
 export function generateRepoPet(seed: RepoSeedInput, location: RepoSignal, health: RepoHealth): RepoPet {
-  const stableSeed = `${seed.owner}/${seed.name}|${seed.canonicalRemote}|${seed.repoId}|${seed.primaryLanguage ?? "unknown"}`;
-  const seedHash = hashStable(stableSeed);
-  const languageBias = seed.primaryLanguage ? hashStable(seed.primaryLanguage) : 0;
-  const species = SPECIES[(seedHash + languageBias) % SPECIES.length];
+  const species = choosePetSpecies(seed);
   const stage = stageFromSignals(location, health);
   const mood = moodFromHealth(health);
   const animationState = animationFromMood(mood, stage);

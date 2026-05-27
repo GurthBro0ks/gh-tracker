@@ -12,4 +12,6 @@ paper-owl: egg is a paper egg with fold lines, tiny eyes, and feather hints, hat
 
 pixel-crab: egg is a pink crab egg with eye and claw hints, hatchling has a small shell, claws, legs, and eye stalks, juvenile has a fuller shell with bigger claws and legs, and adult has a pink crab shell body, two eye stalks with dark eyes, magenta claws on both sides, multiple legs, and front feet.
 
+gear-turtle: egg is a plated shell pod with corner bolts, hatchling has a small shell with a turtle head and tiny legs, juvenile has a larger shell with a center gear mark and visible legs, and adult has a broad shell with panel plates, a cog motif, turtle head, crest, and sturdy legs.
+
 unknown: egg is a mystery pod with antennae and glowing eyes, hatchling is a small hooded blob creature with eyes and feet, juvenile has a larger hood/body with antennae and angular eyes, and adult has a hooded mystery creature silhouette with antennae, glowing eyes, a small blob body, and tiny feet. It is not a letter, number, question mark, or glyph placeholder.

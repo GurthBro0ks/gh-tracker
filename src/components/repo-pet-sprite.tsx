@@ -3,7 +3,7 @@ export type RepoPetSpriteStage = "egg" | "hatchling" | "juvenile" | "adult";
 
 const UNKNOWN_SPECIES = "unknown";
 
-const STAGED_SPECIES = new Set(["terminal-bat", "market-mantis", "repo-slime", "paper-owl", "pixel-crab", "data-frog"]);
+const STAGED_SPECIES = new Set(["terminal-bat", "market-mantis", "repo-slime", "paper-owl", "pixel-crab", "data-frog", "gear-turtle"]);
 
 function speciesKey(species: string | null | undefined) {
   return (species ?? "")

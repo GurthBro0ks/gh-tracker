@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="crispEdges" role="img" aria-label="Gear Turtle egg stage">
+  <!-- phase6d-creature-art phase6d1-pet-evolution: gear-turtle egg shell bolts hatchline -->
+  <g id="shadow" fill="#0c0b16"><ellipse cx="32" cy="52" rx="18" ry="5"/></g>
+  <g id="shell" fill="#8db7ff"><path d="M20 16h24v6h6v22h-6v8H20v-8h-6V22h6z"/></g>
+  <g id="plates" fill="#d7ecff"><rect x="24" y="24" width="16" height="10"/><rect x="28" y="36" width="8" height="8"/></g>
+  <g id="bolts" fill="#ffc44d"><rect x="22" y="22" width="3" height="3"/><rect x="39" y="22" width="3" height="3"/><rect x="22" y="41" width="3" height="3"/><rect x="39" y="41" width="3" height="3"/></g>
+</svg>

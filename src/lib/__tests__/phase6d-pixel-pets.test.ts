@@ -2,12 +2,12 @@ import { readFileSync } from "fs";
 import { join } from "path";
 import { describe, expect, it } from "vitest";
 import { normalizeRepoPetSpriteStatus, repoPetSpriteAsset, repoPetSpriteStageAsset } from "../../components/repo-pet-sprite";
-import { calculatePetMaturityScore, petStageFromMaturityScore } from "../repo-habitat";
+import { calculatePetMaturityScore, deriveRepoHealth, generateRepoPet, petStageFromMaturityScore } from "../repo-habitat";
 
 const repoRoot = process.cwd();
 
 describe("phase6d pixel pet sprites", () => {
-  const petTypes = ["terminal-bat", "market-mantis", "repo-slime", "paper-owl", "pixel-crab", "data-frog", "unknown"] as const;
+  const petTypes = ["terminal-bat", "market-mantis", "repo-slime", "paper-owl", "pixel-crab", "data-frog", "gear-turtle", "unknown"] as const;
   const stages = ["egg", "hatchling", "juvenile", "adult"] as const;
   const stagedCreatureSpriteFiles = [
     ["terminal-bat/adult.svg", ["wings", "ears", "fangs"]],
@@ -26,6 +26,7 @@ describe("phase6d pixel pet sprites", () => {
     expect(repoPetSpriteAsset("Paper Owl")).toBe("/sprites/repo-pets/paper-owl/adult.svg");
     expect(repoPetSpriteAsset("Pixel Crab")).toBe("/sprites/repo-pets/pixel-crab/adult.svg");
     expect(repoPetSpriteAsset("Data Frog")).toBe("/sprites/repo-pets/data-frog/adult.svg");
+    expect(repoPetSpriteAsset("Gear Turtle")).toBe("/sprites/repo-pets/gear-turtle/adult.svg");
     expect(repoPetSpriteStageAsset("Data Frog", "egg")).toBe("/sprites/repo-pets/data-frog/egg.svg");
     expect(repoPetSpriteStageAsset("Terminal Bat", "juvenile")).toBe("/sprites/repo-pets/terminal-bat/juvenile.svg");
   });
@@ -147,5 +148,100 @@ describe("phase6d pixel pet sprites", () => {
     expect(globals).toContain("overflow-wrap: anywhere");
     expect(adapter).toContain("0.6.3-phase6d1-pet-evolution");
     expect([dashboard, habitat, adapter].join("\n").toLowerCase()).not.toContain("nousearch-hermes");
+  });
+
+  it("keeps deterministic pet distribution diverse across current canonical repos", () => {
+    const aggregate = JSON.parse(readFileSync(join(repoRoot, "data/snapshots/aggregate/latest.json"), "utf8")) as {
+      repos: Array<{ id: string; owner: string; name: string; canonicalRemote: string }>;
+    };
+    const speciesCounts = new Map<string, number>();
+    for (const repo of aggregate.repos) {
+      const signal = {
+        machineId: "nuc1",
+        dirty: false,
+        stagedCount: 0,
+        unstagedCount: 0,
+        untrackedCount: 0,
+        aheadCount: 0,
+        behindCount: 0,
+        commitsToday: 1,
+        commitsLast7Days: 3,
+        commitsLast30Days: 9,
+      };
+      const pet = generateRepoPet(
+        {
+          repoId: repo.id,
+          owner: repo.owner,
+          name: repo.name,
+          canonicalRemote: repo.canonicalRemote,
+          primaryLanguage: null,
+        },
+        signal,
+        deriveRepoHealth(signal),
+      );
+      speciesCounts.set(pet.species, (speciesCounts.get(pet.species) ?? 0) + 1);
+      expect(pet.species).not.toBe("Cyber Snail");
+      expect(pet.species).not.toBe("Circuit Moth");
+      expect(pet.species).not.toBe("Arcade Golem");
+    }
+
+    const pixelCrabCount = speciesCounts.get("Pixel Crab") ?? 0;
+    expect(pixelCrabCount).toBeLessThanOrEqual(3);
+    expect(speciesCounts.size).toBeGreaterThanOrEqual(5);
+  });
+
+  it("keeps stable semantic assignment for known repo names", () => {
+    const baseSignal = {
+      machineId: "nuc1",
+      dirty: false,
+      stagedCount: 0,
+      unstagedCount: 0,
+      untrackedCount: 0,
+      aheadCount: 0,
+      behindCount: 0,
+      commitsToday: 2,
+      commitsLast7Days: 4,
+      commitsLast30Days: 12,
+    };
+    const health = deriveRepoHealth(baseSignal);
+    expect(
+      generateRepoPet(
+        {
+          repoId: "gurthbro0ks-apify-market-scanner",
+          owner: "GurthBro0ks",
+          name: "apify-market-scanner",
+          canonicalRemote: "git@github.com:GurthBro0ks/apify-market-scanner.git",
+          primaryLanguage: null,
+        },
+        baseSignal,
+        health,
+      ).species,
+    ).toBe("Market Mantis");
+    expect(
+      generateRepoPet(
+        {
+          repoId: "gurthbro0ks-gh-tracker",
+          owner: "GurthBro0ks",
+          name: "gh-tracker",
+          canonicalRemote: "git@github.com:GurthBro0ks/gh-tracker.git",
+          primaryLanguage: null,
+        },
+        baseSignal,
+        health,
+      ).species,
+    ).toBe("Data Frog");
+    expect(
+      generateRepoPet(
+        {
+          repoId: "gurthbro0ks-sbuild",
+          owner: "GurthBro0ks",
+          name: "sbuild",
+          canonicalRemote: "git@github.com:GurthBro0ks/sbuild.git",
+          primaryLanguage: null,
+        },
+        baseSignal,
+        health,
+      ).species,
+    ).toBe("Gear Turtle");
   });
 });

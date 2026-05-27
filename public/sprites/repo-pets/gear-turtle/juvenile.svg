@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" shape-rendering="crispEdges" role="img" aria-label="Gear Turtle juvenile stage">
+  <!-- phase6d-creature-art phase6d1-pet-evolution: gear-turtle juvenile shell gears legs -->
+  <g id="shadow" fill="#0b0b17"><ellipse cx="48" cy="80" rx="30" ry="7"/></g>
+  <g id="shell" fill="#6f97dd"><path d="M26 34h44v10h10v24H70v10H26V68H16V44h10z"/></g>
+  <g id="shell-panels" fill="#c8e5ff"><rect x="33" y="43" width="30" height="16"/><rect x="40" y="61" width="16" height="10"/></g>
+  <g id="gear-mark" fill="#ffc44d"><rect x="44" y="48" width="8" height="8"/><rect x="42" y="50" width="12" height="4"/><rect x="46" y="46" width="4" height="12"/></g>
+  <g id="head" fill="#97ffb5"><rect x="42" y="23" width="12" height="10"/><rect x="38" y="29" width="20" height="6"/></g>
+  <g id="eyes" fill="#12051f"><rect x="44" y="26" width="3" height="3"/><rect x="50" y="26" width="3" height="3"/></g>
+  <g id="legs" fill="#53b4ff"><rect x="24" y="66" width="10" height="10"/><rect x="62" y="66" width="10" height="10"/><rect x="33" y="70" width="8" height="8"/><rect x="55" y="70" width="8" height="8"/></g>
+</svg>
