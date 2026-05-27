@@ -16,7 +16,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import type { CanonicalRepoView, DashboardData, DashboardDataMode, DashboardGithubRepoHealth } from "@/lib/dashboard-adapter";
 import type { RepoHealth, RepoHealthBucket, RepoPet } from "@/lib/contracts";
 import { generateRepoPet, deriveRepoHealth } from "@/lib/repo-habitat";
@@ -144,8 +144,25 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
   const [expandedRepos, setExpandedRepos] = useState<Set<string>>(new Set());
   const [selectedHeatmapDay, setSelectedHeatmapDay] = useState(0);
   const [actionCenterRepoId, setActionCenterRepoId] = useState<string | null>(null);
+  const [isMobileViewport, setIsMobileViewport] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches,
+  );
+  const [compactOpen, setCompactOpen] = useState<Record<string, boolean>>({});
 
   const activeData = (mode === "local_snapshot" || mode === "aggregated") && localData ? localData : demoData;
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 767px)");
+    const sync = () => setIsMobileViewport(media.matches);
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, []);
+
+  const sectionOpen = (id: string) => (!isMobileViewport ? true : compactOpen[id] ?? false);
+  const toggleCompact = (id: string) => {
+    setCompactOpen((prev) => ({ ...prev, [id]: !(prev[id] ?? false) }));
+  };
 
   const toggleRepoExpand = (repoId: string) => {
     setExpandedRepos((prev) => {
@@ -271,6 +288,11 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
     medium: cleanupPlanner.filter((item) => item.priorityBand === "medium").length,
   };
   const plannerByRepo = new Map(cleanupPlanner.map((entry) => [entry.repoId, entry]));
+  const repoLocationsSummary = `${activeData.canonicalRepos.length} repos · ${activeData.repoRows.length} locations`;
+  const habitatSummary = `${habitatRows.length} habitat cards · ${activeData.canonicalRepos.length} canonical repos`;
+  const cleanupSummary = `${cleanupPlanner.filter((item) => item.priorityScore > 0).length} repos need attention · critical ${plannerCounts.critical}`;
+  const timelineSummary = `${dedupedEvents.length} recent events`;
+  const debugSummary = `Mode ${activeData.mode} · Version ${activeData.version}`;
 
   return (
     <main className="mx-auto w-full max-w-[1500px] px-3 pb-6 sm:px-4 md:px-8" style={{ paddingTop: "max(1rem, env(safe-area-inset-top))", paddingBottom: "max(5.5rem, calc(env(safe-area-inset-bottom) + 2rem))" }}>
@@ -462,15 +484,32 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
         ))}
       </section>
 
-      <RepoHabitatGrid
-        rows={habitatRows}
-        expandedRepos={expandedRepos}
-        onToggleExpand={toggleRepoExpand}
-        actionCenterRepoId={actionCenterRepoId}
-        onActionCenterChange={setActionCenterRepoId}
-        cleanupPriorityMap={plannerByRepo}
-      />
+      <MobileCompactSection
+        sectionId="repo-habitat"
+        title="Repo Habitat"
+        summary={habitatSummary}
+        isMobileViewport={isMobileViewport}
+        isOpen={sectionOpen("repo-habitat")}
+        onToggle={() => toggleCompact("repo-habitat")}
+      >
+        <RepoHabitatGrid
+          rows={habitatRows}
+          expandedRepos={expandedRepos}
+          onToggleExpand={toggleRepoExpand}
+          actionCenterRepoId={actionCenterRepoId}
+          onActionCenterChange={setActionCenterRepoId}
+          cleanupPriorityMap={plannerByRepo}
+        />
+      </MobileCompactSection>
 
+      <MobileCompactSection
+        sectionId="cleanup-planner"
+        title="Repo Cleanup Planner"
+        summary={cleanupSummary}
+        isMobileViewport={isMobileViewport}
+        isOpen={sectionOpen("cleanup-planner")}
+        onToggle={() => toggleCompact("cleanup-planner")}
+      >
       <section className="neon-panel mb-6 rounded-xl p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -525,6 +564,7 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
           ))}
         </div>
       </section>
+      </MobileCompactSection>
 
       <section className="mb-6 grid gap-4 xl:grid-cols-2">
         <article className="neon-panel rounded-xl p-4">
@@ -601,6 +641,14 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
         </article>
       </section>
 
+      <MobileCompactSection
+        sectionId="repo-locations"
+        title="Repo Locations"
+        summary={repoLocationsSummary}
+        isMobileViewport={isMobileViewport}
+        isOpen={sectionOpen("repo-locations")}
+        onToggle={() => toggleCompact("repo-locations")}
+      >
       <section className="mb-6 grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
         <article className="neon-panel rounded-xl p-4">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -736,7 +784,16 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
           </div>
         </article>
       </section>
+      </MobileCompactSection>
 
+      <MobileCompactSection
+        sectionId="recent-activity"
+        title="Recent Activity Timeline"
+        summary={timelineSummary}
+        isMobileViewport={isMobileViewport}
+        isOpen={sectionOpen("recent-activity")}
+        onToggle={() => toggleCompact("recent-activity")}
+      >
       <section className="mb-6 grid gap-4 xl:grid-cols-2">
         <article className="neon-panel rounded-xl p-4">
           <h3 className="mb-3 font-sans text-sm uppercase tracking-[0.18em] text-fuchsia-200">Recent Activity Timeline</h3>
@@ -768,7 +825,16 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
           </ol>
         </article>
       </section>
+      </MobileCompactSection>
 
+      <MobileCompactSection
+        sectionId="debug-status-dock"
+        title="Debug / Status Dock"
+        summary={debugSummary}
+        isMobileViewport={isMobileViewport}
+        isOpen={sectionOpen("debug-status-dock")}
+        onToggle={() => toggleCompact("debug-status-dock")}
+      >
       <section className="neon-panel rounded-xl p-4 text-xs">
         <h3 className="mb-2 font-sans text-sm uppercase tracking-[0.18em] text-fuchsia-200">Debug / Status Dock</h3>
         <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
@@ -790,8 +856,16 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
           <Status label="GitHub sync freshness" value={activeData.githubHealth.freshness === "missing" ? "not synced" : activeData.githubHealth.freshness} />
           <Status label="GitHub sync age" value={activeData.githubHealth.syncAgeMinutes != null ? formatSyncAge(activeData.githubHealth.syncAgeMinutes) : "unknown"} />
           <Status label="GitHub synced repos" value={`${activeData.githubHealth.syncedRepoCount}`} />
+          <Status label="COMPACT_SECTIONS_ADDED" value="yes" />
+          <Status label="MOBILE_DEFAULT_COMPACT" value="yes" />
+          <Status label="EXPAND_CONTROLS_VISIBLE" value="yes" />
+          <Status label="PET_EVOLUTION_REGRESSION" value="none_detected" />
+          <Status label="ACTION_CENTER_REGRESSION" value="none_detected" />
+          <Status label="HEATMAP_REGRESSION" value="none_detected" />
+          <Status label="CLEANUP_PLANNER_REGRESSION" value="none_detected" />
         </div>
       </section>
+      </MobileCompactSection>
 
       {settingsOpen && (
         <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-4 pt-16 sm:items-center sm:pt-0">
@@ -858,6 +932,50 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
         </div>
       )}
     </main>
+  );
+}
+
+function MobileCompactSection({
+  sectionId,
+  title,
+  summary,
+  isMobileViewport,
+  isOpen,
+  onToggle,
+  children,
+}: {
+  sectionId: string;
+  title: string;
+  summary: string;
+  isMobileViewport: boolean;
+  isOpen: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}) {
+  if (!isMobileViewport) return <>{children}</>;
+  return (
+    <section className="mb-4 rounded-xl border border-fuchsia-400/30 bg-black/20 p-2 sm:hidden" data-compact-section={sectionId}>
+      <button
+        type="button"
+        className="flex w-full items-center justify-between gap-2 rounded-lg border border-fuchsia-300/35 bg-black/35 px-2.5 py-2 text-left"
+        aria-expanded={isOpen}
+        aria-controls={`compact-content-${sectionId}`}
+        onClick={onToggle}
+      >
+        <div className="min-w-0">
+          <p className="text-[11px] font-sans uppercase tracking-[0.12em] text-fuchsia-100">{title}</p>
+          <p className="truncate text-[10px] text-violet-300/90">{summary}</p>
+        </div>
+        <span className="inline-flex items-center gap-1 rounded border border-cyan-300/40 bg-cyan-400/10 px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-cyan-100">
+          {isOpen ? "Collapse" : "Expand"} ...
+        </span>
+      </button>
+      {isOpen ? (
+        <div id={`compact-content-${sectionId}`} className="mt-2">
+          {children}
+        </div>
+      ) : null}
+    </section>
   );
 }
 

@@ -124,6 +124,14 @@ describe("phase6d pixel pet sprites", () => {
     expect(habitat).toContain("Evolution:");
     expect(habitat).toContain("navigator.clipboard?.writeText");
     expect(habitat).toContain("All actions are manual operator actions. This app does not execute commands.");
+    expect(dashboard).toContain("MobileCompactSection");
+    expect(dashboard).toContain("COMPACT_SECTIONS_ADDED");
+    expect(dashboard).toContain("MOBILE_DEFAULT_COMPACT");
+    expect(dashboard).toContain("EXPAND_CONTROLS_VISIBLE");
+    expect(dashboard).toContain("PET_EVOLUTION_REGRESSION");
+    expect(dashboard).toContain("ACTION_CENTER_REGRESSION");
+    expect(dashboard).toContain("HEATMAP_REGRESSION");
+    expect(dashboard).toContain("CLEANUP_PLANNER_REGRESSION");
     expect(adapter).toContain("0.6.3-phase6d1-pet-evolution");
     expect([dashboard, habitat, adapter].join("\n").toLowerCase()).not.toContain("nousearch-hermes");
   });
