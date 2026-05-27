@@ -15,7 +15,8 @@
     "aggregate:snapshots": "tsx scripts/aggregate-snapshots.ts",
     "validate:aggregate": "tsx scripts/validate-aggregate.ts",
     "github:sync": "tsx scripts/sync-github-remotes.ts",
-    "validate:github": "tsx scripts/validate-github-health.ts"
+    "validate:github": "tsx scripts/validate-github-health.ts",
+    "validate:runtime-assets": "tsx scripts/validate-runtime-assets.ts"
   },
   "dependencies": {
     "next": "16.2.6",
