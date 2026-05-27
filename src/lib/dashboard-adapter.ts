@@ -134,6 +134,67 @@ export type DashboardData = {
   canonicalRepos: CanonicalRepoView[];
 };
 
+function isoDateUTC(input: Date): string {
+  return input.toISOString().slice(0, 10);
+}
+
+function addUtcDays(isoDay: string, delta: number): string {
+  const date = new Date(`${isoDay}T00:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() + delta);
+  return isoDateUTC(date);
+}
+
+function buildContinuousDailyTrend(
+  dailyMachineStats: SnapshotEnvelope["dailyMachineStats"],
+  endDayIso: string,
+  days = 30,
+) {
+  const byDay = new Map<string, { day: string; total: number; laptop: number; nuc1: number; nuc2: number; additions: number; deletions: number }>();
+  for (const dayRow of dailyMachineStats) {
+    const label = dayRow.date.slice(5);
+    const entry = byDay.get(dayRow.date) ?? { day: label, total: 0, laptop: 0, nuc1: 0, nuc2: 0, additions: 0, deletions: 0 };
+    entry.total += dayRow.commits;
+    if (dayRow.machineId === "laptop") entry.laptop += dayRow.commits;
+    if (dayRow.machineId === "nuc1") entry.nuc1 += dayRow.commits;
+    if (dayRow.machineId === "nuc2") entry.nuc2 += dayRow.commits;
+    entry.additions += dayRow.additions;
+    entry.deletions += dayRow.deletions;
+    byDay.set(dayRow.date, entry);
+  }
+
+  const startDayIso = addUtcDays(endDayIso, -(days - 1));
+  const trend: Array<{ day: string; total: number; laptop: number; nuc1: number; nuc2: number; additions: number; deletions: number }> = [];
+  for (let i = 0; i < days; i += 1) {
+    const dayIso = addUtcDays(startDayIso, i);
+    const existing = byDay.get(dayIso);
+    trend.push(
+      existing ?? {
+        day: dayIso.slice(5),
+        total: 0,
+        laptop: 0,
+        nuc1: 0,
+        nuc2: 0,
+        additions: 0,
+        deletions: 0,
+      },
+    );
+  }
+  return trend;
+}
+
+function buildHeatmapFromTrend(trend: Array<{ total: number }>, weeks = 6): number[][] {
+  const totalCells = weeks * 7;
+  const tail = trend.slice(-totalCells);
+  const padded = Array.from({ length: Math.max(0, totalCells - tail.length) }, () => ({ total: 0 })).concat(tail);
+  const maxTotal = Math.max(1, ...padded.map((row) => row.total));
+  const scaled = padded.map((row) => Math.max(0, Math.min(7, Math.round((row.total / maxTotal) * 7))));
+  const grid: number[][] = [];
+  for (let i = 0; i < weeks; i += 1) {
+    grid.push(scaled.slice(i * 7, i * 7 + 7));
+  }
+  return grid;
+}
+
 export function buildDemoDashboardData(): DashboardData {
   const totalCommitsToday = machines.reduce((sum, machine) => sum + machine.commitsToday, 0);
   const pushesToday = machines.reduce((sum, machine) => sum + machine.pushesToday, 0);
@@ -222,24 +283,15 @@ export function buildDashboardDataFromSnapshot(snapshot: SnapshotEnvelope): Dash
     repoCommitMap.set(row.repoId, (repoCommitMap.get(row.repoId) ?? 0) + row.commits);
   }
 
-  const dateRows = new Map<string, { day: string; total: number; laptop: number; nuc1: number; nuc2: number; additions: number; deletions: number }>();
-  for (const dayRow of snapshot.dailyMachineStats) {
-    const label = dayRow.date.slice(5);
-    const entry = dateRows.get(dayRow.date) ?? { day: label, total: 0, laptop: 0, nuc1: 0, nuc2: 0, additions: 0, deletions: 0 };
-    entry.total += dayRow.commits;
-    if (dayRow.machineId === "laptop") entry.laptop += dayRow.commits;
-    if (dayRow.machineId === "nuc1") entry.nuc1 += dayRow.commits;
-    if (dayRow.machineId === "nuc2") entry.nuc2 += dayRow.commits;
-    entry.additions += dayRow.additions;
-    entry.deletions += dayRow.deletions;
-    dateRows.set(dayRow.date, entry);
-  }
+  const todayIso = isoDateUTC(new Date());
+  const commitTrend = buildContinuousDailyTrend(snapshot.dailyMachineStats, todayIso, 30);
+  const heatmap = buildHeatmapFromTrend(commitTrend, 6);
 
   // Build machine cards from all unique machine IDs in repoLocations
   const machineIdSet = new Set(snapshot.repoLocations.map((l) => l.machineId));
   const machineCards = Array.from(machineIdSet).map((machineId) => {
     const machineLocs = snapshot.repoLocations.filter((l) => l.machineId === machineId);
-    const today = snapshot.dailyMachineStats.find((entry) => entry.machineId === machineId && entry.date === snapshot.createdAt.slice(0, 10));
+    const today = snapshot.dailyMachineStats.find((entry) => entry.machineId === machineId && entry.date === todayIso);
     const machineMeta = snapshot.machine.id === machineId ? snapshot.machine : undefined;
     return {
       id: machineId,
@@ -259,7 +311,7 @@ export function buildDashboardDataFromSnapshot(snapshot: SnapshotEnvelope): Dash
   const mostActiveRepo = repoDistribution[0]?.repoId ?? "n/a";
   const mostActiveMachine = machineCards.sort((a, b) => b.commitsToday - a.commitsToday)[0]?.label ?? "n/a";
 
-  const todayStats = snapshot.dailyMachineStats.filter((entry) => entry.date === snapshot.createdAt.slice(0, 10));
+  const todayStats = snapshot.dailyMachineStats.filter((entry) => entry.date === todayIso);
   const totalCommitsToday = todayStats.reduce((sum, entry) => sum + entry.commits, 0);
   const pushesToday = todayStats.reduce((sum, entry) => sum + entry.pushes, 0);
 
@@ -326,9 +378,9 @@ export function buildDashboardDataFromSnapshot(snapshot: SnapshotEnvelope): Dash
     repoCatalog,
     repoRows,
     timeline: snapshot.activityEvents,
-    commitTrend: Array.from(dateRows.values()).sort((a, b) => a.day.localeCompare(b.day)),
+    commitTrend,
     repoDistribution,
-    heatmap: heatmapWeeks,
+    heatmap,
     canonicalRepos,
   };
 }

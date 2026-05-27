@@ -131,6 +131,9 @@ describe("phase6d pixel pet sprites", () => {
     expect(dashboard).toContain("Tap a day to inspect activity.");
     expect(dashboard).toContain("HEATMAP_STATUS");
     expect(dashboard).toContain("rendered_visible");
+    expect(dashboard).toContain("LOCAL_SNAPSHOT_AGE");
+    expect(dashboard).toContain("LOCAL_SNAPSHOT_FRESHNESS");
+    expect(dashboard).toContain("LOCAL_SNAPSHOT_STALE_WARNING");
     expect(habitat).toContain("Repo Action Center");
     expect(habitat).toContain("Evolution:");
     expect(habitat).toContain("navigator.clipboard?.writeText");

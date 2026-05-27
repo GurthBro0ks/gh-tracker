@@ -148,6 +148,7 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
     () => typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches,
   );
   const [compactOpen, setCompactOpen] = useState<Record<string, boolean>>({});
+  const [renderedAt] = useState(() => Date.now());
 
   const activeData = (mode === "local_snapshot" || mode === "aggregated") && localData ? localData : demoData;
 
@@ -293,6 +294,23 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
   const cleanupSummary = `${cleanupPlanner.filter((item) => item.priorityScore > 0).length} repos need attention · critical ${plannerCounts.critical}`;
   const timelineSummary = `${dedupedEvents.length} recent events`;
   const debugSummary = `Mode ${activeData.mode} · Version ${activeData.version}`;
+  const localSnapshotAgeMinutes = activeData.latestLocalSnapshotTime ? Math.max(0, Math.floor((renderedAt - Date.parse(activeData.latestLocalSnapshotTime)) / 60000)) : null;
+  const localSnapshotFreshness = activeData.mode === "demo"
+    ? "demo"
+    : localSnapshotAgeMinutes == null
+      ? "unknown"
+      : localSnapshotAgeMinutes <= 180
+        ? "fresh"
+        : localSnapshotAgeMinutes <= 1440
+          ? "aging"
+          : "stale";
+  const localSnapshotAgeLabel = localSnapshotAgeMinutes == null
+    ? "unknown"
+    : localSnapshotAgeMinutes < 60
+      ? `${localSnapshotAgeMinutes}m`
+      : localSnapshotAgeMinutes < 1440
+        ? `${Math.floor(localSnapshotAgeMinutes / 60)}h ${localSnapshotAgeMinutes % 60}m`
+        : `${Math.floor(localSnapshotAgeMinutes / 1440)}d ${Math.floor((localSnapshotAgeMinutes % 1440) / 60)}h`;
 
   return (
     <main className="dashboard-shell mx-auto w-full max-w-[1500px] px-3 pb-6 sm:px-4 md:px-8" style={{ paddingTop: "max(1rem, env(safe-area-inset-top))", paddingBottom: "max(5.5rem, calc(env(safe-area-inset-bottom) + 2rem))" }}>
@@ -841,6 +859,11 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
           <Status label="App version" value={activeData.version} />
           <Status label="Data Mode" value={activeData.mode === "demo" ? "Demo (simulated)" : activeData.mode === "aggregated" ? "Aggregated Live Snapshots" : "Local Snapshot"} />
           <Status label="Latest Local Snapshot" value={activeData.latestLocalSnapshotTime ?? "pending Phase 4 collector"} />
+          <Status label="LOCAL_SNAPSHOT_AGE" value={activeData.mode === "demo" ? "demo" : localSnapshotAgeLabel} />
+          <Status label="LOCAL_SNAPSHOT_FRESHNESS" value={localSnapshotFreshness} />
+          {localSnapshotFreshness === "stale" && (
+            <Status label="LOCAL_SNAPSHOT_STALE_WARNING" value="local collector data is stale; charts are zero-filled through today" />
+          )}
           <Status label="Local Repo Count" value={activeData.mode === "demo" ? "0 (demo mode)" : `${activeData.localRepoCount}`} />
           <Status label="Dirty Repo Count" value={activeData.mode === "demo" ? "0 (demo mode)" : `${activeData.dirtyRepoCount}`} />
           <Status label="Unpushed Repo Count" value={activeData.mode === "demo" ? "0 (demo mode)" : `${activeData.unpushedRepoCount}`} />
