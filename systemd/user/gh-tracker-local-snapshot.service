@@ -1,0 +1,11 @@
+[Unit]
+Description=GH Tracker — Local Snapshot Collector
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/slimy/gh-tracker/scripts/run-local-snapshot-collector.sh
+WorkingDirectory=/opt/slimy/gh-tracker
+StandardOutput=journal
+StandardError=journal
