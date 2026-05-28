@@ -324,6 +324,7 @@ function ActionCenterDrawer({ row, planner, onClose }: { row: HabitatRow; planne
         ]} />
         <Section title="Care Plan" lines={[
           ...(planner ? planner.reasons.map((reason) => `Priority reason: ${reason}`) : []),
+          ...(planner ? planner.suggestions.map((s) => `Suggestion: ${s}`) : []),
           ...model.attentionReasons.map((r) => `Needs care: ${r}`),
           ...model.careActions.map((a) => `Action: ${a}`),
           "All actions are manual operator actions. This app does not execute commands.",

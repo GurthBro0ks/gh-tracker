@@ -8,6 +8,7 @@ export type CleanupPlannerEntry = {
   priorityScore: number;
   priorityBand: CleanupPriorityBand;
   reasons: string[];
+  suggestions: string[];
   recommendedActions: string[];
   affectedMachines: string[];
   affectedLocations: Array<{
@@ -44,6 +45,7 @@ export function buildCleanupPlanner(canonicalRepos: CanonicalRepoView[]): Cleanu
   const entries = canonicalRepos.map((repo) => {
     let priorityScore = 0;
     const reasons: string[] = [];
+    const suggestions: string[] = [];
     const recommended = new Set<string>();
 
     const dirtyLocations = repo.perLocationDetails.filter((loc) => loc.dirty);
@@ -93,12 +95,12 @@ export function buildCleanupPlanner(canonicalRepos: CanonicalRepoView[]): Cleanu
     }
     if (github?.ci.status === "none") {
       priorityScore += 10;
-      reasons.push("No CI runs found");
+      suggestions.push("CI not configured yet");
       recommended.add("Configure CI");
     }
     if (github?.latestRelease.status === "none") {
       priorityScore += 10;
-      reasons.push("No release found");
+      suggestions.push("Release tagging not configured yet");
       recommended.add("Plan release");
     }
     if (repo.combinedCommits < 3) {
@@ -137,6 +139,7 @@ export function buildCleanupPlanner(canonicalRepos: CanonicalRepoView[]): Cleanu
       priorityScore,
       priorityBand: bandFromScore(priorityScore),
       reasons,
+      suggestions,
       recommendedActions: Array.from(recommended),
       affectedMachines: repo.machines,
       affectedLocations: repo.perLocationDetails.map((loc) => ({
