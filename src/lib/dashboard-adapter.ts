@@ -223,7 +223,7 @@ export function buildDemoDashboardData(): DashboardData {
 
   return {
     mode: "demo",
-    version: "0.6.3-phase6d1-pet-evolution",
+    version: "0.6.4-phase6d2-pet-animation-health-wording",
     sourceTimestamp: lastDemoRefresh,
     latestLocalSnapshotTime: null,
     localRepoCount: 0,
@@ -356,7 +356,7 @@ export function buildDashboardDataFromSnapshot(snapshot: SnapshotEnvelope): Dash
 
   return {
     mode,
-    version: "0.6.3-phase6d1-pet-evolution",
+    version: "0.6.4-phase6d2-pet-animation-health-wording",
     sourceTimestamp: snapshot.createdAt,
     latestLocalSnapshotTime: snapshot.createdAt,
     localRepoCount: snapshot.repoLocations.length,

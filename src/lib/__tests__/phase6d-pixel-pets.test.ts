@@ -104,7 +104,8 @@ describe("phase6d pixel pet sprites", () => {
     expect(dashboard).toContain('mode="compact"');
     expect(dashboard).toContain("stage={row.pet.stage}");
     expect(habitat).toContain("<RepoPetSprite");
-    expect(habitat).toContain("Pet: ${model.petSpecies} · ${model.petStage}");
+    expect(habitat).toContain("Species: ${model.petSpecies}");
+    expect(habitat).toContain("Stage: ${model.petStage}");
     expect(renderer).toContain("repo-pet-sprite__image");
     expect(renderer).toContain("data-pet-stage");
     expect(renderer).toContain("<img");
@@ -149,7 +150,7 @@ describe("phase6d pixel pet sprites", () => {
     expect(globals).toContain("overflow-x: hidden");
     expect(globals).toContain(".repo-locations-layout");
     expect(globals).toContain("overflow-wrap: anywhere");
-    expect(adapter).toContain("0.6.3-phase6d1-pet-evolution");
+    expect(adapter).toContain("0.6.4-phase6d2-pet-animation-health-wording");
     expect([dashboard, habitat, adapter].join("\n").toLowerCase()).not.toContain("nousearch-hermes");
   });
 

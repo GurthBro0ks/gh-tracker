@@ -76,3 +76,11 @@ GitHub API sync for release/CI/PR/issue health:
 - Token-based, secure local-only secrets handling
 - Merge remote health into RepoHealth score
 - Expand pixel-pet states with sprite-sheet assets
+
+## Phase 6D.2
+Focused polish pass on accepted 6D.1 habitat behavior:
+- Lightweight pixel-pet state animations (idle bob, curious wiggle, focused pulse, stressed jitter, needs-care weak pulse).
+- Reduced-motion accessibility guard for sprite animations.
+- Clearer compact evolution copy: species, stage, mood, and short reason text.
+- GitHub health wording cleanup for no-release/no-CI repos (`none configured`) and no-backlog repos (`PR/issues: clear`).
+- Manual-only Action Center safety preserved (copy-only operator commands, no execution path).

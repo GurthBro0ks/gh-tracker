@@ -132,7 +132,7 @@ function RepoPetCard({ row, expanded, onToggleExpand, onOpenActionCenter }: { ro
         <div className="min-w-0 flex-1">
           <p className="text-base font-sans uppercase tracking-[0.06em] text-white break-words sm:text-lg">{row.repoId}</p>
           <p className="text-[10px] text-violet-300 break-words sm:text-xs">
-            {row.pet.species} · {row.pet.stage} · {row.pet.mood}
+            Species: {row.pet.species} · Stage: {row.pet.stage} · Mood: {row.pet.mood}
             {canonical && (
               <span className="ml-1 text-cyan-200/80">· {canonical.locationCount} location{canonical.locationCount !== 1 ? "s" : ""} · {canonical.machines.join(", ").toUpperCase()}</span>
             )}
@@ -161,7 +161,10 @@ function RepoPetCard({ row, expanded, onToggleExpand, onOpenActionCenter }: { ro
         </div>
       </div>
       <p className="mt-2 rounded border border-lime-300/25 bg-lime-400/10 px-2 py-1 text-[10px] text-lime-100 sm:text-xs">
-        Evolution: {row.pet.stage} from {canonical?.combinedCommits ?? row.health.activity.commitsLast30Days} commits and {row.health.activity.commitsLast7Days} recent activity signals
+        Stage: {row.pet.stage} - earned from {canonical?.combinedCommits ?? row.health.activity.commitsLast30Days} sustained commits and {row.health.activity.commitsLast7Days} recent signals
+      </p>
+      <p className="mt-1 rounded border border-white/15 bg-black/20 px-2 py-1 text-[10px] text-violet-100 sm:text-xs">
+        Mood: {row.pet.mood} - {moodReason(row)}
       </p>
 
       <div className="mt-2 grid gap-2 sm:mt-3 md:grid-cols-2">
@@ -182,8 +185,8 @@ function RepoPetCard({ row, expanded, onToggleExpand, onOpenActionCenter }: { ro
       <div className="mt-2 grid gap-1.5 text-[10px] sm:mt-3 sm:gap-2 sm:text-xs sm:grid-cols-2">
         <p className="rounded border border-cyan-300/30 bg-cyan-400/10 px-1.5 py-0.5 sm:px-2 sm:py-1">Release: {row.github ? formatRelease(row.github.latestRelease) : "not synced yet"}</p>
         <p className="rounded border border-cyan-300/30 bg-cyan-400/10 px-1.5 py-0.5 sm:px-2 sm:py-1">CI: {row.github ? formatCi(row.github.ci) : "not synced yet"}</p>
-        <p className="rounded border border-cyan-300/30 bg-cyan-400/10 px-1.5 py-0.5 sm:px-2 sm:py-1">PR/issue pressure: {row.github ? `${row.github.pullRequests.open ?? "?"} PR / ${row.github.issues.open ?? "?"} issues` : "not synced yet"}</p>
-        <p className="rounded border border-cyan-300/30 bg-cyan-400/10 px-1.5 py-0.5 sm:px-2 sm:py-1">GitHub sync: {row.github ? row.github.sync.status : "not configured"}</p>
+        <p className="rounded border border-cyan-300/30 bg-cyan-400/10 px-1.5 py-0.5 sm:px-2 sm:py-1">PR/issues: {row.github ? formatPrIssue(row.github.pullRequests.open, row.github.issues.open) : "not synced yet"}</p>
+        <p className="rounded border border-cyan-300/30 bg-cyan-400/10 px-1.5 py-0.5 sm:px-2 sm:py-1">GitHub sync: {row.github ? formatGithubSync(row.github.sync.status) : "not configured"}</p>
       </div>
 
       {hasDetails && expanded && (
@@ -235,6 +238,14 @@ function getPetSpriteStatus(row: HabitatRow): RepoPetSpriteStatus {
   return "healthy";
 }
 
+function moodReason(row: HabitatRow): string {
+  if (row.canonicalRepo?.dirtyState === "dirty") return "needs care because one location is dirty";
+  if ((row.canonicalRepo?.unpushedTotal ?? row.health.sync.aheadCount) > 0) return "watching unpushed local commits";
+  if (row.health.bucket === "legendary" || row.health.bucket === "healthy") return "clean recent activity";
+  if (row.health.bucket === "needs_care" || row.health.bucket === "stressed" || row.health.bucket === "sick") return "care signals detected";
+  return "steady recent activity";
+}
+
 export function RepoHealthBadge({ health }: { health: RepoHealth }) {
   return <p className="self-start rounded border border-lime-300/50 bg-lime-400/10 px-2 py-1 text-xs uppercase tracking-[0.12em] text-lime-200 break-words">{health.score} - {health.bucket.replace("_", " ")}</p>;
 }
@@ -245,14 +256,24 @@ function GithubHealthBadge({ github }: { github: DashboardGithubRepoHealth }) {
 }
 
 function formatRelease(release: DashboardGithubRepoHealth["latestRelease"]) {
-  if (release.status === "none") return "No release found";
+  if (release.status === "none") return "none configured";
   if (!release.tagName) return "unknown";
   return release.ageDays === null ? `${release.tagName} (${release.status})` : `${release.tagName} (${release.ageDays}d)`;
 }
 
 function formatCi(ci: DashboardGithubRepoHealth["ci"]) {
-  if (ci.status === "none") return "No runs found";
+  if (ci.status === "none") return "none configured";
   return ci.workflowName ? `${ci.status} (${ci.workflowName})` : ci.status;
+}
+
+function formatPrIssue(prCount: number | null, issueCount: number | null) {
+  if (prCount === 0 && issueCount === 0) return "clear";
+  return `${prCount ?? "?"} PR / ${issueCount ?? "?"} issues`;
+}
+
+function formatGithubSync(status: string) {
+  if (status === "synced") return "fresh/ok";
+  return status;
 }
 
 export function CareActionList({ actions }: { actions: RepoCareAction[] }) {
@@ -280,7 +301,9 @@ function ActionCenterDrawer({ row, planner, onClose }: { row: HabitatRow; planne
 
         <Section title="Overview" lines={[
           `Repo: ${model.canonicalRepo}`,
-          `Pet: ${model.petSpecies} · ${model.petStage}`,
+          `Species: ${model.petSpecies}`,
+          `Stage: ${model.petStage}`,
+          `Mood: ${row.pet.mood}`,
           model.evolutionSummary,
           `Dirty state: ${model.dirtyStatus}`,
           `Unpushed commits: ${model.unpushedTotal}`,
@@ -372,7 +395,7 @@ function buildActionCenterModel(row: HabitatRow): ActionCenterModel {
     displayName: canonical?.displayName ?? row.repoId,
     petSpecies: row.pet.species,
     petStage: row.pet.stage,
-    evolutionSummary: `Evolution: ${row.pet.stage} from ${canonical?.combinedCommits ?? row.health.activity.commitsLast30Days} commits and active history`,
+    evolutionSummary: `Evolution: ${row.pet.stage} stage earned from sustained commits and active history`,
     machines: canonical?.machines ?? [row.machineId],
     locations: locations.map((loc) => ({ machineId: loc.machineId, path: loc.path, branch: loc.branch, dirty: loc.dirty, unpushedCommits: loc.unpushedCommits, headSha: loc.headSha })),
     dirtyStatus: canonical?.dirtyState ?? "unknown",
@@ -383,8 +406,8 @@ function buildActionCenterModel(row: HabitatRow): ActionCenterModel {
     githubHealthSummary: github ? `GitHub health ${github.health.score} (${github.health.label}) · sync ${github.sync.status}` : "GitHub health not synced yet",
     prCount: github?.pullRequests.open ?? null,
     issueCount: github?.issues.open ?? null,
-    ciStatus: github?.ci.status ?? "unknown",
-    releaseStatus: github?.latestRelease.status ?? "unknown",
+    ciStatus: github ? formatCi(github.ci) : "unknown",
+    releaseStatus: github ? formatRelease(github.latestRelease) : "unknown",
     attentionReasons: row.health.attentionReasons.map((r) => attentionLabels[r]),
     careActions: row.health.careActions.map((a) => careLabels[a]),
     safeCommandGroups,

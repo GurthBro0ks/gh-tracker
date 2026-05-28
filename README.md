@@ -45,6 +45,13 @@ Local dashboard for tracking Git/GitHub activity across Laptop, NUC1, and NUC2.
 - Timeline deduplication groups duplicate canonical repo events across machines
 - Debug dock shows ownership filter status and excluded repo count
 
+## Phase 6D.2 (Pet Animation + Health Wording Polish)
+- Added lightweight pixel-pet animation behaviors for idle, curious, focused, stressed, and needs-care states.
+- Added reduced-motion safety via `prefers-reduced-motion` to disable sprite movement.
+- Clarified habitat evolution copy with compact species/stage/mood and reason strings.
+- Softened GitHub wording for repos without release/CI (`none configured`) and clear backlog state (`PR/issues: clear`).
+- Preserved Action Center manual-only safety: copy commands only, no command execution.
+
 ## Run Local
 ```bash
 pnpm install

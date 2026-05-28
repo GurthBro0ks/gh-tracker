@@ -174,35 +174,39 @@ body::before {
   opacity: 0.88;
 }
 
-.sprite-idle {
-  animation: sprite-idle 1.8s steps(2, end) infinite;
+.repo-pet-sprite__image {
+  animation: pet-idle-bob 2.8s ease-in-out infinite;
 }
 
-.sprite-wobble,
-.sprite-hatch,
-.sprite-happy,
-.sprite-stressed,
-.sprite-sleep,
-.sprite-sick,
-.sprite-evolve {
-  animation: sprite-wobble 900ms steps(2, end) infinite;
+.repo-pet-sprite.sprite-idle .repo-pet-sprite__image {
+  animation-name: pet-idle-bob;
 }
 
-.sprite-happy {
-  animation-name: sprite-happy;
+.repo-pet-sprite.sprite-wobble .repo-pet-sprite__image,
+.repo-pet-sprite.sprite-hatch .repo-pet-sprite__image,
+.repo-pet-sprite.sprite-happy .repo-pet-sprite__image {
+  animation: pet-curious-wiggle 1.9s ease-in-out infinite;
 }
 
-.sprite-stressed,
-.sprite-sick {
-  animation-name: sprite-stressed;
+.repo-pet-sprite--focused .repo-pet-sprite__image {
+  animation: pet-focused-pulse 2.2s ease-in-out infinite;
 }
 
-.sprite-sleep {
-  animation-name: sprite-sleep;
+.repo-pet-sprite--needs-care .repo-pet-sprite__image,
+.repo-pet-sprite--dirty .repo-pet-sprite__image,
+.repo-pet-sprite.sprite-sleep .repo-pet-sprite__image {
+  animation: pet-needs-care-pulse 3.4s ease-in-out infinite;
 }
 
-.sprite-evolve {
-  animation-name: sprite-evolve;
+.repo-pet-sprite.sprite-stressed .repo-pet-sprite__image,
+.repo-pet-sprite.sprite-sick .repo-pet-sprite__image,
+.repo-pet-sprite--alert .repo-pet-sprite__image,
+.repo-pet-sprite--unpushed .repo-pet-sprite__image {
+  animation: pet-stressed-jitter 1.3s steps(2, end) infinite;
+}
+
+.repo-pet-sprite.sprite-evolve .repo-pet-sprite__image {
+  animation: pet-focused-pulse 1.4s ease-in-out infinite;
 }
 
 /* Recharts custom tooltip styling */
@@ -236,48 +240,50 @@ body::before {
   font-weight: bold;
 }
 
-@keyframes sprite-idle {
+@keyframes pet-idle-bob {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-2px); }
 }
 
-@keyframes sprite-wobble {
-  0%, 100% { transform: translateX(0) rotate(0deg); }
-  50% { transform: translateX(2px) rotate(1deg); }
+@keyframes pet-curious-wiggle {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  35% { transform: translateY(-2px) rotate(-1deg); }
+  70% { transform: translateY(-1px) rotate(1deg); }
 }
 
-@keyframes sprite-happy {
-  0%, 100% { transform: translateY(0) scale(1); }
-  50% { transform: translateY(-3px) scale(1.04); }
+@keyframes pet-focused-pulse {
+  0%, 100% { transform: translateY(0) scale(1); filter: drop-shadow(0 0 8px rgba(83, 180, 255, 0.25)); }
+  50% { transform: translateY(-1px) scale(1.03); filter: drop-shadow(0 0 14px rgba(83, 180, 255, 0.45)); }
 }
 
-@keyframes sprite-stressed {
+@keyframes pet-stressed-jitter {
   0%, 100% { transform: translateX(0); }
-  20% { transform: translateX(-2px); }
-  40% { transform: translateX(2px); }
+  20% { transform: translateX(-1.5px); }
+  40% { transform: translateX(1.5px); }
   60% { transform: translateX(-1px); }
   80% { transform: translateX(1px); }
 }
 
-@keyframes sprite-sleep {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.55; }
-}
-
-@keyframes sprite-evolve {
-  0%, 100% { filter: hue-rotate(0deg); transform: scale(1); }
-  50% { filter: hue-rotate(45deg); transform: scale(1.08); }
+@keyframes pet-needs-care-pulse {
+  0%, 100% { opacity: 0.92; transform: scale(1); }
+  50% { opacity: 0.72; transform: scale(0.98); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sprite-idle,
-  .sprite-wobble,
-  .sprite-hatch,
-  .sprite-happy,
-  .sprite-stressed,
-  .sprite-sleep,
-  .sprite-sick,
-  .sprite-evolve {
+  .repo-pet-sprite__image,
+  .repo-pet-sprite.sprite-idle .repo-pet-sprite__image,
+  .repo-pet-sprite.sprite-wobble .repo-pet-sprite__image,
+  .repo-pet-sprite.sprite-hatch .repo-pet-sprite__image,
+  .repo-pet-sprite.sprite-happy .repo-pet-sprite__image,
+  .repo-pet-sprite--focused .repo-pet-sprite__image,
+  .repo-pet-sprite--needs-care .repo-pet-sprite__image,
+  .repo-pet-sprite--dirty .repo-pet-sprite__image,
+  .repo-pet-sprite.sprite-sleep .repo-pet-sprite__image,
+  .repo-pet-sprite.sprite-stressed .repo-pet-sprite__image,
+  .repo-pet-sprite.sprite-sick .repo-pet-sprite__image,
+  .repo-pet-sprite--alert .repo-pet-sprite__image,
+  .repo-pet-sprite--unpushed .repo-pet-sprite__image,
+  .repo-pet-sprite.sprite-evolve .repo-pet-sprite__image {
     animation: none;
   }
 }
