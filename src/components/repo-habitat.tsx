@@ -369,25 +369,33 @@ function ActionCenterDrawer({ row, planner, onClose }: { row: HabitatRow; planne
         ]} />
         <div className="mt-3 rounded border border-cyan-300/30 bg-black/30 p-2.5 sm:p-3">
           <p className="mb-2 text-[10px] uppercase tracking-[0.14em] text-cyan-200 sm:text-xs">Copy Commands</p>
+          <p className="mb-2 text-[10px] text-violet-200/70 sm:text-xs">Commands are tailored per location: dirty repos get inspection commands, unpushed repos get ahead/behind inspection, clean repos get light health checks.</p>
           <div className="space-y-2">
-            {model.safeCommandGroups.map((group) => (
-              <div key={`${group.machineId}:${group.path}`} className="rounded border border-white/10 bg-black/25 p-2 text-[10px] sm:text-xs overflow-hidden">
-                <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-violet-200 break-all min-w-0 flex-1">{group.machineId.toUpperCase()} · {group.runLabel} · {group.path}</p>
-                  <button
-                    type="button"
-                    className="flex-shrink-0 rounded border border-cyan-300/40 bg-cyan-400/10 px-3 py-2 text-[10px] uppercase tracking-[0.1em] text-cyan-100 min-h-[44px] min-w-[60px] flex items-center justify-center sm:min-h-0 sm:min-w-0 sm:px-2 sm:py-1"
-                    onClick={() => {
-                      void navigator.clipboard?.writeText(group.commands.join("\n"));
-                    }}
-                    aria-label={`Copy commands for ${group.machineId}`}
-                  >
-                    Copy
-                  </button>
+            {model.safeCommandGroups.map((group) => {
+              const loc = model.locations.find((l) => l.machineId === group.machineId && l.path === group.path);
+              const contextLabel = loc?.dirty ? "Inspect dirty working tree" : (loc?.unpushedCommits ?? 0) > 0 ? "Inspect unpushed commits" : "Verify repo health";
+              return (
+                <div key={`${group.machineId}:${group.path}`} className="rounded border border-white/10 bg-black/25 p-2 text-[10px] sm:text-xs overflow-hidden">
+                  <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-violet-200 break-all">{group.machineId.toUpperCase()} · {group.path}</p>
+                      <p className="text-cyan-200/70">{contextLabel}</p>
+                    </div>
+                    <button
+                      type="button"
+                      className="flex-shrink-0 rounded border border-cyan-300/40 bg-cyan-400/10 px-3 py-2 text-[10px] uppercase tracking-[0.1em] text-cyan-100 min-h-[44px] min-w-[60px] flex items-center justify-center sm:min-h-0 sm:min-w-0 sm:px-2 sm:py-1"
+                      onClick={() => {
+                        void navigator.clipboard?.writeText(group.commands.join("\n"));
+                      }}
+                      aria-label={`Copy commands for ${group.machineId}`}
+                    >
+                      Copy
+                    </button>
+                  </div>
+                  <pre className="overflow-x-auto whitespace-pre text-lime-200 break-all">{group.commands.join("\n")}</pre>
                 </div>
-                <pre className="overflow-x-auto whitespace-pre text-lime-200 break-all">{group.commands.join("\n")}</pre>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
@@ -414,14 +422,36 @@ function buildActionCenterModel(row: HabitatRow): ActionCenterModel {
   const github = row.github;
   const safeCommandGroups = locations.map((loc) => {
     const remote = machineRemotePrefix(loc.machineId);
-    const commands = [
-      ...(remote ? [remote] : []),
-      `cd ${loc.path}`,
-      "git status --branch --short",
-      "git diff --stat",
-      "git log --oneline -5",
-      "git branch --show-current",
-    ];
+    const baseCmds = remote ? [remote] : [];
+    let commands: string[];
+    if (loc.dirty) {
+      commands = [
+        ...baseCmds,
+        `cd ${loc.path}`,
+        "git status --branch --short",
+        "git diff --stat",
+        "git stash list",
+        "git log --oneline -5",
+        "git branch --show-current",
+      ];
+    } else if (loc.unpushedCommits > 0) {
+      commands = [
+        ...baseCmds,
+        `cd ${loc.path}`,
+        "git status --branch --short",
+        `git log --oneline @{u}..HEAD`,
+        "git diff --stat @{u}..HEAD",
+        "git branch --show-current",
+      ];
+    } else {
+      commands = [
+        ...baseCmds,
+        `cd ${loc.path}`,
+        "git status --branch --short",
+        "git log --oneline -3",
+        "git remote -v",
+      ];
+    }
     return {
       machineId: loc.machineId,
       path: loc.path,

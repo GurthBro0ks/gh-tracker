@@ -121,7 +121,7 @@ describe("phase6d pixel pet sprites", () => {
     const habitat = readFileSync(join(repoRoot, "src/components/repo-habitat.tsx"), "utf8");
     const adapter = readFileSync(join(repoRoot, "src/lib/dashboard-adapter.ts"), "utf8");
     const globals = readFileSync(join(repoRoot, "src/app/globals.css"), "utf8");
-    expect(dashboard).toContain("Repo Cleanup Planner");
+    expect(dashboard).toContain("Maintenance Queue");
     expect(dashboard).toContain("Repo Locations");
     expect(dashboard).toContain("dashboard-shell");
     expect(dashboard).toContain("repo-locations-layout");

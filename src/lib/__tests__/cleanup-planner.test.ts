@@ -43,13 +43,30 @@ describe("cleanup planner", () => {
   it("keeps commands safe and copy-only oriented", () => {
     const repo = makeRepo({ repoId: "safety-repo", dirtyState: "dirty", unpushedTotal: 2 });
     const planner = buildCleanupPlanner([repo]);
-    const commands = planner[0].safeCommandGroups[0].commands.join("\n");
+    const group = planner[0].safeCommandGroups[0];
+    const commands = group.commands.join("\n");
     expect(commands).toContain("git status --branch --short");
-    expect(commands).toContain("git remote -v");
+    expect(group.context).toBe("inspect-dirty");
     expect(commands).not.toContain("git reset --hard");
     expect(commands).not.toContain("git clean -fd");
     expect(commands).not.toContain("git push --force");
     expect(commands).not.toContain("rm -rf");
     expect(commands).not.toContain("sudo ");
+  });
+
+  it("generates verify-health commands for clean repos", () => {
+    const repo = makeRepo({ repoId: "clean-repo", dirtyState: "clean", unpushedTotal: 0 });
+    const planner = buildCleanupPlanner([repo]);
+    const group = planner[0].safeCommandGroups[0];
+    expect(group.context).toBe("verify-health");
+    expect(group.commands.join("\n")).toContain("git remote -v");
+  });
+
+  it("generates inspect-unpushed commands for repos with unpushed commits", () => {
+    const repo = makeRepo({ repoId: "unpushed-repo", dirtyState: "clean", unpushedTotal: 5 });
+    const planner = buildCleanupPlanner([repo]);
+    const group = planner[0].safeCommandGroups[0];
+    expect(group.context).toBe("inspect-unpushed");
+    expect(group.commands.join("\n")).toContain("@{u}..HEAD");
   });
 });

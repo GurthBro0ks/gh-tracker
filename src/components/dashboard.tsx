@@ -282,7 +282,6 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
   const heatmapCells = useMemo(() => buildHeatmapInspectorCells(activeData.heatmap, activeData.commitTrend, activeData.timeline), [activeData.heatmap, activeData.commitTrend, activeData.timeline]);
   const selectedHeatmapCell = heatmapCells[selectedHeatmapDay] ?? null;
   const cleanupPlanner = useMemo(() => buildCleanupPlanner(activeData.canonicalRepos), [activeData.canonicalRepos]);
-  const plannerTop = cleanupPlanner.slice(0, 5);
   const plannerCounts = {
     critical: cleanupPlanner.filter((item) => item.priorityBand === "critical").length,
     high: cleanupPlanner.filter((item) => item.priorityBand === "high").length,
@@ -291,7 +290,7 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
   const plannerByRepo = new Map(cleanupPlanner.map((entry) => [entry.repoId, entry]));
   const repoLocationsSummary = `${activeData.canonicalRepos.length} repos · ${activeData.repoRows.length} locations`;
   const habitatSummary = `${habitatRows.length} habitat cards · ${activeData.canonicalRepos.length} canonical repos`;
-  const cleanupSummary = `${cleanupPlanner.filter((item) => item.priorityScore > 0).length} repos need attention · critical ${plannerCounts.critical}`;
+  const cleanupSummary = `Maintenance Queue: ${cleanupPlanner.filter((item) => item.priorityScore > 0).length} repos · ${plannerCounts.critical} critical · ${plannerCounts.high} high`;
   const timelineSummary = `${dedupedEvents.length} recent events`;
   const debugSummary = `Mode ${activeData.mode} · Version ${activeData.version}`;
   const localSnapshotAgeMinutes = activeData.latestLocalSnapshotTime ? Math.max(0, Math.floor((renderedAt - Date.parse(activeData.latestLocalSnapshotTime)) / 60000)) : null;
@@ -522,64 +521,74 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
 
       <MobileCompactSection
         sectionId="cleanup-planner"
-        title="Repo Cleanup Planner"
+        title="Maintenance Queue"
         summary={cleanupSummary}
         isMobileViewport={isMobileViewport}
         isOpen={sectionOpen("cleanup-planner")}
         onToggle={() => toggleCompact("cleanup-planner")}
       >
-      <section className="neon-panel mb-6 rounded-xl p-4">
+      <section className="neon-panel mb-6 rounded-xl p-3 sm:p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h3 className="font-sans text-sm uppercase tracking-[0.18em] text-fuchsia-200">Repo Cleanup Planner</h3>
-            <p className="mt-1 text-xs text-violet-200/85">Ranked, read-only cleanup priorities. Commands are copy-only and never executed by this app.</p>
+            <h3 className="font-sans text-sm uppercase tracking-[0.18em] text-fuchsia-200">Maintenance Queue</h3>
+            <p className="mt-1 text-xs text-violet-200/85">Ranked repos needing attention. Commands are copy-only and never executed by this app.</p>
           </div>
-          <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
-            <Status label="Repos needing attention" value={`${cleanupPlanner.filter((item) => item.priorityScore > 0).length}`} />
+          <div className="grid grid-cols-2 gap-1.5 text-[10px] sm:grid-cols-4 sm:text-xs">
+            <Status label="Needs attention" value={`${cleanupPlanner.filter((item) => item.priorityScore > 0).length}`} />
             <Status label="Critical" value={`${plannerCounts.critical}`} />
             <Status label="High" value={`${plannerCounts.high}`} />
             <Status label="Medium" value={`${plannerCounts.medium}`} />
           </div>
         </div>
-        <div className="mt-3 grid gap-3 lg:grid-cols-2">
-          {plannerTop.map((item) => (
-            <article key={item.repoId} className="rounded-xl border border-fuchsia-400/30 bg-black/30 p-3">
+        <div className="mt-3 space-y-2">
+          {cleanupPlanner.filter((item) => item.priorityScore > 0).map((item) => (
+            <article key={item.repoId} className="maintenance-queue-item rounded-xl border border-fuchsia-400/30 bg-black/30 p-2.5 sm:p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="font-sans text-sm uppercase tracking-[0.08em] text-white">{item.displayName}</p>
-                <span className={`rounded border px-2 py-1 text-[10px] uppercase tracking-[0.12em] ${item.priorityBand === "critical" ? "border-rose-300/60 bg-rose-400/10 text-rose-200" : item.priorityBand === "high" ? "border-amber-300/60 bg-amber-400/10 text-amber-200" : item.priorityBand === "medium" ? "border-cyan-300/60 bg-cyan-400/10 text-cyan-200" : "border-violet-300/60 bg-violet-400/10 text-violet-200"}`}>
-                  {item.priorityBand} · {item.priorityScore}
+                <p className="font-sans text-xs uppercase tracking-[0.08em] text-white break-words sm:text-sm">{item.displayName}</p>
+                <span className={`rounded border px-2 py-1 text-[10px] uppercase tracking-[0.12em] ${item.priorityBand === "critical" ? "border-rose-300/60 bg-rose-400/10 text-rose-200" : item.priorityBand === "high" ? "border-amber-300/60 bg-amber-400/10 text-amber-200" : item.priorityBand === "medium" ? "border-cyan-300/60 bg-cyan-400/10 text-cyan-200" : item.priorityBand === "low" ? "border-violet-300/60 bg-violet-400/10 text-violet-200" : "border-lime-300/60 bg-lime-400/10 text-lime-200"}`}>
+                  {item.priorityBand}
                 </span>
               </div>
-              <p className="mt-1 text-xs text-violet-200/80">Machines: {item.affectedMachines.join(", ").toUpperCase()}</p>
-              <p className="mt-1 text-xs text-violet-200/80">Locations: {item.affectedLocations.map((loc) => `${loc.machineId}:${loc.path}`).join("; ") || "none"}</p>
-              <ul className="mt-2 space-y-1 text-xs text-violet-100/90">
+              <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-violet-200/75 sm:text-xs">
+                <span>Machines: {item.affectedMachines.map((m) => m.toUpperCase()).join(", ")}</span>
+                <span>Locations: {item.affectedLocations.length}</span>
+                {item.affectedLocations.some((l) => l.dirty) && <span className="text-rose-200/80">Dirty: {item.affectedLocations.filter((l) => l.dirty).length}</span>}
+                {item.affectedLocations.some((l) => l.unpushedCommits > 0) && <span className="text-amber-200/80">Unpushed: {item.affectedLocations.reduce((s, l) => s + l.unpushedCommits, 0)}</span>}
+              </div>
+              <ul className="mt-1.5 space-y-0.5">
                 {item.reasons.slice(0, 3).map((reason, idx) => (
-                  <li key={`${item.repoId}:reason:${idx}`} className="rounded border border-white/10 bg-black/35 px-2 py-1">{reason}</li>
+                  <li key={`r:${idx}`} className="text-[10px] text-violet-100/85 sm:text-xs">Priority reason: {reason}</li>
+                ))}
+                {item.suggestions.map((s, idx) => (
+                  <li key={`s:${idx}`} className="text-[10px] text-cyan-200/70 sm:text-xs">Suggestion: {s}</li>
                 ))}
               </ul>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {item.recommendedActions.slice(0, 3).map((action) => (
-                  <span key={`${item.repoId}:action:${action}`} className="rounded border border-cyan-300/35 bg-cyan-400/10 px-2 py-1 text-[10px] uppercase tracking-[0.1em] text-cyan-100">{action}</span>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {item.recommendedActions.slice(0, 2).map((action) => (
+                  <span key={action} className="rounded border border-cyan-300/35 bg-cyan-400/10 px-1.5 py-0.5 text-[9px] uppercase tracking-[0.1em] text-cyan-100 sm:px-2 sm:py-1 sm:text-[10px]">{action}</span>
                 ))}
               </div>
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <button type="button" className="rounded border border-fuchsia-300/45 bg-fuchsia-400/10 px-3 py-1 text-[10px] uppercase tracking-[0.12em] text-fuchsia-100" onClick={() => setActionCenterRepoId(item.repoId)}>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <button type="button" className="rounded border border-fuchsia-300/45 bg-fuchsia-400/10 px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-fuchsia-100 min-h-[36px] sm:min-h-0 sm:px-3" onClick={() => setActionCenterRepoId(item.repoId)}>
                   Open Action Center
                 </button>
                 {item.safeCommandGroups[0] ? (
                   <button
                     type="button"
-                    className="rounded border border-cyan-300/45 bg-cyan-400/10 px-3 py-1 text-[10px] uppercase tracking-[0.12em] text-cyan-100"
+                    className="rounded border border-cyan-300/45 bg-cyan-400/10 px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-cyan-100 min-h-[36px] sm:min-h-0 sm:px-3"
                     onClick={() => {
                       void navigator.clipboard?.writeText(item.safeCommandGroups[0].commands.join("\n"));
                     }}
                   >
-                    Copy Inspection Commands
+                    Copy {item.safeCommandGroups[0].context === "inspect-dirty" ? "Inspection" : item.safeCommandGroups[0].context === "inspect-unpushed" ? "Ahead/Behind" : "Health Check"} Commands
                   </button>
                 ) : null}
               </div>
             </article>
           ))}
+          {cleanupPlanner.filter((item) => item.priorityScore > 0).length === 0 && (
+            <p className="py-4 text-center text-xs text-violet-300/70">All repos are clean. No immediate cleanup pressure detected.</p>
+          )}
         </div>
       </section>
       </MobileCompactSection>

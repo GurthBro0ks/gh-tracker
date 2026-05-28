@@ -2,6 +2,14 @@ import type { CanonicalRepoView } from "@/lib/dashboard-adapter";
 
 export type CleanupPriorityBand = "critical" | "high" | "medium" | "low" | "info";
 
+export type CleanupCommandGroup = {
+  machineId: string;
+  path: string;
+  runLabel: string;
+  commands: string[];
+  context: "inspect-dirty" | "inspect-unpushed" | "verify-health";
+};
+
 export type CleanupPlannerEntry = {
   repoId: string;
   displayName: string;
@@ -18,12 +26,7 @@ export type CleanupPlannerEntry = {
     dirty: boolean;
     unpushedCommits: number;
   }>;
-  safeCommandGroups: Array<{
-    machineId: string;
-    path: string;
-    runLabel: string;
-    commands: string[];
-  }>;
+  safeCommandGroups: CleanupCommandGroup[];
 };
 
 function machineRemotePrefix(machineId: string): string | null {
@@ -116,20 +119,48 @@ export function buildCleanupPlanner(canonicalRepos: CanonicalRepoView[]): Cleanu
 
     const safeCommandGroups = repo.perLocationDetails.map((loc) => {
       const remote = machineRemotePrefix(loc.machineId);
-      const commands = [
-        ...(remote ? [remote] : []),
-        `cd ${loc.path}`,
-        "git status --branch --short",
-        "git diff --stat",
-        "git log --oneline -5",
-        "git branch --show-current",
-        "git remote -v",
-      ];
+      const baseCmds = remote ? [remote] : [];
+      let commands: string[];
+      let context: CleanupCommandGroup["context"];
+
+      if (loc.dirty) {
+        context = "inspect-dirty";
+        commands = [
+          ...baseCmds,
+          `cd ${loc.path}`,
+          "git status --branch --short",
+          "git diff --stat",
+          "git stash list",
+          "git log --oneline -5",
+          "git branch --show-current",
+        ];
+      } else if (loc.unpushedCommits > 0) {
+        context = "inspect-unpushed";
+        commands = [
+          ...baseCmds,
+          `cd ${loc.path}`,
+          "git status --branch --short",
+          `git log --oneline @{u}..HEAD`,
+          "git diff --stat @{u}..HEAD",
+          "git branch --show-current",
+        ];
+      } else {
+        context = "verify-health";
+        commands = [
+          ...baseCmds,
+          `cd ${loc.path}`,
+          "git status --branch --short",
+          "git log --oneline -3",
+          "git remote -v",
+        ];
+      }
+
       return {
         machineId: loc.machineId,
         path: loc.path,
         runLabel: loc.machineId === "laptop" ? "Run on laptop" : "Run on machine",
         commands,
+        context,
       };
     });
 
