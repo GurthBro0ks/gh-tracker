@@ -150,7 +150,7 @@ describe("phase6d pixel pet sprites", () => {
     expect(globals).toContain("overflow-x: hidden");
     expect(globals).toContain(".repo-locations-layout");
     expect(globals).toContain("overflow-wrap: anywhere");
-    expect(adapter).toContain("0.6.4-phase6d2-pet-animation-health-wording");
+    expect(adapter).toContain("0.6.6-phase6e-cleanup-planner");
     expect([dashboard, habitat, adapter].join("\n").toLowerCase()).not.toContain("nousearch-hermes");
   });
 
