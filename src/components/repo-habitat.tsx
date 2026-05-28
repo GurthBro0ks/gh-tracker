@@ -110,20 +110,23 @@ function RepoPetCard({ row, expanded, onToggleExpand, onOpenActionCenter }: { ro
 
   return (
     <article
-      className="overflow-hidden rounded-xl border border-fuchsia-400/40 bg-black/35 p-2.5 sm:p-3 cursor-pointer transition-colors hover:bg-black/45"
+      className={`pet-card overflow-hidden rounded-xl border p-2.5 sm:p-3 cursor-pointer transition-colors hover:bg-black/45 ${expanded ? "pet-card--expanded border-fuchsia-300/60 bg-black/45" : "border-fuchsia-400/40 bg-black/35"}`}
       onClick={onToggleExpand}
       role="button"
       tabIndex={0}
-      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onToggleExpand(); }}
+      aria-expanded={hasDetails ? expanded : undefined}
+      aria-label={`${row.repoId} — ${expanded ? "Collapse details" : hasDetails ? `Expand ${canonical.perMachineDetails.length} machine details` : "Open Action Center for commands"}`}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggleExpand(); } }}
     >
       <div className="mb-2">
         <button
           type="button"
-          className="w-full rounded border border-cyan-300/50 bg-cyan-400/15 px-3 py-2 text-xs font-medium uppercase tracking-[0.12em] text-cyan-100"
+          className="w-full rounded border border-cyan-300/50 bg-cyan-400/15 px-3 py-2 text-xs font-medium uppercase tracking-[0.12em] text-cyan-100 min-h-[44px] sm:min-h-0"
           onClick={(e) => {
             e.stopPropagation();
             onOpenActionCenter();
           }}
+          aria-label={`Open Action Center for ${row.repoId}`}
         >
           Open Action Center
         </button>
@@ -217,11 +220,21 @@ function RepoPetCard({ row, expanded, onToggleExpand, onOpenActionCenter }: { ro
               </div>
             ))}
           </div>
+          <div className="mt-2 text-center">
+            <button
+              type="button"
+              className="rounded border border-fuchsia-400/25 bg-fuchsia-400/5 px-3 py-1 text-[10px] uppercase tracking-[0.12em] text-fuchsia-200/80 sm:text-xs min-h-[36px] sm:min-h-0"
+              onClick={(e) => { e.stopPropagation(); onToggleExpand(); }}
+              aria-label="Collapse machine details"
+            >
+              Collapse details
+            </button>
+          </div>
         </div>
       )}
 
       {hasDetails && !expanded && (
-        <div className="mt-2 text-center text-[10px] text-violet-300/60 sm:text-xs">
+        <div className="mt-2 text-center text-[10px] text-violet-300/60 sm:text-xs" aria-hidden="true">
           Tap to expand {canonical.perMachineDetails.length} machine{canonical.perMachineDetails.length !== 1 ? "s" : ""}
         </div>
       )}
@@ -288,15 +301,40 @@ export function CareActionList({ actions }: { actions: RepoCareAction[] }) {
 
 function ActionCenterDrawer({ row, planner, onClose }: { row: HabitatRow; planner: CleanupPlannerEntry | null; onClose: () => void }) {
   const model = buildActionCenterModel(row);
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
   return (
-    <div className="fixed inset-0 z-50 bg-black/75 p-2 sm:p-6" role="dialog" aria-modal="true" aria-label="Repo Action Center">
-      <div className="mx-auto max-h-[94vh] w-full max-w-4xl overflow-y-auto rounded-xl border border-fuchsia-400/40 bg-[rgba(10,6,18,0.98)] p-3 sm:p-5">
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <div>
+    <div
+      className="action-center-overlay fixed inset-0 z-50 bg-black/75 flex items-end sm:items-center sm:p-6"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Repo Action Center"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
+        ref={scrollRef}
+        className="action-center-panel mx-auto w-full max-w-4xl max-h-[92vh] sm:max-h-[88vh] overflow-y-auto overscroll-contain rounded-t-xl sm:rounded-xl border border-fuchsia-400/40 bg-[rgba(10,6,18,0.98)] p-3 pt-2 sm:p-5"
+        style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
+      >
+        <div className="flex items-center justify-between gap-2 mb-3" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
+          <div className="min-w-0 flex-1">
             <p className="text-[10px] uppercase tracking-[0.14em] text-fuchsia-200">Repo Action Center</p>
-            <h4 className="text-base font-sans uppercase tracking-[0.08em] text-white sm:text-lg">{model.displayName}</h4>
+            <h4 className="text-base font-sans uppercase tracking-[0.08em] text-white break-words sm:text-lg">{model.displayName}</h4>
           </div>
-          <button type="button" className="rounded border border-white/20 bg-black/30 px-3 py-1 text-xs text-violet-100" onClick={onClose}>Close</button>
+          <button
+            type="button"
+            className="action-center-close flex-shrink-0 rounded border border-white/20 bg-black/30 px-3 py-2 text-xs text-violet-100 min-h-[44px] min-w-[44px] flex items-center justify-center sm:min-h-0 sm:min-w-0 sm:py-1"
+            onClick={onClose}
+            aria-label="Close Action Center"
+          >
+            Close
+          </button>
         </div>
 
         <Section title="Overview" lines={[
@@ -333,20 +371,21 @@ function ActionCenterDrawer({ row, planner, onClose }: { row: HabitatRow; planne
           <p className="mb-2 text-[10px] uppercase tracking-[0.14em] text-cyan-200 sm:text-xs">Copy Commands</p>
           <div className="space-y-2">
             {model.safeCommandGroups.map((group) => (
-              <div key={`${group.machineId}:${group.path}`} className="rounded border border-white/10 bg-black/25 p-2 text-[10px] sm:text-xs">
+              <div key={`${group.machineId}:${group.path}`} className="rounded border border-white/10 bg-black/25 p-2 text-[10px] sm:text-xs overflow-hidden">
                 <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-violet-200 break-all">{group.machineId.toUpperCase()} · {group.runLabel} · {group.path}</p>
+                  <p className="text-violet-200 break-all min-w-0 flex-1">{group.machineId.toUpperCase()} · {group.runLabel} · {group.path}</p>
                   <button
                     type="button"
-                    className="rounded border border-cyan-300/40 bg-cyan-400/10 px-2 py-1 text-[10px] uppercase tracking-[0.1em] text-cyan-100"
+                    className="flex-shrink-0 rounded border border-cyan-300/40 bg-cyan-400/10 px-3 py-2 text-[10px] uppercase tracking-[0.1em] text-cyan-100 min-h-[44px] min-w-[60px] flex items-center justify-center sm:min-h-0 sm:min-w-0 sm:px-2 sm:py-1"
                     onClick={() => {
                       void navigator.clipboard?.writeText(group.commands.join("\n"));
                     }}
+                    aria-label={`Copy commands for ${group.machineId}`}
                   >
                     Copy
                   </button>
                 </div>
-                <pre className="overflow-x-auto whitespace-pre text-lime-200">{group.commands.join("\n")}</pre>
+                <pre className="overflow-x-auto whitespace-pre text-lime-200 break-all">{group.commands.join("\n")}</pre>
               </div>
             ))}
           </div>

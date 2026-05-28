@@ -283,7 +283,51 @@ body::before {
   .repo-pet-sprite.sprite-sick .repo-pet-sprite__image,
   .repo-pet-sprite--alert .repo-pet-sprite__image,
   .repo-pet-sprite--unpushed .repo-pet-sprite__image,
-  .repo-pet-sprite.sprite-evolve .repo-pet-sprite__image {
+  .repo-pet-sprite.sprite-evolve .repo-pet-sprite__image,
+  .pet-card {
     animation: none;
+    transition: none;
+  }
+}
+
+.action-center-overlay {
+  -webkit-overflow-scrolling: touch;
+}
+
+.action-center-panel {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(151, 255, 76, 0.3) transparent;
+}
+
+.action-center-panel::-webkit-scrollbar {
+  width: 4px;
+}
+
+.action-center-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.action-center-panel::-webkit-scrollbar-thumb {
+  background: rgba(151, 255, 76, 0.3);
+  border-radius: 2px;
+}
+
+.pet-card {
+  transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.pet-card--expanded {
+  box-shadow: 0 0 12px rgba(215, 23, 255, 0.15);
+}
+
+.pet-card:focus-visible {
+  outline: 2px solid rgba(151, 255, 76, 0.6);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pet-card {
+    transition: none;
   }
 }
