@@ -21,6 +21,10 @@ export type CleanupProofCommandGroup = {
 export type CleanupPlannerEntry = {
   repoId: string;
   displayName: string;
+  repoClass: "standard" | "operational_queue";
+  suppressNormalCleanup: boolean;
+  suggestedMode: "normal" | "hold_no_push";
+  safetyNote: string | null;
   priorityScore: number;
   priorityBand: CleanupPriorityBand;
   reasons: string[];
@@ -37,6 +41,31 @@ export type CleanupPlannerEntry = {
   safeCommandGroups: CleanupCommandGroup[];
   proofCommandGroups: CleanupProofCommandGroup[];
 };
+
+function classifyRepo(repo: CanonicalRepoView): {
+  repoClass: "standard" | "operational_queue";
+  suppressNormalCleanup: boolean;
+  suggestedMode: "normal" | "hold_no_push";
+  safetyNote: string | null;
+} {
+  const isMailboxOutbox = repo.repoId === "local-mailbox_outbox"
+    || repo.perLocationDetails.some((loc) => loc.path.includes("/home/slimy/nuc-comms/mailbox_outbox"));
+  if (isMailboxOutbox) {
+    return {
+      repoClass: "operational_queue",
+      suppressNormalCleanup: true,
+      suggestedMode: "hold_no_push",
+      safetyNote: "Operational mailbox/outbox transport. Hold/no-push unless explicitly draining queue.",
+    };
+  }
+
+  return {
+    repoClass: "standard",
+    suppressNormalCleanup: false,
+    suggestedMode: "normal",
+    safetyNote: null,
+  };
+}
 
 function buildProofCommands(machineId: string, path: string, inspectCommands: string[]): string[] {
   const safeRepo = path.split("/").filter(Boolean).pop() ?? "repo";
@@ -67,6 +96,7 @@ function bandFromScore(score: number): CleanupPriorityBand {
 
 export function buildCleanupPlanner(canonicalRepos: CanonicalRepoView[]): CleanupPlannerEntry[] {
   const entries = canonicalRepos.map((repo) => {
+    const classification = classifyRepo(repo);
     let priorityScore = 0;
     const reasons: string[] = [];
     const suggestions: string[] = [];
@@ -138,6 +168,15 @@ export function buildCleanupPlanner(canonicalRepos: CanonicalRepoView[]): Cleanu
       recommended.add("Monitor repository health");
     }
 
+    if (classification.repoClass === "operational_queue") {
+      reasons.unshift("Operational queue repo");
+      suggestions.unshift("Mailbox transport: hold/no-push unless explicitly draining queue");
+      recommended.clear();
+      recommended.add("Inspect queue state and proof pack");
+      recommended.add("Hold push unless explicit drain request");
+      priorityScore = Math.min(priorityScore, 5);
+    }
+
     const safeCommandGroups = repo.perLocationDetails.map((loc) => {
       const remote = machineRemotePrefix(loc.machineId);
       const baseCmds = remote ? [remote] : [];
@@ -195,6 +234,10 @@ export function buildCleanupPlanner(canonicalRepos: CanonicalRepoView[]): Cleanu
     return {
       repoId: repo.repoId,
       displayName: repo.displayName,
+      repoClass: classification.repoClass,
+      suppressNormalCleanup: classification.suppressNormalCleanup,
+      suggestedMode: classification.suggestedMode,
+      safetyNote: classification.safetyNote,
       priorityScore,
       priorityBand: bandFromScore(priorityScore),
       reasons,

@@ -75,4 +75,37 @@ describe("cleanup planner", () => {
     expect(group.context).toBe("inspect-unpushed");
     expect(group.commands.join("\n")).toContain("@{u}..HEAD");
   });
+
+  it("classifies mailbox outbox as operational queue and suppresses normal cleanup", () => {
+    const mailbox = makeRepo({
+      repoId: "local-mailbox_outbox",
+      dirtyState: "dirty",
+      unpushedTotal: 21,
+      perLocationDetails: [{
+        id: "mb1",
+        machineId: "nuc1",
+        path: "/home/slimy/nuc-comms/mailbox_outbox",
+        branch: "main",
+        dirty: true,
+        unpushedCommits: 21,
+        headSha: "",
+        stagedCount: 0,
+        unstagedCount: 0,
+        untrackedCount: 0,
+      }],
+    });
+    const normal = makeRepo({ repoId: "normal-repo", dirtyState: "dirty", unpushedTotal: 5 });
+    const planner = buildCleanupPlanner([mailbox, normal]);
+    const mailboxEntry = planner.find((p) => p.repoId === "local-mailbox_outbox");
+    const normalEntry = planner.find((p) => p.repoId === "normal-repo");
+    expect(mailboxEntry).toBeDefined();
+    expect(normalEntry).toBeDefined();
+    expect(mailboxEntry?.repoClass).toBe("operational_queue");
+    expect(mailboxEntry?.suppressNormalCleanup).toBe(true);
+    expect(mailboxEntry?.suggestedMode).toBe("hold_no_push");
+    expect(mailboxEntry?.safetyNote).toContain("Operational mailbox/outbox transport");
+    expect(mailboxEntry?.safeCommandGroups[0]?.commands.join("\n")).toContain("git status --branch --short");
+    expect(mailboxEntry?.proofCommandGroups[0]?.commands.join("\n")).toContain("mkdir -p \"$PROOF_DIR\"");
+    expect((normalEntry?.priorityScore ?? 0)).toBeGreaterThan(mailboxEntry?.priorityScore ?? 999);
+  });
 });

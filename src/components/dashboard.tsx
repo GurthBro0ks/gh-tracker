@@ -282,15 +282,17 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
   const heatmapCells = useMemo(() => buildHeatmapInspectorCells(activeData.heatmap, activeData.commitTrend, activeData.timeline), [activeData.heatmap, activeData.commitTrend, activeData.timeline]);
   const selectedHeatmapCell = heatmapCells[selectedHeatmapDay] ?? null;
   const cleanupPlanner = useMemo(() => buildCleanupPlanner(activeData.canonicalRepos), [activeData.canonicalRepos]);
+  const normalCleanupPlanner = cleanupPlanner.filter((item) => !item.suppressNormalCleanup);
+  const operationalQueuePlanner = cleanupPlanner.filter((item) => item.suppressNormalCleanup);
   const plannerCounts = {
-    critical: cleanupPlanner.filter((item) => item.priorityBand === "critical").length,
-    high: cleanupPlanner.filter((item) => item.priorityBand === "high").length,
-    medium: cleanupPlanner.filter((item) => item.priorityBand === "medium").length,
+    critical: normalCleanupPlanner.filter((item) => item.priorityBand === "critical" && item.priorityScore > 0).length,
+    high: normalCleanupPlanner.filter((item) => item.priorityBand === "high" && item.priorityScore > 0).length,
+    medium: normalCleanupPlanner.filter((item) => item.priorityBand === "medium" && item.priorityScore > 0).length,
   };
   const plannerByRepo = new Map(cleanupPlanner.map((entry) => [entry.repoId, entry]));
   const repoLocationsSummary = `${activeData.canonicalRepos.length} repos · ${activeData.repoRows.length} locations`;
   const habitatSummary = `${habitatRows.length} habitat cards · ${activeData.canonicalRepos.length} canonical repos`;
-  const cleanupSummary = `Maintenance Queue: ${cleanupPlanner.filter((item) => item.priorityScore > 0).length} repos · ${plannerCounts.critical} critical · ${plannerCounts.high} high`;
+  const cleanupSummary = `Maintenance Queue: ${normalCleanupPlanner.filter((item) => item.priorityScore > 0).length} repos · ${plannerCounts.critical} critical · ${plannerCounts.high} high`;
   const timelineSummary = `${dedupedEvents.length} recent events`;
   const debugSummary = `Mode ${activeData.mode} · Version ${activeData.version}`;
   const localSnapshotAgeMinutes = activeData.latestLocalSnapshotTime ? Math.max(0, Math.floor((renderedAt - Date.parse(activeData.latestLocalSnapshotTime)) / 60000)) : null;
@@ -534,14 +536,14 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
             <p className="mt-1 text-xs text-violet-200/85">Ranked repos needing attention. Commands are copy-only and never executed by this app.</p>
           </div>
           <div className="grid grid-cols-2 gap-1.5 text-[10px] sm:grid-cols-4 sm:text-xs">
-            <Status label="Needs attention" value={`${cleanupPlanner.filter((item) => item.priorityScore > 0).length}`} />
+            <Status label="Needs attention" value={`${normalCleanupPlanner.filter((item) => item.priorityScore > 0).length}`} />
             <Status label="Critical" value={`${plannerCounts.critical}`} />
             <Status label="High" value={`${plannerCounts.high}`} />
             <Status label="Medium" value={`${plannerCounts.medium}`} />
           </div>
         </div>
         <div className="mt-3 space-y-2">
-          {cleanupPlanner.filter((item) => item.priorityScore > 0).map((item) => (
+          {normalCleanupPlanner.filter((item) => item.priorityScore > 0).map((item) => (
             <article key={item.repoId} className="maintenance-queue-item rounded-xl border border-fuchsia-400/30 bg-black/30 p-2.5 sm:p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="font-sans text-xs uppercase tracking-[0.08em] text-white break-words sm:text-sm">{item.displayName}</p>
@@ -597,10 +599,43 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
               </div>
             </article>
           ))}
-          {cleanupPlanner.filter((item) => item.priorityScore > 0).length === 0 && (
+          {normalCleanupPlanner.filter((item) => item.priorityScore > 0).length === 0 && (
             <p className="py-4 text-center text-xs text-violet-300/70">All repos are clean. No immediate cleanup pressure detected.</p>
           )}
         </div>
+        {operationalQueuePlanner.length > 0 && (
+          <div className="mt-3 rounded-xl border border-cyan-300/30 bg-black/25 p-2.5 sm:p-3">
+            <p className="text-[10px] uppercase tracking-[0.14em] text-cyan-200 sm:text-xs">Operational Queues</p>
+            <p className="mt-1 text-[10px] text-violet-200/75 sm:text-xs">Mailbox transport repos are shown separately and default to hold/no-push mode.</p>
+            <div className="mt-2 space-y-2">
+              {operationalQueuePlanner.map((item) => (
+                <article key={`oq:${item.repoId}`} className="rounded border border-cyan-300/25 bg-black/30 p-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-[10px] font-sans uppercase tracking-[0.08em] text-white sm:text-xs">{item.displayName}</p>
+                    <span className="rounded border border-cyan-300/50 bg-cyan-400/10 px-2 py-0.5 text-[9px] uppercase tracking-[0.1em] text-cyan-100">Operational queue</span>
+                  </div>
+                  <p className="mt-1 text-[10px] text-cyan-100/90 sm:text-xs">Mailbox transport · Hold/no-push unless explicitly draining queue</p>
+                  {item.safetyNote ? <p className="mt-1 text-[10px] text-violet-100/85 sm:text-xs">{item.safetyNote}</p> : null}
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <button type="button" className="rounded border border-fuchsia-300/45 bg-fuchsia-400/10 px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-fuchsia-100" onClick={() => setActionCenterRepoId(item.repoId)}>
+                      Open Action Center
+                    </button>
+                    {item.safeCommandGroups[0] ? (
+                      <button type="button" className="rounded border border-cyan-300/45 bg-cyan-400/10 px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-cyan-100" onClick={() => { void navigator.clipboard?.writeText(item.safeCommandGroups[0].commands.join("\n")); }}>
+                        Copy Inspection Commands
+                      </button>
+                    ) : null}
+                    {item.proofCommandGroups[0] ? (
+                      <button type="button" className="rounded border border-lime-300/45 bg-lime-400/10 px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-lime-100" onClick={() => { void navigator.clipboard?.writeText(item.proofCommandGroups[0].commands.join("\n")); }}>
+                        Copy Proof Capture Commands
+                      </button>
+                    ) : null}
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        )}
       </section>
       </MobileCompactSection>
 
