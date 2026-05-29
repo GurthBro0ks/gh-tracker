@@ -223,7 +223,7 @@ export function buildDemoDashboardData(): DashboardData {
 
   return {
     mode: "demo",
-    version: "0.7.1-phase7b-operational-queue",
+    version: "0.7.3-phase7c-cleanup-queue",
     sourceTimestamp: lastDemoRefresh,
     latestLocalSnapshotTime: null,
     localRepoCount: 0,
@@ -356,7 +356,7 @@ export function buildDashboardDataFromSnapshot(snapshot: SnapshotEnvelope): Dash
 
   return {
     mode,
-    version: "0.7.1-phase7b-operational-queue",
+    version: "0.7.3-phase7c-cleanup-queue",
     sourceTimestamp: snapshot.createdAt,
     latestLocalSnapshotTime: snapshot.createdAt,
     localRepoCount: snapshot.repoLocations.length,

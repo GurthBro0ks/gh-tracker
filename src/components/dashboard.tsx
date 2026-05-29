@@ -350,6 +350,7 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
             >
               {mode === "aggregated" ? "● Aggregated" : "Aggregated"}
             </button>
+            <span className="rounded border border-fuchsia-400/30 bg-black/20 px-2 py-1 text-[9px] font-mono tracking-wide text-fuchsia-300/70 sm:text-[10px]">{activeData.version}</span>
             <button
               type="button"
               className="rounded border border-fuchsia-400/50 bg-black/30 px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-violet-200 sm:px-3 sm:text-xs sm:tracking-[0.15em]"
