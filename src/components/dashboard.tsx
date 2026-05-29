@@ -24,6 +24,7 @@ import { RepoHabitatGrid } from "@/components/repo-habitat";
 import { RepoPetSprite, type RepoPetSpriteStatus } from "@/components/repo-pet-sprite";
 import { buildHeatmapInspectorCells } from "@/lib/heatmap-inspector";
 import { buildCleanupPlanner } from "@/lib/cleanup-planner";
+import { buildMaintenanceBuckets } from "@/lib/maintenance-classifier";
 
 const PIE_COLORS = ["#d717ff", "#97ff4c", "#53b4ff", "#ff74ae", "#ffc44d", "#a98dff"];
 
@@ -282,17 +283,22 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
   const heatmapCells = useMemo(() => buildHeatmapInspectorCells(activeData.heatmap, activeData.commitTrend, activeData.timeline), [activeData.heatmap, activeData.commitTrend, activeData.timeline]);
   const selectedHeatmapCell = heatmapCells[selectedHeatmapDay] ?? null;
   const cleanupPlanner = useMemo(() => buildCleanupPlanner(activeData.canonicalRepos), [activeData.canonicalRepos]);
-  const normalCleanupPlanner = cleanupPlanner.filter((item) => !item.suppressNormalCleanup);
-  const operationalQueuePlanner = cleanupPlanner.filter((item) => item.suppressNormalCleanup);
-  const plannerCounts = {
-    critical: normalCleanupPlanner.filter((item) => item.priorityBand === "critical" && item.priorityScore > 0).length,
-    high: normalCleanupPlanner.filter((item) => item.priorityBand === "high" && item.priorityScore > 0).length,
-    medium: normalCleanupPlanner.filter((item) => item.priorityBand === "medium" && item.priorityScore > 0).length,
-  };
   const plannerByRepo = new Map(cleanupPlanner.map((entry) => [entry.repoId, entry]));
+  const maintenanceBuckets = useMemo(
+    () => {
+      const plannerMap = new Map(cleanupPlanner.map((entry) => [entry.repoId, entry]));
+      return buildMaintenanceBuckets(
+        activeData.canonicalRepos,
+        plannerMap,
+        activeData.dirtyRepoCount,
+        activeData.unpushedRepoCount,
+      );
+    },
+    [activeData.canonicalRepos, cleanupPlanner, activeData.dirtyRepoCount, activeData.unpushedRepoCount],
+  );
   const repoLocationsSummary = `${activeData.canonicalRepos.length} repos · ${activeData.repoRows.length} locations`;
   const habitatSummary = `${habitatRows.length} habitat cards · ${activeData.canonicalRepos.length} canonical repos`;
-  const cleanupSummary = `Maintenance Queue: ${normalCleanupPlanner.filter((item) => item.priorityScore > 0).length} repos · ${plannerCounts.critical} critical · ${plannerCounts.high} high`;
+  const cleanupSummary = `Actionable: ${maintenanceBuckets.counts.actionable} · Holds: ${maintenanceBuckets.counts.knownHolds} · Raw: ${maintenanceBuckets.counts.rawDirty}d/${maintenanceBuckets.counts.rawUnpushed}u`;
   const timelineSummary = `${dedupedEvents.length} recent events`;
   const debugSummary = `Mode ${activeData.mode} · Version ${activeData.version}`;
   const localSnapshotAgeMinutes = activeData.latestLocalSnapshotTime ? Math.max(0, Math.floor((renderedAt - Date.parse(activeData.latestLocalSnapshotTime)) / 60000)) : null;
@@ -534,108 +540,92 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h3 className="font-sans text-sm uppercase tracking-[0.18em] text-fuchsia-200">Maintenance Queue</h3>
-            <p className="mt-1 text-xs text-violet-200/85">Ranked repos needing attention. Commands are copy-only and never executed by this app.</p>
+            <p className="mt-1 text-xs text-violet-200/85">Commands are copy-only and never executed by this app.</p>
           </div>
           <div className="grid grid-cols-2 gap-1.5 text-[10px] sm:grid-cols-4 sm:text-xs">
-            <Status label="Needs attention" value={`${normalCleanupPlanner.filter((item) => item.priorityScore > 0).length}`} />
-            <Status label="Critical" value={`${plannerCounts.critical}`} />
-            <Status label="High" value={`${plannerCounts.high}`} />
-            <Status label="Medium" value={`${plannerCounts.medium}`} />
+            <Status label="Raw dirty" value={`${maintenanceBuckets.counts.rawDirty}`} />
+            <Status label="Raw unpushed" value={`${maintenanceBuckets.counts.rawUnpushed}`} />
+            <Status label="Actionable" value={`${maintenanceBuckets.counts.actionable}`} />
+            <Status label="Known holds" value={`${maintenanceBuckets.counts.knownHolds}`} />
           </div>
         </div>
-        <div className="mt-3 space-y-2">
-          {normalCleanupPlanner.filter((item) => item.priorityScore > 0).map((item) => (
-            <article key={item.repoId} className="maintenance-queue-item rounded-xl border border-fuchsia-400/30 bg-black/30 p-2.5 sm:p-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="font-sans text-xs uppercase tracking-[0.08em] text-white break-words sm:text-sm">{item.displayName}</p>
-                <span className={`rounded border px-2 py-1 text-[10px] uppercase tracking-[0.12em] ${item.priorityBand === "critical" ? "border-rose-300/60 bg-rose-400/10 text-rose-200" : item.priorityBand === "high" ? "border-amber-300/60 bg-amber-400/10 text-amber-200" : item.priorityBand === "medium" ? "border-cyan-300/60 bg-cyan-400/10 text-cyan-200" : item.priorityBand === "low" ? "border-violet-300/60 bg-violet-400/10 text-violet-200" : "border-lime-300/60 bg-lime-400/10 text-lime-200"}`}>
-                  {item.priorityBand}
-                </span>
-              </div>
-              <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-violet-200/75 sm:text-xs">
-                <span>Machines: {item.affectedMachines.map((m) => m.toUpperCase()).join(", ")}</span>
-                <span>Locations: {item.affectedLocations.length}</span>
-                {item.affectedLocations.some((l) => l.dirty) && <span className="text-rose-200/80">Dirty: {item.affectedLocations.filter((l) => l.dirty).length}</span>}
-                {item.affectedLocations.some((l) => l.unpushedCommits > 0) && <span className="text-amber-200/80">Unpushed: {item.affectedLocations.reduce((s, l) => s + l.unpushedCommits, 0)}</span>}
-              </div>
-              <ul className="mt-1.5 space-y-0.5">
-                {item.reasons.slice(0, 3).map((reason, idx) => (
-                  <li key={`r:${idx}`} className="text-[10px] text-violet-100/85 sm:text-xs">Priority reason: {reason}</li>
+        <p className="mt-2 text-[10px] text-violet-300/70 sm:text-xs">
+          Raw dirty count includes intentional holds and runtime state. Actionable count excludes known holds.
+        </p>
+
+        <div className="mt-3 space-y-3">
+          {maintenanceBuckets.needsAction.length > 0 && (
+            <BucketCard
+              title="Needs Action"
+              count={maintenanceBuckets.needsAction.length}
+              color="rose"
+              items={maintenanceBuckets.needsAction}
+              setActionCenterRepoId={setActionCenterRepoId}
+              showDetails
+            />
+          )}
+
+          {maintenanceBuckets.operationalHold.length > 0 && (
+            <BucketCard
+              title="Operational Hold"
+              description="Intentional no-push operational queues"
+              count={maintenanceBuckets.operationalHold.length}
+              color="cyan"
+              items={maintenanceBuckets.operationalHold}
+              setActionCenterRepoId={setActionCenterRepoId}
+            />
+          )}
+
+          {maintenanceBuckets.activeDevelopment.length > 0 && (
+            <BucketCard
+              title="Active Development"
+              description="Repos intentionally in progress — do not clean"
+              count={maintenanceBuckets.activeDevelopment.length}
+              color="lime"
+              items={maintenanceBuckets.activeDevelopment}
+              setActionCenterRepoId={setActionCenterRepoId}
+            />
+          )}
+
+          {maintenanceBuckets.runtimeLocalState.length > 0 && (
+            <BucketCard
+              title="Runtime / Local State"
+              description="Known runtime dirt and local state — review if needed"
+              count={maintenanceBuckets.runtimeLocalState.length}
+              color="violet"
+              items={maintenanceBuckets.runtimeLocalState}
+              setActionCenterRepoId={setActionCenterRepoId}
+            />
+          )}
+
+          {maintenanceBuckets.staleSnapshot.length > 0 && (
+            <BucketCard
+              title="Stale Snapshot"
+              description="Old laptop/snapshot entries — refresh source machine"
+              count={maintenanceBuckets.staleSnapshot.length}
+              color="amber"
+              items={maintenanceBuckets.staleSnapshot}
+              setActionCenterRepoId={setActionCenterRepoId}
+            />
+          )}
+
+          {maintenanceBuckets.recentlyResolved.length > 0 && (
+            <details className="group rounded-xl border border-lime-300/20 bg-black/20 p-2.5 sm:p-3">
+              <summary className="cursor-pointer text-[10px] uppercase tracking-[0.14em] text-lime-200 sm:text-xs">
+                Recently Resolved ({maintenanceBuckets.recentlyResolved.length})
+              </summary>
+              <p className="mt-1 text-[10px] text-violet-300/70 sm:text-xs">Clean repos and recently resolved cleanup wins.</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {maintenanceBuckets.recentlyResolved.map((item) => (
+                  <span key={item.repoId} className="rounded border border-lime-300/25 bg-lime-400/5 px-2 py-0.5 text-[9px] text-lime-100/80 sm:text-[10px]">{item.displayName}</span>
                 ))}
-                {item.suggestions.map((s, idx) => (
-                  <li key={`s:${idx}`} className="text-[10px] text-cyan-200/70 sm:text-xs">Suggestion: {s}</li>
-                ))}
-              </ul>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {item.recommendedActions.slice(0, 2).map((action) => (
-                  <span key={action} className="rounded border border-cyan-300/35 bg-cyan-400/10 px-1.5 py-0.5 text-[9px] uppercase tracking-[0.1em] text-cyan-100 sm:px-2 sm:py-1 sm:text-[10px]">{action}</span>
-                ))}
               </div>
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <button type="button" className="rounded border border-fuchsia-300/45 bg-fuchsia-400/10 px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-fuchsia-100 min-h-[36px] sm:min-h-0 sm:px-3" onClick={() => setActionCenterRepoId(item.repoId)}>
-                  Open Action Center
-                </button>
-                {item.safeCommandGroups[0] ? (
-                  <button
-                    type="button"
-                    className="rounded border border-cyan-300/45 bg-cyan-400/10 px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-cyan-100 min-h-[36px] sm:min-h-0 sm:px-3"
-                    onClick={() => {
-                      void navigator.clipboard?.writeText(item.safeCommandGroups[0].commands.join("\n"));
-                    }}
-                  >
-                    Copy Inspection Commands
-                  </button>
-                ) : null}
-                {item.proofCommandGroups[0] ? (
-                  <button
-                    type="button"
-                    className="rounded border border-lime-300/45 bg-lime-400/10 px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-lime-100 min-h-[36px] sm:min-h-0 sm:px-3"
-                    onClick={() => {
-                      void navigator.clipboard?.writeText(item.proofCommandGroups[0].commands.join("\n"));
-                    }}
-                  >
-                    Copy Proof Capture Commands
-                  </button>
-                ) : null}
-              </div>
-            </article>
-          ))}
-          {normalCleanupPlanner.filter((item) => item.priorityScore > 0).length === 0 && (
-            <p className="py-4 text-center text-xs text-violet-300/70">All repos are clean. No immediate cleanup pressure detected.</p>
+            </details>
           )}
         </div>
-        {operationalQueuePlanner.length > 0 && (
-          <div className="mt-3 rounded-xl border border-cyan-300/30 bg-black/25 p-2.5 sm:p-3">
-            <p className="text-[10px] uppercase tracking-[0.14em] text-cyan-200 sm:text-xs">Operational Queues</p>
-            <p className="mt-1 text-[10px] text-violet-200/75 sm:text-xs">Mailbox transport repos are shown separately and default to hold/no-push mode.</p>
-            <div className="mt-2 space-y-2">
-              {operationalQueuePlanner.map((item) => (
-                <article key={`oq:${item.repoId}`} className="rounded border border-cyan-300/25 bg-black/30 p-2">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-[10px] font-sans uppercase tracking-[0.08em] text-white sm:text-xs">{item.displayName}</p>
-                    <span className="rounded border border-cyan-300/50 bg-cyan-400/10 px-2 py-0.5 text-[9px] uppercase tracking-[0.1em] text-cyan-100">Operational queue</span>
-                  </div>
-                  <p className="mt-1 text-[10px] text-cyan-100/90 sm:text-xs">Mailbox transport · Hold/no-push unless explicitly draining queue</p>
-                  {item.safetyNote ? <p className="mt-1 text-[10px] text-violet-100/85 sm:text-xs">{item.safetyNote}</p> : null}
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <button type="button" className="rounded border border-fuchsia-300/45 bg-fuchsia-400/10 px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-fuchsia-100" onClick={() => setActionCenterRepoId(item.repoId)}>
-                      Open Action Center
-                    </button>
-                    {item.safeCommandGroups[0] ? (
-                      <button type="button" className="rounded border border-cyan-300/45 bg-cyan-400/10 px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-cyan-100" onClick={() => { void navigator.clipboard?.writeText(item.safeCommandGroups[0].commands.join("\n")); }}>
-                        Copy Inspection Commands
-                      </button>
-                    ) : null}
-                    {item.proofCommandGroups[0] ? (
-                      <button type="button" className="rounded border border-lime-300/45 bg-lime-400/10 px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-lime-100" onClick={() => { void navigator.clipboard?.writeText(item.proofCommandGroups[0].commands.join("\n")); }}>
-                        Copy Proof Capture Commands
-                      </button>
-                    ) : null}
-                  </div>
-                </article>
-              ))}
-            </div>
-          </div>
+
+        {maintenanceBuckets.needsAction.length === 0 && maintenanceBuckets.operationalHold.length === 0 && maintenanceBuckets.activeDevelopment.length === 0 && maintenanceBuckets.runtimeLocalState.length === 0 && maintenanceBuckets.staleSnapshot.length === 0 && (
+          <p className="mt-4 py-4 text-center text-xs text-violet-300/70">All repos are clean. No issues detected.</p>
         )}
       </section>
       </MobileCompactSection>
@@ -1082,5 +1072,162 @@ function Status({ label, value }: { label: string; value: string }) {
       <span className="mr-2 text-violet-300">{label}:</span>
       <span className="text-violet-100">{value}</span>
     </p>
+  );
+}
+
+const BUCKET_BORDER: Record<string, string> = {
+  rose: "border-rose-300/30",
+  cyan: "border-cyan-300/25",
+  lime: "border-lime-300/25",
+  violet: "border-violet-300/25",
+  amber: "border-amber-300/25",
+};
+
+const BUCKET_BG: Record<string, string> = {
+  rose: "bg-rose-400/5",
+  cyan: "bg-cyan-400/5",
+  lime: "bg-lime-400/5",
+  violet: "bg-violet-400/5",
+  amber: "bg-amber-400/5",
+};
+
+const BUCKET_TEXT: Record<string, string> = {
+  rose: "text-rose-200",
+  cyan: "text-cyan-200",
+  lime: "text-lime-200",
+  violet: "text-violet-200",
+  amber: "text-amber-200",
+};
+
+const RISK_BORDER: Record<string, string> = {
+  high: "border-rose-300/50 bg-rose-400/10 text-rose-200",
+  medium: "border-amber-300/50 bg-amber-400/10 text-amber-200",
+  low: "border-cyan-300/50 bg-cyan-400/10 text-cyan-200",
+  none: "border-lime-300/50 bg-lime-400/10 text-lime-200",
+};
+
+function BucketCard({
+  title,
+  description,
+  count,
+  color,
+  items,
+  setActionCenterRepoId,
+  showDetails,
+}: {
+  title: string;
+  description?: string;
+  count: number;
+  color: string;
+  items: import("@/lib/maintenance-classifier").ClassifiedItem[];
+  setActionCenterRepoId: (id: string | null) => void;
+  showDetails?: boolean;
+}) {
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const toggleExpanded = (id: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  return (
+    <details className={`group rounded-xl border ${BUCKET_BORDER[color] ?? "border-fuchsia-400/30"} ${BUCKET_BG[color] ?? "bg-black/30"} p-2.5 sm:p-3`} open>
+      <summary className="flex cursor-pointer items-center justify-between">
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.14em] sm:text-xs" style={{ color: `var(--bucket-color-${color}, inherit)` }}>
+            <span className={BUCKET_TEXT[color] ?? "text-violet-200"}>{title}</span>
+            <span className="ml-2 text-violet-300/70">({count})</span>
+          </p>
+          {description ? (
+            <p className="mt-0.5 text-[10px] text-violet-300/70 sm:text-xs">{description}</p>
+          ) : null}
+        </div>
+        <span className="text-[9px] text-violet-400 group-open:hidden sm:text-[10px]">Expand ...</span>
+        <span className="hidden text-[9px] text-violet-400 group-open:inline sm:text-[10px]">Collapse</span>
+      </summary>
+      <div className="mt-2 space-y-2">
+        {items.map((item) => {
+          const hasCommands = item.entry && item.entry.safeCommandGroups.length > 0;
+          const hasProofCommands = item.entry && item.entry.proofCommandGroups.length > 0;
+          const isExpanded = expanded.has(item.repoId);
+          const totalUnpushed = item.locations.reduce((s, l) => s + l.unpushedCommits, 0);
+          const dirtyLocs = item.locations.filter((l) => l.dirty).length;
+
+          return (
+            <article key={item.repoId} className="rounded-lg border border-white/10 bg-black/35 p-2 sm:p-2.5">
+              <div className="flex flex-wrap items-center justify-between gap-1.5">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <p className="font-sans text-[10px] uppercase tracking-[0.06em] text-white sm:text-xs">{item.displayName}</p>
+                  <span className={`rounded border px-1.5 py-0.5 text-[8px] uppercase tracking-[0.1em] sm:text-[9px] ${RISK_BORDER[item.risk] ?? RISK_BORDER.low}`}>
+                    {item.risk}
+                  </span>
+                </div>
+                <span className="rounded border border-violet-300/40 bg-violet-400/10 px-1.5 py-0.5 text-[8px] text-violet-200 sm:text-[9px]">{item.label}</span>
+              </div>
+
+              <div className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[9px] text-violet-200/70 sm:text-[10px]">
+                <span>Machines: {item.machines.map((m) => m.toUpperCase()).join(", ")}</span>
+                {dirtyLocs > 0 && <span className="text-rose-200/80">Dirty: {dirtyLocs}</span>}
+                {totalUnpushed > 0 && <span className="text-amber-200/80">Unpushed: {totalUnpushed}</span>}
+              </div>
+
+              <p className="mt-1 text-[9px] text-violet-300/75 sm:text-[10px]">{item.recommendation}</p>
+
+              {showDetails && isExpanded && item.entry && item.entry.reasons.length > 0 && (
+                <ul className="mt-1 space-y-0.5">
+                  {item.entry.reasons.slice(0, 3).map((reason, idx) => (
+                    <li key={`r:${idx}`} className="text-[9px] text-violet-100/85 sm:text-[10px]">Priority reason: {reason}</li>
+                  ))}
+                </ul>
+              )}
+
+              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                {showDetails && (
+                  <button
+                    type="button"
+                    className="rounded border border-fuchsia-300/40 bg-fuchsia-400/8 px-2 py-0.5 text-[8px] uppercase tracking-[0.1em] text-fuchsia-100 sm:text-[9px]"
+                    onClick={() => toggleExpanded(item.repoId)}
+                  >
+                    {isExpanded ? "Hide Details" : "Show Details"}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="rounded border border-fuchsia-300/40 bg-fuchsia-400/8 px-2 py-0.5 text-[8px] uppercase tracking-[0.1em] text-fuchsia-100 sm:text-[9px]"
+                  onClick={() => setActionCenterRepoId(item.repoId)}
+                >
+                  Open Action Center
+                </button>
+                {hasCommands && (
+                  <button
+                    type="button"
+                    className="rounded border border-cyan-300/40 bg-cyan-400/8 px-2 py-0.5 text-[8px] uppercase tracking-[0.1em] text-cyan-100 sm:text-[9px]"
+                    onClick={() => {
+                      void navigator.clipboard?.writeText(item.entry!.safeCommandGroups[0].commands.join("\n"));
+                    }}
+                  >
+                    Copy Inspection
+                  </button>
+                )}
+                {hasProofCommands && (
+                  <button
+                    type="button"
+                    className="rounded border border-lime-300/40 bg-lime-400/8 px-2 py-0.5 text-[8px] uppercase tracking-[0.1em] text-lime-100 sm:text-[9px]"
+                    onClick={() => {
+                      void navigator.clipboard?.writeText(item.entry!.proofCommandGroups[0].commands.join("\n"));
+                    }}
+                  >
+                    Copy Proof
+                  </button>
+                )}
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </details>
   );
 }

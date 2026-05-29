@@ -58,8 +58,9 @@ describe("phase6a action center", () => {
   it("renders repo cleanup planner hooks", () => {
     const dashboard = readFileSync(join(repoRoot, "src/components/dashboard.tsx"), "utf8");
     expect(dashboard).toContain("Maintenance Queue");
-    expect(dashboard).toContain("Operational Queues");
+    expect(dashboard).toContain("Operational Hold");
     expect(dashboard).toContain("Commands are copy-only and never executed by this app");
     expect(dashboard).toContain("buildCleanupPlanner");
+    expect(dashboard).toContain("buildMaintenanceBuckets");
   });
 });
