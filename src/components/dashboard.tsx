@@ -580,7 +580,18 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
                       void navigator.clipboard?.writeText(item.safeCommandGroups[0].commands.join("\n"));
                     }}
                   >
-                    Copy {item.safeCommandGroups[0].context === "inspect-dirty" ? "Inspection" : item.safeCommandGroups[0].context === "inspect-unpushed" ? "Ahead/Behind" : "Health Check"} Commands
+                    Copy Inspection Commands
+                  </button>
+                ) : null}
+                {item.proofCommandGroups[0] ? (
+                  <button
+                    type="button"
+                    className="rounded border border-lime-300/45 bg-lime-400/10 px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-lime-100 min-h-[36px] sm:min-h-0 sm:px-3"
+                    onClick={() => {
+                      void navigator.clipboard?.writeText(item.proofCommandGroups[0].commands.join("\n"));
+                    }}
+                  >
+                    Copy Proof Capture Commands
                   </button>
                 ) : null}
               </div>

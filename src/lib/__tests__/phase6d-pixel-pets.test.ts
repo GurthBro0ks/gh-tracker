@@ -138,7 +138,7 @@ describe("phase6d pixel pet sprites", () => {
     expect(habitat).toContain("Repo Action Center");
     expect(habitat).toContain("Evolution:");
     expect(habitat).toContain("navigator.clipboard?.writeText");
-    expect(habitat).toContain("All actions are manual operator actions. This app does not execute commands.");
+    expect(habitat).toContain("Manual proof only — this app does not execute commands.");
     expect(dashboard).toContain("MobileCompactSection");
     expect(dashboard).toContain("COMPACT_SECTIONS_ADDED");
     expect(dashboard).toContain("MOBILE_DEFAULT_COMPACT");

@@ -10,6 +10,14 @@ export type CleanupCommandGroup = {
   context: "inspect-dirty" | "inspect-unpushed" | "verify-health";
 };
 
+export type CleanupProofCommandGroup = {
+  machineId: string;
+  path: string;
+  runLabel: string;
+  commands: string[];
+  context: "capture-proof";
+};
+
 export type CleanupPlannerEntry = {
   repoId: string;
   displayName: string;
@@ -27,7 +35,20 @@ export type CleanupPlannerEntry = {
     unpushedCommits: number;
   }>;
   safeCommandGroups: CleanupCommandGroup[];
+  proofCommandGroups: CleanupProofCommandGroup[];
 };
+
+function buildProofCommands(machineId: string, path: string, inspectCommands: string[]): string[] {
+  const safeRepo = path.split("/").filter(Boolean).pop() ?? "repo";
+  return [
+    `PROOF_DIR=/tmp/gh_tracker_maintenance_proof_${safeRepo}_$(date -u +%Y%m%dT%H%M%SZ)`,
+    'mkdir -p "$PROOF_DIR"',
+    `printf '%s\n' '${machineId}:${path}' > "$PROOF_DIR"/location.txt`,
+    `printf '%s\n' 'manual-proof-only' > "$PROOF_DIR"/mode.txt`,
+    ...inspectCommands.map((cmd, idx) => `${cmd} > "$PROOF_DIR"/step_${String(idx + 1).padStart(2, "0")}.txt`),
+    'ls -la "$PROOF_DIR"',
+  ];
+}
 
 function machineRemotePrefix(machineId: string): string | null {
   if (machineId === "nuc1") return "ssh nuc1";
@@ -130,7 +151,6 @@ export function buildCleanupPlanner(canonicalRepos: CanonicalRepoView[]): Cleanu
           `cd ${loc.path}`,
           "git status --branch --short",
           "git diff --stat",
-          "git stash list",
           "git log --oneline -5",
           "git branch --show-current",
         ];
@@ -164,6 +184,14 @@ export function buildCleanupPlanner(canonicalRepos: CanonicalRepoView[]): Cleanu
       };
     });
 
+    const proofCommandGroups = safeCommandGroups.map((group) => ({
+      machineId: group.machineId,
+      path: group.path,
+      runLabel: group.runLabel,
+      context: "capture-proof" as const,
+      commands: buildProofCommands(group.machineId, group.path, group.commands),
+    }));
+
     return {
       repoId: repo.repoId,
       displayName: repo.displayName,
@@ -181,6 +209,7 @@ export function buildCleanupPlanner(canonicalRepos: CanonicalRepoView[]): Cleanu
         unpushedCommits: loc.unpushedCommits,
       })),
       safeCommandGroups,
+      proofCommandGroups,
     };
   });
 

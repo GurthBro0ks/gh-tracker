@@ -34,6 +34,7 @@ type ActionCenterModel = {
   attentionReasons: string[];
   careActions: string[];
   safeCommandGroups: Array<{ machineId: string; path: string; runLabel: string; commands: string[] }>;
+  proofCommandGroups: Array<{ machineId: string; path: string; runLabel: string; commands: string[] }>;
 };
 
 const attentionLabels: Record<RepoAttentionReason, string> = {
@@ -365,13 +366,14 @@ function ActionCenterDrawer({ row, planner, onClose }: { row: HabitatRow; planne
           ...(planner ? planner.suggestions.map((s) => `Suggestion: ${s}`) : []),
           ...model.attentionReasons.map((r) => `Needs care: ${r}`),
           ...model.careActions.map((a) => `Action: ${a}`),
-          "All actions are manual operator actions. This app does not execute commands.",
+          "Manual proof only — this app does not execute commands.",
         ]} />
         <div className="mt-3 rounded border border-cyan-300/30 bg-black/30 p-2.5 sm:p-3">
           <p className="mb-2 text-[10px] uppercase tracking-[0.14em] text-cyan-200 sm:text-xs">Copy Commands</p>
-          <p className="mb-2 text-[10px] text-violet-200/70 sm:text-xs">Commands are tailored per location: dirty repos get inspection commands, unpushed repos get ahead/behind inspection, clean repos get light health checks.</p>
+          <p className="mb-2 text-[10px] text-violet-200/70 sm:text-xs">Manual proof only — this app does not execute commands. Dirty repos get inspection commands, unpushed repos get ahead/behind inspection, clean repos get light health checks.</p>
           <div className="space-y-2">
-            {model.safeCommandGroups.map((group) => {
+            {model.safeCommandGroups.map((group, index) => {
+              const proofGroup = model.proofCommandGroups[index];
               const loc = model.locations.find((l) => l.machineId === group.machineId && l.path === group.path);
               const contextLabel = loc?.dirty ? "Inspect dirty working tree" : (loc?.unpushedCommits ?? 0) > 0 ? "Inspect unpushed commits" : "Verify repo health";
               return (
@@ -381,16 +383,30 @@ function ActionCenterDrawer({ row, planner, onClose }: { row: HabitatRow; planne
                       <p className="text-violet-200 break-all">{group.machineId.toUpperCase()} · {group.path}</p>
                       <p className="text-cyan-200/70">{contextLabel}</p>
                     </div>
-                    <button
-                      type="button"
-                      className="flex-shrink-0 rounded border border-cyan-300/40 bg-cyan-400/10 px-3 py-2 text-[10px] uppercase tracking-[0.1em] text-cyan-100 min-h-[44px] min-w-[60px] flex items-center justify-center sm:min-h-0 sm:min-w-0 sm:px-2 sm:py-1"
-                      onClick={() => {
-                        void navigator.clipboard?.writeText(group.commands.join("\n"));
-                      }}
-                      aria-label={`Copy commands for ${group.machineId}`}
-                    >
-                      Copy
-                    </button>
+                    <div className="flex flex-wrap items-center gap-1">
+                      <button
+                        type="button"
+                        className="flex-shrink-0 rounded border border-cyan-300/40 bg-cyan-400/10 px-3 py-2 text-[10px] uppercase tracking-[0.1em] text-cyan-100 min-h-[44px] min-w-[60px] flex items-center justify-center sm:min-h-0 sm:min-w-0 sm:px-2 sm:py-1"
+                        onClick={() => {
+                          void navigator.clipboard?.writeText(group.commands.join("\n"));
+                        }}
+                        aria-label={`Copy inspection commands for ${group.machineId}`}
+                      >
+                        Copy inspection
+                      </button>
+                      {proofGroup ? (
+                        <button
+                          type="button"
+                          className="flex-shrink-0 rounded border border-lime-300/40 bg-lime-400/10 px-3 py-2 text-[10px] uppercase tracking-[0.1em] text-lime-100 min-h-[44px] min-w-[60px] flex items-center justify-center sm:min-h-0 sm:min-w-0 sm:px-2 sm:py-1"
+                          onClick={() => {
+                            void navigator.clipboard?.writeText(proofGroup.commands.join("\n"));
+                          }}
+                          aria-label={`Copy proof capture commands for ${group.machineId}`}
+                        >
+                          Copy proof capture
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
                   <pre className="overflow-x-auto whitespace-pre text-lime-200 break-all">{group.commands.join("\n")}</pre>
                 </div>
@@ -430,7 +446,6 @@ function buildActionCenterModel(row: HabitatRow): ActionCenterModel {
         `cd ${loc.path}`,
         "git status --branch --short",
         "git diff --stat",
-        "git stash list",
         "git log --oneline -5",
         "git branch --show-current",
       ];
@@ -459,6 +474,23 @@ function buildActionCenterModel(row: HabitatRow): ActionCenterModel {
       commands,
     };
   });
+  const proofCommandGroups = safeCommandGroups.map((group) => {
+    const safeRepo = group.path.split("/").filter(Boolean).pop() ?? "repo";
+    const commands = [
+      `PROOF_DIR=/tmp/gh_tracker_maintenance_proof_${safeRepo}_$(date -u +%Y%m%dT%H%M%SZ)`,
+      'mkdir -p "$PROOF_DIR"',
+      `printf '%s\\n' '${group.machineId}:${group.path}' > "$PROOF_DIR"/location.txt`,
+      `printf '%s\\n' 'manual-proof-only' > "$PROOF_DIR"/mode.txt`,
+      ...group.commands.map((cmd, idx) => `${cmd} > "$PROOF_DIR"/step_${String(idx + 1).padStart(2, "0")}.txt`),
+      'ls -la "$PROOF_DIR"',
+    ];
+    return {
+      machineId: group.machineId,
+      path: group.path,
+      runLabel: group.runLabel,
+      commands,
+    };
+  });
 
   return {
     canonicalRepo: row.repoId,
@@ -481,6 +513,7 @@ function buildActionCenterModel(row: HabitatRow): ActionCenterModel {
     attentionReasons: row.health.attentionReasons.map((r) => attentionLabels[r]),
     careActions: row.health.careActions.map((a) => careLabels[a]),
     safeCommandGroups,
+    proofCommandGroups,
   };
 }
 

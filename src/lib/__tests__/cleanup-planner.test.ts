@@ -52,6 +52,12 @@ describe("cleanup planner", () => {
     expect(commands).not.toContain("git push --force");
     expect(commands).not.toContain("rm -rf");
     expect(commands).not.toContain("sudo ");
+    const proofCommands = planner[0].proofCommandGroups[0].commands.join("\n");
+    expect(proofCommands).toContain("mkdir -p \"$PROOF_DIR\"");
+    expect(proofCommands).toContain("git status --branch --short > \"$PROOF_DIR\"");
+    expect(proofCommands).not.toContain("git add ");
+    expect(proofCommands).not.toContain("git commit ");
+    expect(proofCommands).not.toContain("git push ");
   });
 
   it("generates verify-health commands for clean repos", () => {

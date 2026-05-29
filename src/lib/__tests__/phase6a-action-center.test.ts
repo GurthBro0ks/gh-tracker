@@ -19,9 +19,11 @@ describe("phase6a action center", () => {
 
   it("keeps command text copy-only and non-destructive by default", () => {
     const source = readFileSync(join(repoRoot, "src/components/repo-habitat.tsx"), "utf8");
-    expect(source).toContain("All actions are manual operator actions. This app does not execute commands.");
+    expect(source).toContain("Manual proof only — this app does not execute commands.");
     expect(source).toContain("navigator.clipboard?.writeText");
-    expect(source).toContain("Copy");
+    expect(source).toContain("Copy inspection");
+    expect(source).toContain("Copy proof capture");
+    expect(source).toContain("mkdir -p \"$PROOF_DIR\"");
     expect(source).toContain("git status --branch --short");
     expect(source).not.toContain("git reset --hard");
     expect(source).not.toContain("git clean -fd");
