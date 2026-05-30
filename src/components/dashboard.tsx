@@ -1204,9 +1204,13 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
       )}
 
       {settingsOpen && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-4 pt-16 sm:items-center sm:pt-0">
-          <div className="w-full max-w-md rounded-xl border border-fuchsia-400/50 bg-gradient-to-b from-[rgba(18,9,32,0.98)] to-[rgba(8,4,15,0.98)] p-5 shadow-[0_0_40px_rgba(215,23,255,0.2)]">
-            <div className="mb-4 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-4 pt-[max(1rem,env(safe-area-inset-top))] sm:items-center sm:pt-0" onClick={() => setSettingsOpen(false)}>
+          <div
+            className="settings-modal-panel w-full max-w-md rounded-xl border border-fuchsia-400/50 bg-gradient-to-b from-[rgba(18,9,32,0.98)] to-[rgba(8,4,15,0.98)] shadow-[0_0_40px_rgba(215,23,255,0.2)] flex flex-col"
+            style={{ maxHeight: "calc(100dvh - 2rem)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex shrink-0 items-center justify-between p-5 pb-3">
               <h2 className="font-sans text-lg uppercase tracking-[0.08em] text-fuchsia-200">Settings</h2>
               <button
                 type="button"
@@ -1217,97 +1221,99 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
               </button>
             </div>
 
-            <div className="space-y-3 text-xs">
-              <div className="rounded border border-white/10 bg-black/30 px-3 py-2">
-                <p className="text-violet-300">App version</p>
-                <p className="text-violet-100">{activeData.version}</p>
-              </div>
+            <div className="settings-modal-body flex-1 overflow-y-auto px-5 pb-5 text-xs" style={{ paddingBottom: "max(1.25rem, calc(env(safe-area-inset-bottom) + 0.75rem))" }}>
+              <div className="space-y-3">
+                <div className="rounded border border-white/10 bg-black/30 px-3 py-2">
+                  <p className="text-violet-300">App version</p>
+                  <p className="text-violet-100">{activeData.version}</p>
+                </div>
 
-              <div className="rounded border border-white/10 bg-black/30 px-3 py-2">
-                <p className="text-violet-300">Auth source</p>
-                <p className="text-violet-100">Slimy owner email/password</p>
-              </div>
+                <div className="rounded border border-white/10 bg-black/30 px-3 py-2">
+                  <p className="text-violet-300">Auth source</p>
+                  <p className="text-violet-100">Slimy owner email/password</p>
+                </div>
 
-              <div className="rounded border border-white/10 bg-black/30 px-3 py-2">
-                <p className="text-violet-300">Signed in as</p>
-                <p className="text-violet-100">{session ? session.email : "Unknown"}</p>
-              </div>
+                <div className="rounded border border-white/10 bg-black/30 px-3 py-2">
+                  <p className="text-violet-300">Signed in as</p>
+                  <p className="text-violet-100">{session ? session.email : "Unknown"}</p>
+                </div>
 
-              <div className="rounded border border-white/10 bg-black/30 px-3 py-2">
-                <p className="text-violet-300">Role</p>
-                <p className="text-violet-100">{session ? session.role : "Unknown"}</p>
-              </div>
+                <div className="rounded border border-white/10 bg-black/30 px-3 py-2">
+                  <p className="text-violet-300">Role</p>
+                  <p className="text-violet-100">{session ? session.role : "Unknown"}</p>
+                </div>
 
-              <div className="rounded border border-white/10 bg-black/30 px-3 py-2">
-                <p className="text-violet-300">Outer gate</p>
-                <p className="text-violet-100">Basic Auth still enabled</p>
-              </div>
+                <div className="rounded border border-white/10 bg-black/30 px-3 py-2">
+                  <p className="text-violet-300">Outer gate</p>
+                  <p className="text-violet-100">Basic Auth still enabled</p>
+                </div>
 
-              <div className="rounded border border-white/10 bg-black/30 px-3 py-2">
-                <p className="text-violet-300">GitHub sync status</p>
-                <p className="text-violet-100">{githubStatusLabel(activeData.githubHealth.status)} — {activeData.githubHealth.syncedRepoCount} repos synced</p>
-              </div>
+                <div className="rounded border border-white/10 bg-black/30 px-3 py-2">
+                  <p className="text-violet-300">GitHub sync status</p>
+                  <p className="text-violet-100">{githubStatusLabel(activeData.githubHealth.status)} — {activeData.githubHealth.syncedRepoCount} repos synced</p>
+                </div>
 
-              <div className="rounded border border-white/10 bg-black/30 px-3 py-2">
-                <p className="text-violet-300">Session status</p>
-                <p className="text-violet-100">{session?.role === "owner" ? "Active (owner verified)" : "Unknown"}</p>
-              </div>
+                <div className="rounded border border-white/10 bg-black/30 px-3 py-2">
+                  <p className="text-violet-300">Session status</p>
+                  <p className="text-violet-100">{session?.role === "owner" ? "Active (owner verified)" : "Unknown"}</p>
+                </div>
 
-              <div className="rounded border border-fuchsia-400/30 bg-black/30 px-3 py-3">
-                <p className="mb-2 text-fuchsia-200 font-medium text-xs uppercase tracking-wide">Alert Preferences</p>
-                <div className="space-y-1.5 text-violet-100">
-                  <div className="flex justify-between">
-                    <span className="text-violet-300">Persistence</span>
-                    <span>{serverPrefsLoaded ? "Enabled (server synced)" : "Loading…"}</span>
+                <div className="rounded border border-fuchsia-400/30 bg-black/30 px-3 py-3">
+                  <p className="mb-2 text-fuchsia-200 font-medium text-xs uppercase tracking-wide">Alert Preferences</p>
+                  <div className="space-y-1.5 text-violet-100">
+                    <div className="flex justify-between">
+                      <span className="text-violet-300">Persistence</span>
+                      <span>{serverPrefsLoaded ? "Enabled (server synced)" : "Loading…"}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-violet-300">Dismissed alerts</span>
+                      <span>{dismissedAlertIds.size}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-violet-300">Snoozed alerts</span>
+                      <span>{snoozedAlertIds.size}</span>
+                    </div>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-violet-300">Dismissed alerts</span>
-                    <span>{dismissedAlertIds.size}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-violet-300">Snoozed alerts</span>
-                    <span>{snoozedAlertIds.size}</span>
+                  <div className="mt-3 space-y-1.5">
+                    <button
+                      type="button"
+                      onClick={handleClearDismissed}
+                      disabled={dismissedAlertIds.size === 0}
+                      className="w-full rounded border border-violet-400/30 bg-violet-950/30 px-2 py-1.5 text-xs text-violet-200 hover:bg-violet-900/40 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      Clear dismissed alerts
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleClearSnoozed}
+                      disabled={snoozedAlertIds.size === 0}
+                      className="w-full rounded border border-violet-400/30 bg-violet-950/30 px-2 py-1.5 text-xs text-violet-200 hover:bg-violet-900/40 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      Clear snoozed alerts
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleClearAll}
+                      disabled={dismissedAlertIds.size === 0 && snoozedAlertIds.size === 0}
+                      className="w-full rounded border border-amber-400/30 bg-amber-950/30 px-2 py-1.5 text-xs text-amber-200 hover:bg-amber-900/40 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      Clear all alert preferences
+                    </button>
+                    <p className="text-[10px] text-violet-400/70 pt-1">Only alert UI preferences are changed. Repo data is not modified.</p>
                   </div>
                 </div>
-                <div className="mt-3 space-y-1.5">
-                  <button
-                    type="button"
-                    onClick={handleClearDismissed}
-                    disabled={dismissedAlertIds.size === 0}
-                    className="w-full rounded border border-violet-400/30 bg-violet-950/30 px-2 py-1.5 text-xs text-violet-200 hover:bg-violet-900/40 disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    Clear dismissed alerts
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleClearSnoozed}
-                    disabled={snoozedAlertIds.size === 0}
-                    className="w-full rounded border border-violet-400/30 bg-violet-950/30 px-2 py-1.5 text-xs text-violet-200 hover:bg-violet-900/40 disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    Clear snoozed alerts
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleClearAll}
-                    disabled={dismissedAlertIds.size === 0 && snoozedAlertIds.size === 0}
-                    className="w-full rounded border border-amber-400/30 bg-amber-950/30 px-2 py-1.5 text-xs text-amber-200 hover:bg-amber-900/40 disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    Clear all alert preferences
-                  </button>
-                  <p className="text-[10px] text-violet-400/70 pt-1">Only alert UI preferences are changed. Repo data is not modified.</p>
-                </div>
-              </div>
 
-              <button
-                type="button"
-                onClick={async () => {
-                  await fetch("/api/auth/logout", { method: "POST" });
-                  window.location.href = "/login";
-                }}
-                className="w-full rounded border border-rose-400/50 bg-rose-950/30 px-3 py-2 text-xs font-medium text-rose-200 hover:bg-rose-900/40"
-              >
-                Sign Out
-              </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await fetch("/api/auth/logout", { method: "POST" });
+                    window.location.href = "/login";
+                  }}
+                  className="w-full rounded border border-rose-400/50 bg-rose-950/30 px-3 py-2 text-xs font-medium text-rose-200 hover:bg-rose-900/40"
+                >
+                  Sign Out
+                </button>
+              </div>
             </div>
           </div>
         </div>
