@@ -103,9 +103,9 @@ describe("Phase 9A version status centralization", () => {
 });
 
 describe("Phase 9A.1 alert hard refresh persistence", () => {
-  it("server prefs useEffect gates on prefs.updatedAt > 0", () => {
+  it("server prefs useEffect gates on merged updatedAt", () => {
     const dashboard = readFileSync(join(repoRoot, "src/components/dashboard.tsx"), "utf8");
-    expect(dashboard).toContain("prefs.updatedAt > 0");
+    expect(dashboard).toContain("if (serverPrefs.updatedAt > 0 || localPrefs.updatedAt > 0)");
   });
 
   it("server prefs useEffect sets serverPrefsLoaded on non-ok response", () => {
@@ -114,9 +114,9 @@ describe("Phase 9A.1 alert hard refresh persistence", () => {
     expect(dashboard).toContain("setServerPrefsLoaded(true)");
   });
 
-  it("server prefs only overwrites dismissedAlertIds when updatedAt > 0", () => {
+  it("server prefs merges dismissedAlertIds via merged preferences", () => {
     const dashboard = readFileSync(join(repoRoot, "src/components/dashboard.tsx"), "utf8");
-    const dismissedPattern = /setDismissedAlertIds\(fromServerDismissed\)/g;
+    const dismissedPattern = /setDismissedAlertIds\(new Set\(merged\.dismissedAlertIds\)\)/g;
     const matches = dashboard.match(dismissedPattern);
     expect(matches).not.toBeNull();
     expect(matches!.length).toBe(1);
@@ -138,7 +138,7 @@ describe("Phase 9A.1 alert hard refresh persistence", () => {
   it("handleClearDismissed calls clearDismissedLocalStorage and syncs to server", () => {
     const dashboard = readFileSync(join(repoRoot, "src/components/dashboard.tsx"), "utf8");
     expect(dashboard).toContain("clearDismissedLocalStorage()");
-    expect(dashboard).toContain("syncClearToServer");
+    expect(dashboard).toContain("syncPreferencesToServer");
   });
 
   it("handleClearSnoozed calls clearSnoozedLocalStorage", () => {
@@ -148,10 +148,9 @@ describe("Phase 9A.1 alert hard refresh persistence", () => {
 
   it("server localStorage sync only happens inside updatedAt > 0 guard", () => {
     const dashboard = readFileSync(join(repoRoot, "src/components/dashboard.tsx"), "utf8");
-    const guardBlock = dashboard.match(/if \(prefs\.updatedAt > 0\) \{[\s\S]*?\n        \}/);
+    const guardBlock = dashboard.match(/if \(serverPrefs\.updatedAt > 0 \|\| localPrefs\.updatedAt > 0\) \{[\s\S]*?\}/);
     expect(guardBlock).not.toBeNull();
-    expect(guardBlock![0]).toContain("localStorage.setItem");
-    expect(guardBlock![0]).toContain("gh-tracker-alert-dismissed");
+    expect(guardBlock![0]).toContain("persistLocalPreferences");
   });
 
   it("preferences route GET returns updatedAt field", () => {

@@ -16,7 +16,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import type { CanonicalRepoView, DashboardData, DashboardDataMode, DashboardGithubRepoHealth } from "@/lib/dashboard-adapter";
 import type { RepoHealth, RepoHealthBucket, RepoPet } from "@/lib/contracts";
 import { generateRepoPet, deriveRepoHealth } from "@/lib/repo-habitat";
@@ -25,7 +25,7 @@ import { RepoPetSprite, type RepoPetSpriteStatus } from "@/components/repo-pet-s
 import { buildHeatmapInspectorCells } from "@/lib/heatmap-inspector";
 import { buildCleanupPlanner } from "@/lib/cleanup-planner";
 import { buildMaintenanceBuckets } from "@/lib/maintenance-classifier";
-import { buildAlerts, getDismissedAlertIds, getSnoozedAlertIds, dismissAlertId as dismissLocal, snoozeAlertId as snoozeLocal, clearDismissedLocalStorage, clearSnoozedLocalStorage, clearAllAlertLocalStorage } from "@/lib/maintenance-alerts";
+import { buildAlerts, getDismissedAlertIds, getLocalPreferences, getSnoozedAlertIds, getSnoozedUntilByAlertId, persistLocalPreferences, dismissAlertId as dismissLocal, snoozeAlertId as snoozeLocal, clearDismissedLocalStorage, clearSnoozedLocalStorage, clearAllAlertLocalStorage } from "@/lib/maintenance-alerts";
 import type { AlertPreferences } from "@/lib/alert-preferences";
 import { APP_RELEASE_TAG } from "@/lib/app-version";
 
@@ -169,43 +169,52 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
     if (typeof window === "undefined") return new Set();
     return getSnoozedAlertIds();
   });
-  const [serverPrefsLoaded, setServerPrefsLoaded] = useState(false);
-  const dismissedForSync = useRef(dismissedAlertIds);
-  const snoozedForSync = useRef(snoozedAlertIds);
+   const [serverPrefsLoaded, setServerPrefsLoaded] = useState(false);
 
-  useEffect(() => {
-    dismissedForSync.current = dismissedAlertIds;
-  }, [dismissedAlertIds]);
-
-  useEffect(() => {
-    snoozedForSync.current = snoozedAlertIds;
-  }, [snoozedAlertIds]);
+  function mergePreferences(server: AlertPreferences, local: AlertPreferences): AlertPreferences {
+    const dismissed = new Set(server.dismissedAlertIds);
+    for (const id of local.dismissedAlertIds) {
+      dismissed.add(id);
+    }
+    const snoozedUntil: Record<string, number> = { ...server.snoozedUntilByAlertId };
+    for (const [id, until] of Object.entries(local.snoozedUntilByAlertId)) {
+      if (typeof until === "number") {
+        const current = snoozedUntil[id] ?? 0;
+        snoozedUntil[id] = Math.max(current, until);
+      }
+    }
+    return {
+      dismissedAlertIds: Array.from(dismissed),
+      snoozedUntilByAlertId: snoozedUntil,
+      updatedAt: Math.max(server.updatedAt, local.updatedAt),
+    };
+  }
 
   useEffect(() => {
     if (serverPrefsLoaded) return;
     let cancelled = false;
     (async () => {
       try {
+        const localPrefs = getLocalPreferences();
         const res = await fetch("/api/alerts/preferences");
         if (!res.ok) {
           if (!cancelled) setServerPrefsLoaded(true);
           return;
         }
-        const prefs: AlertPreferences = await res.json();
+        const serverPrefs: AlertPreferences = await res.json();
         if (cancelled) return;
-        if (prefs.updatedAt > 0) {
-          const fromServerDismissed = new Set(prefs.dismissedAlertIds);
-          const fromServerSnoozed = new Set(
-            Object.entries(prefs.snoozedUntilByAlertId)
+        if (serverPrefs.updatedAt > 0 || localPrefs.updatedAt > 0) {
+          const merged = mergePreferences(serverPrefs, localPrefs);
+          const activeSnoozedIds = new Set(
+            Object.entries(merged.snoozedUntilByAlertId)
               .filter(([, until]) => Date.now() < until)
               .map(([id]) => id),
           );
-          setDismissedAlertIds(fromServerDismissed);
-          setSnoozedAlertIds(fromServerSnoozed);
-          try {
-            localStorage.setItem("gh-tracker-alert-dismissed", JSON.stringify(Array.from(fromServerDismissed)));
-            localStorage.setItem("gh-tracker-alert-snoozed", JSON.stringify(Array.from(fromServerSnoozed)));
-          } catch {
+          setDismissedAlertIds(new Set(merged.dismissedAlertIds));
+          setSnoozedAlertIds(activeSnoozedIds);
+          persistLocalPreferences(merged);
+          if (merged.updatedAt > serverPrefs.updatedAt) {
+            await postPreferences(merged);
           }
         }
         setServerPrefsLoaded(true);
@@ -216,89 +225,49 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
     return () => { cancelled = true; };
   }, [serverPrefsLoaded]);
 
-  async function syncDismissedToServer(ids: Set<string>): Promise<void> {
+  function buildCanonicalPreferences(): AlertPreferences {
+    return {
+      dismissedAlertIds: Array.from(dismissedAlertIds),
+      snoozedUntilByAlertId: getSnoozedUntilByAlertId(),
+      updatedAt: Date.now(),
+    };
+  }
+
+  async function postPreferences(prefs: AlertPreferences): Promise<void> {
     try {
-      const currentSnoozed = snoozedForSync.current;
-      const snoozed: Record<string, number> = {};
-      for (const id of ids) {
-        if (currentSnoozed.has(id)) snoozed[id] = Date.now() + 3600000;
-      }
       await fetch("/api/alerts/preferences", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          dismissedAlertIds: Array.from(ids),
-          snoozedUntilByAlertId: snoozed,
-        }),
+        body: JSON.stringify(prefs),
       });
     } catch {
     }
   }
 
-  async function syncSnoozedToServer(ids: Set<string>): Promise<void> {
-    try {
-      const currentDismissed = dismissedForSync.current;
-      const snoozedUntil: Record<string, number> = {};
-      for (const id of ids) {
-        snoozedUntil[id] = Date.now() + 3600000;
-      }
-      await fetch("/api/alerts/preferences", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          dismissedAlertIds: Array.from(currentDismissed),
-          snoozedUntilByAlertId: snoozedUntil,
-        }),
-      });
-    } catch {
-    }
+  async function syncPreferencesToServer(): Promise<void> {
+    const prefs = buildCanonicalPreferences();
+    persistLocalPreferences(prefs);
+    await postPreferences(prefs);
   }
 
-  async function syncClearToServer(
-    clearDismissed: boolean,
-    clearSnoozed: boolean,
-  ): Promise<void> {
-    try {
-      const dismissed = clearDismissed ? [] : Array.from(dismissedForSync.current);
-      const snoozed: Record<string, number> = {};
-      if (!clearSnoozed) {
-        const currentSnoozed = snoozedForSync.current;
-        for (const id of currentSnoozed) {
-          snoozed[id] = Date.now() + 3600000;
-        }
-      }
-      await fetch("/api/alerts/preferences", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          dismissedAlertIds: dismissed,
-          snoozedUntilByAlertId: snoozed,
-        }),
-      });
-    } catch {
-    }
-  }
-
-  const handleClearDismissed = useCallback(async () => {
+  const handleClearDismissed = async () => {
     clearDismissedLocalStorage();
-    const fresh = getDismissedAlertIds();
-    setDismissedAlertIds(fresh);
-    await syncClearToServer(true, false);
-  }, []);
+    setDismissedAlertIds(getDismissedAlertIds());
+    await syncPreferencesToServer();
+  };
 
-  const handleClearSnoozed = useCallback(async () => {
+  const handleClearSnoozed = async () => {
     clearSnoozedLocalStorage();
-    const fresh = getSnoozedAlertIds();
-    setSnoozedAlertIds(fresh);
-    await syncClearToServer(false, true);
-  }, []);
+    setSnoozedAlertIds(getSnoozedAlertIds());
+    await syncPreferencesToServer();
+  };
 
-  const handleClearAll = useCallback(async () => {
+  const handleClearAll = async () => {
     clearAllAlertLocalStorage();
     setDismissedAlertIds(getDismissedAlertIds());
     setSnoozedAlertIds(getSnoozedAlertIds());
-    await syncClearToServer(true, true);
-  }, []);
+    await syncPreferencesToServer();
+  };
 
   const activeData = (mode === "local_snapshot" || mode === "aggregated") && localData ? localData : demoData;
 
@@ -1177,27 +1146,25 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
                       >
                         Copy Inspection
                       </button>
-                      <button
-                        type="button"
-                        className="rounded border border-violet-300/40 bg-violet-400/8 px-2 py-0.5 text-[8px] uppercase tracking-[0.1em] text-violet-100"
-                        onClick={() => {
-                          dismissLocal(alert.id);
-                          const updated = getDismissedAlertIds();
-                          setDismissedAlertIds(updated);
-                          void syncDismissedToServer(updated);
-                        }}
-                      >
-                        Dismiss
-                      </button>
-                      <button
-                        type="button"
+                          <button
+                            type="button"
+                            className="rounded border border-violet-300/40 bg-violet-400/8 px-2 py-0.5 text-[8px] uppercase tracking-[0.1em] text-violet-100"
+                            onClick={() => {
+                              dismissLocal(alert.id);
+                              setDismissedAlertIds(getDismissedAlertIds());
+                              void syncPreferencesToServer();
+                            }}
+                          >
+                            Dismiss
+                          </button>
+                          <button
+                            type="button"
                         className="rounded border border-amber-300/40 bg-amber-400/8 px-2 py-0.5 text-[8px] uppercase tracking-[0.1em] text-amber-100"
-                        onClick={() => {
-                          snoozeLocal(alert.id);
-                          const updated = getSnoozedAlertIds();
-                          setSnoozedAlertIds(updated);
-                          void syncSnoozedToServer(updated);
-                        }}
+                            onClick={() => {
+                              snoozeLocal(alert.id);
+                              setSnoozedAlertIds(getSnoozedAlertIds());
+                              void syncPreferencesToServer();
+                            }}
                       >
                         Snooze
                       </button>
