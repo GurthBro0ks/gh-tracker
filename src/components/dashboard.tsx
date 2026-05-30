@@ -25,6 +25,7 @@ import { RepoPetSprite, type RepoPetSpriteStatus } from "@/components/repo-pet-s
 import { buildHeatmapInspectorCells } from "@/lib/heatmap-inspector";
 import { buildCleanupPlanner } from "@/lib/cleanup-planner";
 import { buildMaintenanceBuckets } from "@/lib/maintenance-classifier";
+import { buildAlerts, getDismissedAlertIds, getSnoozedAlertIds, dismissAlertId, snoozeAlertId } from "@/lib/maintenance-alerts";
 
 const PIE_COLORS = ["#d717ff", "#97ff4c", "#53b4ff", "#ff74ae", "#ffc44d", "#a98dff"];
 
@@ -150,6 +151,15 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
   );
   const [compactOpen, setCompactOpen] = useState<Record<string, boolean>>({});
   const [renderedAt] = useState(() => Date.now());
+  const [alertCenterOpen, setAlertCenterOpen] = useState(false);
+  const [dismissedAlertIds, setDismissedAlertIds] = useState<Set<string>>(() => {
+    if (typeof window === "undefined") return new Set();
+    return getDismissedAlertIds();
+  });
+  const [snoozedAlertIds, setSnoozedAlertIds] = useState<Set<string>>(() => {
+    if (typeof window === "undefined") return new Set();
+    return getSnoozedAlertIds();
+  });
 
   const activeData = (mode === "local_snapshot" || mode === "aggregated") && localData ? localData : demoData;
 
@@ -296,6 +306,10 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
     },
     [activeData.canonicalRepos, cleanupPlanner, activeData.dirtyRepoCount, activeData.unpushedRepoCount],
   );
+  const activeAlerts = useMemo(
+    () => buildAlerts(maintenanceBuckets.needsAction, dismissedAlertIds, snoozedAlertIds).filter((a) => !a.dismissed && !a.snoozed),
+    [maintenanceBuckets.needsAction, dismissedAlertIds, snoozedAlertIds],
+  );
   const repoLocationsSummary = `${activeData.canonicalRepos.length} repos · ${activeData.repoRows.length} locations`;
   const habitatSummary = `${habitatRows.length} habitat cards · ${activeData.canonicalRepos.length} canonical repos`;
   const cleanupSummary = `Actionable: ${maintenanceBuckets.counts.actionable} · Holds: ${maintenanceBuckets.counts.knownHolds} · Raw: ${maintenanceBuckets.counts.rawDirty}d/${maintenanceBuckets.counts.rawUnpushed}u`;
@@ -357,6 +371,13 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
               {mode === "aggregated" ? "● Aggregated" : "Aggregated"}
             </button>
             <span className="rounded border border-fuchsia-400/30 bg-black/20 px-2 py-1 text-[9px] font-mono tracking-wide text-fuchsia-300/70 sm:text-[10px]">{activeData.version}</span>
+            <button
+              type="button"
+              className={`rounded border px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] sm:px-3 sm:text-xs sm:tracking-[0.15em] ${activeAlerts.length > 0 ? "border-rose-400/60 bg-rose-500/15 text-rose-200 animate-pulse" : "border-fuchsia-400/50 bg-black/30 text-violet-200"}`}
+              onClick={() => setAlertCenterOpen(true)}
+            >
+              Alerts{activeAlerts.length > 0 ? `: ${activeAlerts.length}` : ""}
+            </button>
             <button
               type="button"
               className="rounded border border-fuchsia-400/50 bg-black/30 px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-violet-200 sm:px-3 sm:text-xs sm:tracking-[0.15em]"
@@ -936,6 +957,98 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
         </div>
       </section>
       </MobileCompactSection>
+
+      {alertCenterOpen && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-4 pt-16 sm:items-center sm:pt-0" onClick={() => setAlertCenterOpen(false)}>
+          <div className="w-full max-w-lg rounded-xl border border-fuchsia-400/50 bg-gradient-to-b from-[rgba(18,9,32,0.98)] to-[rgba(8,4,15,0.98)] p-5 shadow-[0_0_40px_rgba(215,23,255,0.2)]" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="font-sans text-lg uppercase tracking-[0.08em] text-fuchsia-200">Alert Center</h2>
+              <div className="flex gap-2">
+                {activeAlerts.length > 0 && (
+                  <span className="rounded border border-rose-400/50 bg-rose-500/15 px-2 py-1 text-[10px] text-rose-200">{activeAlerts.length} active alert{activeAlerts.length !== 1 ? "s" : ""}</span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setAlertCenterOpen(false)}
+                  className="rounded border border-fuchsia-400/50 bg-black/30 px-2 py-1 text-xs text-violet-200 hover:text-fuchsia-200"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-2 text-xs max-h-[65vh] overflow-y-auto">
+              {activeAlerts.length === 0 ? (
+                <div className="rounded border border-lime-300/25 bg-lime-400/5 px-3 py-4 text-center text-violet-200">
+                  No active alerts. All Needs Action items are handled.
+                </div>
+              ) : (
+                activeAlerts.map((alert) => (
+                  <div key={alert.id} className="rounded border border-white/10 bg-black/35 p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-1.5">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <p className="font-sans text-[10px] uppercase tracking-[0.06em] text-white sm:text-xs">{alert.displayName}</p>
+                        <span className={`rounded border px-1.5 py-0.5 text-[8px] uppercase tracking-[0.1em] ${alert.severity === "high" ? "border-rose-300/50 bg-rose-400/10 text-rose-200" : alert.severity === "medium" ? "border-amber-300/50 bg-amber-400/10 text-amber-200" : "border-cyan-300/50 bg-cyan-400/10 text-cyan-200"}`}>
+                          {alert.severity}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        className="rounded border border-fuchsia-300/40 bg-fuchsia-400/8 px-2 py-0.5 text-[8px] uppercase tracking-[0.1em] text-fuchsia-100"
+                        onClick={() => setActionCenterRepoId(alert.repoId)}
+                      >
+                        Open Action Center
+                      </button>
+                    </div>
+
+                    <div className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[9px] text-violet-200/70">
+                      <span>Machine: {alert.machine.toUpperCase()}</span>
+                      <span>Reason: {alert.reason}</span>
+                    </div>
+
+                    <p className="mt-1 text-[9px] text-violet-300/75">{alert.recommendation}</p>
+
+                    <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                      <button
+                        type="button"
+                        className="rounded border border-cyan-300/40 bg-cyan-400/8 px-2 py-0.5 text-[8px] uppercase tracking-[0.1em] text-cyan-100"
+                        onClick={() => {
+                          const entry = maintenanceBuckets.needsAction.find((i) => i.repoId === alert.repoId)?.entry;
+                          if (entry && entry.safeCommandGroups.length > 0) {
+                            void navigator.clipboard?.writeText(entry.safeCommandGroups[0].commands.join("\n"));
+                          }
+                        }}
+                      >
+                        Copy Inspection
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded border border-violet-300/40 bg-violet-400/8 px-2 py-0.5 text-[8px] uppercase tracking-[0.1em] text-violet-100"
+                        onClick={() => {
+                          dismissAlertId(alert.id);
+                          setDismissedAlertIds(getDismissedAlertIds());
+                        }}
+                      >
+                        Dismiss
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded border border-amber-300/40 bg-amber-400/8 px-2 py-0.5 text-[8px] uppercase tracking-[0.1em] text-amber-100"
+                        onClick={() => {
+                          snoozeAlertId(alert.id);
+                          setSnoozedAlertIds(getSnoozedAlertIds());
+                        }}
+                      >
+                        Snooze
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {settingsOpen && (
         <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-4 pt-16 sm:items-center sm:pt-0">
