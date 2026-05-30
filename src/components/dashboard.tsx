@@ -16,7 +16,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import type { CanonicalRepoView, DashboardData, DashboardDataMode, DashboardGithubRepoHealth } from "@/lib/dashboard-adapter";
 import type { RepoHealth, RepoHealthBucket, RepoPet } from "@/lib/contracts";
 import { generateRepoPet, deriveRepoHealth } from "@/lib/repo-habitat";
@@ -153,6 +153,12 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
   const [renderedAt] = useState(() => Date.now());
   const [alertCenterOpen, setAlertCenterOpen] = useState(false);
   const [alertActionCenterError, setAlertActionCenterError] = useState<string | null>(null);
+  const handleActionCenterOpen = useCallback((repoId: string | null) => {
+    if (repoId && isMobileViewport) {
+      setCompactOpen((prev) => ({ ...prev, "repo-habitat": true }));
+    }
+    setActionCenterRepoId(repoId);
+  }, [isMobileViewport]);
   const [dismissedAlertIds, setDismissedAlertIds] = useState<Set<string>>(() => {
     if (typeof window === "undefined") return new Set();
     return getDismissedAlertIds();
@@ -545,7 +551,7 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
           expandedRepos={expandedRepos}
           onToggleExpand={toggleRepoExpand}
           actionCenterRepoId={actionCenterRepoId}
-          onActionCenterChange={setActionCenterRepoId}
+          onActionCenterChange={handleActionCenterOpen}
           cleanupPriorityMap={plannerByRepo}
         />
       </MobileCompactSection>
@@ -582,7 +588,7 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
               count={maintenanceBuckets.needsAction.length}
               color="rose"
               items={maintenanceBuckets.needsAction}
-              setActionCenterRepoId={setActionCenterRepoId}
+              setActionCenterRepoId={handleActionCenterOpen}
               showDetails
             />
           )}
@@ -594,7 +600,7 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
               count={maintenanceBuckets.operationalHold.length}
               color="cyan"
               items={maintenanceBuckets.operationalHold}
-              setActionCenterRepoId={setActionCenterRepoId}
+              setActionCenterRepoId={handleActionCenterOpen}
             />
           )}
 
@@ -605,7 +611,7 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
               count={maintenanceBuckets.activeDevelopment.length}
               color="lime"
               items={maintenanceBuckets.activeDevelopment}
-              setActionCenterRepoId={setActionCenterRepoId}
+              setActionCenterRepoId={handleActionCenterOpen}
             />
           )}
 
@@ -616,7 +622,7 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
               count={maintenanceBuckets.runtimeLocalState.length}
               color="violet"
               items={maintenanceBuckets.runtimeLocalState}
-              setActionCenterRepoId={setActionCenterRepoId}
+              setActionCenterRepoId={handleActionCenterOpen}
             />
           )}
 
@@ -627,7 +633,7 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
               count={maintenanceBuckets.staleSnapshot.length}
               color="amber"
               items={maintenanceBuckets.staleSnapshot}
-              setActionCenterRepoId={setActionCenterRepoId}
+              setActionCenterRepoId={handleActionCenterOpen}
             />
           )}
 
@@ -1000,8 +1006,10 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
                           const found = habitatRows.some((r) => r.repoId === alert.repoId);
                           if (found) {
                             setAlertCenterOpen(false);
-                            setActionCenterRepoId(alert.repoId);
                             setAlertActionCenterError(null);
+                            requestAnimationFrame(() => {
+                              handleActionCenterOpen(alert.repoId);
+                            });
                           } else {
                             setAlertActionCenterError(alert.repoId);
                           }
