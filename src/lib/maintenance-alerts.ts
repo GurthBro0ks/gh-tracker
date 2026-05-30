@@ -67,6 +67,19 @@ export function unsnoozeAlertId(id: string): void {
   storeSet(SNOOZED_KEY, ids);
 }
 
+export function clearDismissedLocalStorage(): void {
+  storeSet(DISMISSED_KEY, new Set());
+}
+
+export function clearSnoozedLocalStorage(): void {
+  storeSet(SNOOZED_KEY, new Set());
+}
+
+export function clearAllAlertLocalStorage(): void {
+  storeSet(DISMISSED_KEY, new Set());
+  storeSet(SNOOZED_KEY, new Set());
+}
+
 export function buildAlertId(
   repoId: string,
   machineId: string,

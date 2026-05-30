@@ -1,11 +1,28 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, afterEach, beforeEach, vi } from "vitest";
 import type { ClassifiedItem } from "../maintenance-classifier";
 import {
   buildAlerts,
   buildAlertId,
   severityFromRisk,
   reasonFromLabel,
+  clearDismissedLocalStorage,
+  clearSnoozedLocalStorage,
+  clearAllAlertLocalStorage,
+  dismissAlertId,
+  snoozeAlertId,
+  getDismissedAlertIds,
+  getSnoozedAlertIds,
 } from "../maintenance-alerts";
+
+function mockLocalStorage() {
+  const store: Record<string, string> = {};
+  return {
+    getItem: (key: string) => store[key] ?? null,
+    setItem: (key: string, value: string) => { store[key] = value; },
+    removeItem: (key: string) => { delete store[key]; },
+    clear: () => { Object.keys(store).forEach((k) => delete store[k]); },
+  };
+}
 
 function makeNeedsAction(overrides: Partial<ClassifiedItem>): ClassifiedItem {
   return {
@@ -180,5 +197,78 @@ describe("maintenance alerts", () => {
     const item = makeNeedsAction({ repoId: "to-snooze" });
     const alerts = buildAlerts([item], snoozed, new Set());
     expect(alerts.every((a) => a.snoozed === (a.id === id))).toBe(true);
+  });
+});
+
+describe("alert clear operations", () => {
+  beforeEach(() => {
+    vi.stubGlobal("localStorage", mockLocalStorage());
+  });
+
+  afterEach(() => {
+    clearAllAlertLocalStorage();
+    vi.unstubAllGlobals();
+  });
+
+  it("clearDismissedLocalStorage removes all dismissed IDs", () => {
+    dismissAlertId("a1");
+    dismissAlertId("a2");
+    expect(getDismissedAlertIds().size).toBe(2);
+    clearDismissedLocalStorage();
+    expect(getDismissedAlertIds().size).toBe(0);
+  });
+
+  it("clearDismissedLocalStorage preserves snoozed state", () => {
+    dismissAlertId("d1");
+    snoozeAlertId("s1");
+    clearDismissedLocalStorage();
+    expect(getDismissedAlertIds().size).toBe(0);
+    expect(getSnoozedAlertIds().has("s1")).toBe(true);
+  });
+
+  it("clearSnoozedLocalStorage removes all snoozed IDs", () => {
+    snoozeAlertId("s1");
+    snoozeAlertId("s2");
+    expect(getSnoozedAlertIds().size).toBe(2);
+    clearSnoozedLocalStorage();
+    expect(getSnoozedAlertIds().size).toBe(0);
+  });
+
+  it("clearSnoozedLocalStorage preserves dismissed state", () => {
+    dismissAlertId("d1");
+    snoozeAlertId("s1");
+    clearSnoozedLocalStorage();
+    expect(getDismissedAlertIds().has("d1")).toBe(true);
+    expect(getSnoozedAlertIds().size).toBe(0);
+  });
+
+  it("clearAllAlertLocalStorage resets both dismissed and snoozed", () => {
+    dismissAlertId("d1");
+    snoozeAlertId("s1");
+    clearAllAlertLocalStorage();
+    expect(getDismissedAlertIds().size).toBe(0);
+    expect(getSnoozedAlertIds().size).toBe(0);
+  });
+
+  it("after clearDismissed, buildAlerts shows alerts as not dismissed", () => {
+    const item = makeNeedsAction({ repoId: "clear-test" });
+    const alerts = buildAlerts([item], new Set(), new Set());
+    const id = alerts[0].id;
+    dismissAlertId(id);
+    const dismissed = getDismissedAlertIds();
+    expect(dismissed.has(id)).toBe(true);
+    clearDismissedLocalStorage();
+    const afterClear = buildAlerts([item], getDismissedAlertIds(), getSnoozedAlertIds());
+    expect(afterClear[0].dismissed).toBe(false);
+  });
+
+  it("after clearSnoozed, buildAlerts shows alerts as not snoozed", () => {
+    const item = makeNeedsAction({ repoId: "clear-test" });
+    const alerts = buildAlerts([item], new Set(), new Set());
+    const id = alerts[0].id;
+    snoozeAlertId(id);
+    clearSnoozedLocalStorage();
+    const afterClear = buildAlerts([item], getDismissedAlertIds(), getSnoozedAlertIds());
+    expect(afterClear[0].snoozed).toBe(false);
   });
 });

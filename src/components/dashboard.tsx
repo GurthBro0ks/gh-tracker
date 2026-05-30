@@ -25,7 +25,7 @@ import { RepoPetSprite, type RepoPetSpriteStatus } from "@/components/repo-pet-s
 import { buildHeatmapInspectorCells } from "@/lib/heatmap-inspector";
 import { buildCleanupPlanner } from "@/lib/cleanup-planner";
 import { buildMaintenanceBuckets } from "@/lib/maintenance-classifier";
-import { buildAlerts, getDismissedAlertIds, getSnoozedAlertIds, dismissAlertId as dismissLocal, snoozeAlertId as snoozeLocal } from "@/lib/maintenance-alerts";
+import { buildAlerts, getDismissedAlertIds, getSnoozedAlertIds, dismissAlertId as dismissLocal, snoozeAlertId as snoozeLocal, clearDismissedLocalStorage, clearSnoozedLocalStorage, clearAllAlertLocalStorage } from "@/lib/maintenance-alerts";
 import type { AlertPreferences } from "@/lib/alert-preferences";
 
 const PIE_COLORS = ["#d717ff", "#97ff4c", "#53b4ff", "#ff74ae", "#ffc44d", "#a98dff"];
@@ -247,6 +247,52 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
     } catch {
     }
   }
+
+  async function syncClearToServer(
+    clearDismissed: boolean,
+    clearSnoozed: boolean,
+  ): Promise<void> {
+    try {
+      const dismissed = clearDismissed ? [] : Array.from(dismissedForSync.current);
+      const snoozed: Record<string, number> = {};
+      if (!clearSnoozed) {
+        const currentSnoozed = snoozedForSync.current;
+        for (const id of currentSnoozed) {
+          snoozed[id] = Date.now() + 3600000;
+        }
+      }
+      await fetch("/api/alerts/preferences", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          dismissedAlertIds: dismissed,
+          snoozedUntilByAlertId: snoozed,
+        }),
+      });
+    } catch {
+    }
+  }
+
+  const handleClearDismissed = useCallback(async () => {
+    clearDismissedLocalStorage();
+    const fresh = getDismissedAlertIds();
+    setDismissedAlertIds(fresh);
+    await syncClearToServer(true, false);
+  }, []);
+
+  const handleClearSnoozed = useCallback(async () => {
+    clearSnoozedLocalStorage();
+    const fresh = getSnoozedAlertIds();
+    setSnoozedAlertIds(fresh);
+    await syncClearToServer(false, true);
+  }, []);
+
+  const handleClearAll = useCallback(async () => {
+    clearAllAlertLocalStorage();
+    setDismissedAlertIds(getDismissedAlertIds());
+    setSnoozedAlertIds(getSnoozedAlertIds());
+    await syncClearToServer(true, true);
+  }, []);
 
   const activeData = (mode === "local_snapshot" || mode === "aggregated") && localData ? localData : demoData;
 
@@ -1205,6 +1251,51 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
               <div className="rounded border border-white/10 bg-black/30 px-3 py-2">
                 <p className="text-violet-300">Session status</p>
                 <p className="text-violet-100">{session?.role === "owner" ? "Active (owner verified)" : "Unknown"}</p>
+              </div>
+
+              <div className="rounded border border-fuchsia-400/30 bg-black/30 px-3 py-3">
+                <p className="mb-2 text-fuchsia-200 font-medium text-xs uppercase tracking-wide">Alert Preferences</p>
+                <div className="space-y-1.5 text-violet-100">
+                  <div className="flex justify-between">
+                    <span className="text-violet-300">Persistence</span>
+                    <span>{serverPrefsLoaded ? "Enabled (server synced)" : "Loading…"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-violet-300">Dismissed alerts</span>
+                    <span>{dismissedAlertIds.size}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-violet-300">Snoozed alerts</span>
+                    <span>{snoozedAlertIds.size}</span>
+                  </div>
+                </div>
+                <div className="mt-3 space-y-1.5">
+                  <button
+                    type="button"
+                    onClick={handleClearDismissed}
+                    disabled={dismissedAlertIds.size === 0}
+                    className="w-full rounded border border-violet-400/30 bg-violet-950/30 px-2 py-1.5 text-xs text-violet-200 hover:bg-violet-900/40 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Clear dismissed alerts
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleClearSnoozed}
+                    disabled={snoozedAlertIds.size === 0}
+                    className="w-full rounded border border-violet-400/30 bg-violet-950/30 px-2 py-1.5 text-xs text-violet-200 hover:bg-violet-900/40 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Clear snoozed alerts
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleClearAll}
+                    disabled={dismissedAlertIds.size === 0 && snoozedAlertIds.size === 0}
+                    className="w-full rounded border border-amber-400/30 bg-amber-950/30 px-2 py-1.5 text-xs text-amber-200 hover:bg-amber-900/40 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Clear all alert preferences
+                  </button>
+                  <p className="text-[10px] text-violet-400/70 pt-1">Only alert UI preferences are changed. Repo data is not modified.</p>
+                </div>
               </div>
 
               <button
