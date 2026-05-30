@@ -152,6 +152,7 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
   const [compactOpen, setCompactOpen] = useState<Record<string, boolean>>({});
   const [renderedAt] = useState(() => Date.now());
   const [alertCenterOpen, setAlertCenterOpen] = useState(false);
+  const [alertActionCenterError, setAlertActionCenterError] = useState<string | null>(null);
   const [dismissedAlertIds, setDismissedAlertIds] = useState<Set<string>>(() => {
     if (typeof window === "undefined") return new Set();
     return getDismissedAlertIds();
@@ -995,10 +996,24 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
                       <button
                         type="button"
                         className="rounded border border-fuchsia-300/40 bg-fuchsia-400/8 px-2 py-0.5 text-[8px] uppercase tracking-[0.1em] text-fuchsia-100"
-                        onClick={() => setActionCenterRepoId(alert.repoId)}
+                        onClick={() => {
+                          const found = habitatRows.some((r) => r.repoId === alert.repoId);
+                          if (found) {
+                            setAlertCenterOpen(false);
+                            setActionCenterRepoId(alert.repoId);
+                            setAlertActionCenterError(null);
+                          } else {
+                            setAlertActionCenterError(alert.repoId);
+                          }
+                        }}
                       >
                         Open Action Center
                       </button>
+                      {alertActionCenterError === alert.repoId && (
+                        <span className="ml-1 rounded border border-amber-300/30 bg-amber-400/8 px-1.5 py-0.5 text-[7px] uppercase tracking-[0.08em] text-amber-200/80">
+                          Action Center unavailable for this alert
+                        </span>
+                      )}
                     </div>
 
                     <div className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[9px] text-violet-200/70">
