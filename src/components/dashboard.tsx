@@ -25,7 +25,8 @@ import { RepoPetSprite, type RepoPetSpriteStatus } from "@/components/repo-pet-s
 import { buildHeatmapInspectorCells } from "@/lib/heatmap-inspector";
 import { buildCleanupPlanner } from "@/lib/cleanup-planner";
 import { buildMaintenanceBuckets } from "@/lib/maintenance-classifier";
-import { buildAlerts, getDismissedAlertIds, getSnoozedAlertIds, dismissAlertId, snoozeAlertId } from "@/lib/maintenance-alerts";
+import { buildAlerts, getDismissedAlertIds, getSnoozedAlertIds, dismissAlertId as dismissLocal, snoozeAlertId as snoozeLocal } from "@/lib/maintenance-alerts";
+import type { AlertPreferences } from "@/lib/alert-preferences";
 
 const PIE_COLORS = ["#d717ff", "#97ff4c", "#53b4ff", "#ff74ae", "#ffc44d", "#a98dff"];
 
@@ -167,6 +168,77 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
     if (typeof window === "undefined") return new Set();
     return getSnoozedAlertIds();
   });
+  const [serverPrefsLoaded, setServerPrefsLoaded] = useState(false);
+
+  useEffect(() => {
+    if (serverPrefsLoaded) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/alerts/preferences");
+        if (!res.ok) return;
+        const prefs: AlertPreferences = await res.json();
+        if (cancelled) return;
+        const fromServerDismissed = new Set(prefs.dismissedAlertIds);
+        const fromServerSnoozed = new Set(
+          Object.entries(prefs.snoozedUntilByAlertId)
+            .filter(([, until]) => Date.now() < until)
+            .map(([id]) => id),
+        );
+        setDismissedAlertIds((prev) => {
+          const merged = new Set(prev);
+          for (const id of fromServerDismissed) merged.add(id);
+          return merged;
+        });
+        setSnoozedAlertIds((prev) => {
+          const merged = new Set(prev);
+          for (const id of fromServerSnoozed) merged.add(id);
+          return merged;
+        });
+        setServerPrefsLoaded(true);
+      } catch {
+        if (!cancelled) setServerPrefsLoaded(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [serverPrefsLoaded]);
+
+  async function syncDismissedToServer(ids: Set<string>): Promise<void> {
+    try {
+      const snoozed: Record<string, number> = {};
+      for (const id of ids) {
+        if (snoozedAlertIds.has(id)) snoozed[id] = Date.now() + 3600000;
+      }
+      await fetch("/api/alerts/preferences", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          dismissedAlertIds: Array.from(ids),
+          snoozedUntilByAlertId: snoozed,
+        }),
+      });
+    } catch {
+    }
+  }
+
+  async function syncSnoozedToServer(ids: Set<string>): Promise<void> {
+    try {
+      const dismissed = new Set(dismissedAlertIds);
+      const snoozedUntil: Record<string, number> = {};
+      for (const id of ids) {
+        snoozedUntil[id] = Date.now() + 3600000;
+      }
+      await fetch("/api/alerts/preferences", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          dismissedAlertIds: Array.from(dismissed),
+          snoozedUntilByAlertId: snoozedUntil,
+        }),
+      });
+    } catch {
+    }
+  }
 
   const activeData = (mode === "local_snapshot" || mode === "aggregated") && localData ? localData : demoData;
 
@@ -1048,8 +1120,10 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
                         type="button"
                         className="rounded border border-violet-300/40 bg-violet-400/8 px-2 py-0.5 text-[8px] uppercase tracking-[0.1em] text-violet-100"
                         onClick={() => {
-                          dismissAlertId(alert.id);
-                          setDismissedAlertIds(getDismissedAlertIds());
+                          dismissLocal(alert.id);
+                          const updated = getDismissedAlertIds();
+                          setDismissedAlertIds(updated);
+                          void syncDismissedToServer(updated);
                         }}
                       >
                         Dismiss
@@ -1058,8 +1132,10 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
                         type="button"
                         className="rounded border border-amber-300/40 bg-amber-400/8 px-2 py-0.5 text-[8px] uppercase tracking-[0.1em] text-amber-100"
                         onClick={() => {
-                          snoozeAlertId(alert.id);
-                          setSnoozedAlertIds(getSnoozedAlertIds());
+                          snoozeLocal(alert.id);
+                          const updated = getSnoozedAlertIds();
+                          setSnoozedAlertIds(updated);
+                          void syncSnoozedToServer(updated);
                         }}
                       >
                         Snooze
