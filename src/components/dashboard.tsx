@@ -16,7 +16,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CanonicalRepoView, DashboardData, DashboardDataMode, DashboardGithubRepoHealth } from "@/lib/dashboard-adapter";
 import type { RepoHealth, RepoHealthBucket, RepoPet } from "@/lib/contracts";
 import { generateRepoPet, deriveRepoHealth } from "@/lib/repo-habitat";
@@ -169,6 +169,16 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
     return getSnoozedAlertIds();
   });
   const [serverPrefsLoaded, setServerPrefsLoaded] = useState(false);
+  const dismissedForSync = useRef(dismissedAlertIds);
+  const snoozedForSync = useRef(snoozedAlertIds);
+
+  useEffect(() => {
+    dismissedForSync.current = dismissedAlertIds;
+  }, [dismissedAlertIds]);
+
+  useEffect(() => {
+    snoozedForSync.current = snoozedAlertIds;
+  }, [snoozedAlertIds]);
 
   useEffect(() => {
     if (serverPrefsLoaded) return;
@@ -185,16 +195,13 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
             .filter(([, until]) => Date.now() < until)
             .map(([id]) => id),
         );
-        setDismissedAlertIds((prev) => {
-          const merged = new Set(prev);
-          for (const id of fromServerDismissed) merged.add(id);
-          return merged;
-        });
-        setSnoozedAlertIds((prev) => {
-          const merged = new Set(prev);
-          for (const id of fromServerSnoozed) merged.add(id);
-          return merged;
-        });
+        setDismissedAlertIds(fromServerDismissed);
+        setSnoozedAlertIds(fromServerSnoozed);
+        try {
+          localStorage.setItem("gh-tracker-alert-dismissed", JSON.stringify(Array.from(fromServerDismissed)));
+          localStorage.setItem("gh-tracker-alert-snoozed", JSON.stringify(Array.from(fromServerSnoozed)));
+        } catch {
+        }
         setServerPrefsLoaded(true);
       } catch {
         if (!cancelled) setServerPrefsLoaded(true);
@@ -205,9 +212,10 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
 
   async function syncDismissedToServer(ids: Set<string>): Promise<void> {
     try {
+      const currentSnoozed = snoozedForSync.current;
       const snoozed: Record<string, number> = {};
       for (const id of ids) {
-        if (snoozedAlertIds.has(id)) snoozed[id] = Date.now() + 3600000;
+        if (currentSnoozed.has(id)) snoozed[id] = Date.now() + 3600000;
       }
       await fetch("/api/alerts/preferences", {
         method: "POST",
@@ -223,7 +231,7 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
 
   async function syncSnoozedToServer(ids: Set<string>): Promise<void> {
     try {
-      const dismissed = new Set(dismissedAlertIds);
+      const currentDismissed = dismissedForSync.current;
       const snoozedUntil: Record<string, number> = {};
       for (const id of ids) {
         snoozedUntil[id] = Date.now() + 3600000;
@@ -232,7 +240,7 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          dismissedAlertIds: Array.from(dismissed),
+          dismissedAlertIds: Array.from(currentDismissed),
           snoozedUntilByAlertId: snoozedUntil,
         }),
       });

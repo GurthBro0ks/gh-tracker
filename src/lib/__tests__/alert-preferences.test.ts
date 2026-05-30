@@ -1,23 +1,24 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { writeFile, mkdir, unlink, rmdir } from "fs/promises";
+import { writeFile, unlink } from "fs/promises";
 import { existsSync } from "fs";
 import path from "path";
 
-const TEST_DIR = path.join(process.cwd(), "data", "runtime-test");
+const RUNTIME_DIR = path.join(process.cwd(), "data", "runtime");
+const RUNTIME_FILE = path.join(RUNTIME_DIR, "alert-preferences.json");
+const RUNTIME_TMP = path.join(RUNTIME_DIR, "alert-preferences.json.tmp");
+
+async function cleanupRuntimeFile() {
+  try { await unlink(RUNTIME_FILE); } catch {}
+  try { await unlink(RUNTIME_TMP); } catch {}
+}
 
 describe("alert preferences storage", () => {
   beforeEach(async () => {
-    if (!existsSync(TEST_DIR)) {
-      await mkdir(TEST_DIR, { recursive: true });
-    }
+    await cleanupRuntimeFile();
   });
 
   afterEach(async () => {
-    const file = path.join(TEST_DIR, "alert-preferences.json");
-    const tmp = path.join(TEST_DIR, "alert-preferences.json.tmp");
-    try { await unlink(file); } catch {}
-    try { await unlink(tmp); } catch {}
-    try { await rmdir(TEST_DIR); } catch {}
+    await cleanupRuntimeFile();
   });
 
   it("returns safe defaults when file missing", async () => {
@@ -43,30 +44,23 @@ describe("alert preferences storage", () => {
   });
 
   it("handles malformed JSON safely", async () => {
-    const { readAlertPreferences } = await import("../alert-preferences");
-    const file = path.join(process.cwd(), "data", "runtime", "alert-preferences.json");
-    const dir = path.dirname(file);
-    if (!existsSync(dir)) {
-      await mkdir(dir, { recursive: true });
-    }
-    await writeFile(file, "not valid json{{{", "utf-8");
+    const { readAlertPreferences, ensureRuntimeDir } = await import("../alert-preferences");
+    await ensureRuntimeDir();
+    await writeFile(RUNTIME_FILE, "not valid json{{{", "utf-8");
     const prefs = await readAlertPreferences();
     expect(prefs.dismissedAlertIds).toEqual([]);
     expect(prefs.snoozedUntilByAlertId).toEqual({});
     expect(prefs.updatedAt).toBe(0);
-    try { await unlink(file); } catch {}
   });
 
   it("handles corrupted structure (null fields)", async () => {
     const { readAlertPreferences, ensureRuntimeDir } = await import("../alert-preferences");
     await ensureRuntimeDir();
-    const file = path.join(process.cwd(), "data", "runtime", "alert-preferences.json");
-    await writeFile(file, JSON.stringify({ dismissedAlertIds: null, snoozedUntilByAlertId: null, updatedAt: null }), "utf-8");
+    await writeFile(RUNTIME_FILE, JSON.stringify({ dismissedAlertIds: null, snoozedUntilByAlertId: null, updatedAt: null }), "utf-8");
     const prefs = await readAlertPreferences();
     expect(prefs.dismissedAlertIds).toEqual([]);
     expect(prefs.snoozedUntilByAlertId).toEqual({});
     expect(prefs.updatedAt).toBe(0);
-    try { await unlink(file); } catch {}
   });
 
   it("uses safe write pattern (temp file + rename)", async () => {
@@ -80,8 +74,7 @@ describe("alert preferences storage", () => {
     const readBack = await readAlertPreferences();
     expect(readBack.dismissedAlertIds).toContain("safe_write_test");
     expect(readBack.updatedAt).toBe(12345);
-    const tmpPath = path.join(process.cwd(), "data", "runtime", "alert-preferences.json.tmp");
-    expect(existsSync(tmpPath)).toBe(false);
+    expect(existsSync(RUNTIME_TMP)).toBe(false);
   });
 
   it("isSnoozed returns false for unknown alert", async () => {
@@ -112,13 +105,70 @@ describe("alert preferences storage", () => {
   it("partial preferences get merged with defaults on read", async () => {
     const { ensureRuntimeDir } = await import("../alert-preferences");
     await ensureRuntimeDir();
-    const file = path.join(process.cwd(), "data", "runtime", "alert-preferences.json");
-    await writeFile(file, JSON.stringify({ dismissedAlertIds: ["only_dismissed"] }), "utf-8");
+    await writeFile(RUNTIME_FILE, JSON.stringify({ dismissedAlertIds: ["only_dismissed"] }), "utf-8");
     const { readAlertPreferences } = await import("../alert-preferences");
     const prefs = await readAlertPreferences();
     expect(prefs.dismissedAlertIds).toEqual(["only_dismissed"]);
     expect(prefs.snoozedUntilByAlertId).toEqual({});
     expect(prefs.updatedAt).toBe(0);
-    try { await unlink(file); } catch {}
+  });
+
+  it("server state does NOT merge stale localStorage dismissed IDs - regression guard", async () => {
+    const { readAlertPreferences, writeAlertPreferences } = await import("../alert-preferences");
+    const serverPref = {
+      dismissedAlertIds: ["alert_active"],
+      snoozedUntilByAlertId: { "alert_snoozed": Date.now() + 3600000 },
+      updatedAt: Date.now(),
+    };
+    await writeAlertPreferences(serverPref);
+
+    const staleLocalDismissed = new Set(["alert_gone", "alert_ancient"]);
+    const serverState = await readAlertPreferences();
+    const serverDismissed = new Set(serverState.dismissedAlertIds);
+    const merged = new Set(staleLocalDismissed);
+    for (const id of serverDismissed) merged.add(id);
+    expect(merged.has("alert_gone")).toBe(true);
+    expect(merged.has("alert_ancient")).toBe(true);
+
+    const correctState = new Set(serverState.dismissedAlertIds);
+    expect(correctState.has("alert_gone")).toBe(false);
+    expect(correctState.has("alert_ancient")).toBe(false);
+    expect(correctState.has("alert_active")).toBe(true);
+    expect(correctState.size).toBe(1);
+  });
+
+  it("server state does NOT merge stale localStorage snoozed IDs - regression guard", async () => {
+    const { readAlertPreferences, writeAlertPreferences } = await import("../alert-preferences");
+    const now = Date.now();
+    const serverPref = {
+      dismissedAlertIds: [],
+      snoozedUntilByAlertId: { "alert_fresh": now + 3600000 },
+      updatedAt: now,
+    };
+    await writeAlertPreferences(serverPref);
+
+    const staleLocalSnoozed = new Set(["alert_old", "alert_expired"]);
+    const serverState = await readAlertPreferences();
+    const serverSnoozed = new Set(
+      Object.entries(serverState.snoozedUntilByAlertId)
+        .filter(([, until]) => Date.now() < until)
+        .map(([id]) => id),
+    );
+    const merged = new Set(staleLocalSnoozed);
+    for (const id of serverSnoozed) merged.add(id);
+    expect(merged.has("alert_old")).toBe(true);
+
+    const correctState = new Set(serverSnoozed);
+    expect(correctState.has("alert_old")).toBe(false);
+    expect(correctState.has("alert_fresh")).toBe(true);
+    expect(correctState.size).toBe(1);
+  });
+
+  it("initial page load does not write empty preferences (no-op test)", async () => {
+    const { readAlertPreferences } = await import("../alert-preferences");
+    const prefs = await readAlertPreferences();
+    expect(prefs.dismissedAlertIds).toEqual([]);
+    expect(prefs.updatedAt).toBe(0);
+    expect(existsSync(RUNTIME_FILE)).toBe(false);
   });
 });

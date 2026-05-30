@@ -201,4 +201,43 @@ describe("POST /api/alerts/preferences", () => {
     expect(body.dismissedAlertIds).toContain("new_dismiss");
     expect(body.dismissedAlertIds).not.toContain("existing_snooze");
   });
+
+  it("GET only returns server state, never localStorage - regression guard", async () => {
+    getSession.mockResolvedValue({ sub: "u1", email: "owner@test.com", role: "owner", iat: 0, exp: 9999999999 });
+    requireOwner.mockReturnValue({ sub: "u1", email: "owner@test.com", role: "owner", iat: 0, exp: 9999999999 });
+    readAlertPreferences.mockResolvedValue({
+      dismissedAlertIds: ["server_alert_only"],
+      snoozedUntilByAlertId: {},
+      updatedAt: 5000,
+    });
+    const { GET } = await import("../preferences/route");
+    const response = await GET();
+    const body = await response.json();
+    expect(body.dismissedAlertIds).toEqual(["server_alert_only"]);
+    expect(body.dismissedAlertIds).not.toContain("stale_local_alert");
+    expect(body.updatedAt).toBe(5000);
+  });
+
+  it("POST does not merge stale client side state", async () => {
+    getSession.mockResolvedValue({ sub: "u1", email: "owner@test.com", role: "owner", iat: 0, exp: 9999999999 });
+    requireOwner.mockReturnValue({ sub: "u1", email: "owner@test.com", role: "owner", iat: 0, exp: 9999999999 });
+    readAlertPreferences.mockResolvedValue({
+      dismissedAlertIds: [],
+      snoozedUntilByAlertId: {},
+      updatedAt: 100,
+    });
+    writeAlertPreferences.mockResolvedValue(undefined);
+    const { POST } = await import("../preferences/route");
+    const request = new NextRequest("http://127.0.0.1:5055/api/alerts/preferences", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ dismissedAlertIds: ["only_this_alert"] }),
+    });
+    const response = await POST(request);
+    const body = await response.json();
+    expect(body.dismissedAlertIds).toEqual(["only_this_alert"]);
+    expect(writeAlertPreferences).toHaveBeenCalledWith(
+      expect.objectContaining({ dismissedAlertIds: ["only_this_alert"] }),
+    );
+  });
 });
