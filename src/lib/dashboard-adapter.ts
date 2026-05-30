@@ -9,6 +9,7 @@ import {
   repos,
 } from "@/lib/demo-data";
 import type { SnapshotEnvelope } from "@/lib/contracts";
+import { APP_VERSION } from "@/lib/app-version";
 
 export type DashboardDataMode = "demo" | "local_snapshot" | "aggregated";
 
@@ -223,7 +224,7 @@ export function buildDemoDashboardData(): DashboardData {
 
   return {
     mode: "demo",
-    version: "0.7.3-phase7c-cleanup-queue",
+    version: APP_VERSION,
     sourceTimestamp: lastDemoRefresh,
     latestLocalSnapshotTime: null,
     localRepoCount: 0,
@@ -356,7 +357,7 @@ export function buildDashboardDataFromSnapshot(snapshot: SnapshotEnvelope): Dash
 
   return {
     mode,
-    version: "0.7.3-phase7c-cleanup-queue",
+    version: APP_VERSION,
     sourceTimestamp: snapshot.createdAt,
     latestLocalSnapshotTime: snapshot.createdAt,
     localRepoCount: snapshot.repoLocations.length,

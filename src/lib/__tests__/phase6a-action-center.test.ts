@@ -39,9 +39,13 @@ describe("phase6a action center", () => {
     expect(source).toContain("perLocationDetails");
   });
 
-  it("uses current phase7b1 version and excludes nousearch-hermes-agent", () => {
+  it("uses centralized version and excludes nousearch-hermes-agent", () => {
     const adapter = readFileSync(join(repoRoot, "src/lib/dashboard-adapter.ts"), "utf8");
-    expect(adapter).toContain("0.7.3-phase7c-cleanup-queue");
+    const appVersion = readFileSync(join(repoRoot, "src/lib/app-version.ts"), "utf8");
+    expect(adapter).toContain('import { APP_VERSION } from "@/lib/app-version"');
+    expect(adapter).toContain("version: APP_VERSION");
+    expect(appVersion).toContain("0.8.3-phase8d-alert-preferences");
+    expect(adapter).not.toContain("0.7.3-phase7c-cleanup-queue");
     const latestSummaryPath = join(repoRoot, "data/github/remotes/latest-summary.json");
     const json = readFileSync(latestSummaryPath, "utf8").toLowerCase();
     expect(json).not.toContain("nousearch-hermes-agent");

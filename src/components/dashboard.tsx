@@ -27,6 +27,7 @@ import { buildCleanupPlanner } from "@/lib/cleanup-planner";
 import { buildMaintenanceBuckets } from "@/lib/maintenance-classifier";
 import { buildAlerts, getDismissedAlertIds, getSnoozedAlertIds, dismissAlertId as dismissLocal, snoozeAlertId as snoozeLocal, clearDismissedLocalStorage, clearSnoozedLocalStorage, clearAllAlertLocalStorage } from "@/lib/maintenance-alerts";
 import type { AlertPreferences } from "@/lib/alert-preferences";
+import { APP_RELEASE_TAG } from "@/lib/app-version";
 
 const PIE_COLORS = ["#d717ff", "#97ff4c", "#53b4ff", "#ff74ae", "#ffc44d", "#a98dff"];
 
@@ -1057,6 +1058,7 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
         <h3 className="mb-2 font-sans text-sm uppercase tracking-[0.18em] text-fuchsia-200">Debug / Status Dock</h3>
         <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
           <Status label="App version" value={activeData.version} />
+          <Status label="Release tag" value={APP_RELEASE_TAG} />
           <Status label="Data Mode" value={activeData.mode === "demo" ? "Demo (simulated)" : activeData.mode === "aggregated" ? "Aggregated Live Snapshots" : "Local Snapshot"} />
           <Status label="Latest Local Snapshot" value={activeData.latestLocalSnapshotTime ?? "pending Phase 4 collector"} />
           <Status label="LOCAL_SNAPSHOT_AGE" value={activeData.mode === "demo" ? "demo" : localSnapshotAgeLabel} />
@@ -1226,6 +1228,7 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
                 <div className="rounded border border-white/10 bg-black/30 px-3 py-2">
                   <p className="text-violet-300">App version</p>
                   <p className="text-violet-100">{activeData.version}</p>
+                  <p className="mt-1 font-mono text-[10px] text-fuchsia-300/60">{APP_RELEASE_TAG}</p>
                 </div>
 
                 <div className="rounded border border-white/10 bg-black/30 px-3 py-2">
