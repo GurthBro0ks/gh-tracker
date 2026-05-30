@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "fs";
 import { join } from "path";
+import { buildAlertId } from "../maintenance-alerts";
 
 const repoRoot = process.cwd();
 
@@ -96,6 +97,83 @@ describe("Phase 9A version status centralization", () => {
     const dashboard = readFileSync(join(repoRoot, "src/components/dashboard.tsx"), "utf8");
     expect(dashboard).not.toContain("git push");
     expect(dashboard).not.toContain("git execute");
+    expect(dashboard).not.toContain("deleteRepo");
+    expect(dashboard).not.toContain("executeCommand");
+  });
+});
+
+describe("Phase 9A.1 alert hard refresh persistence", () => {
+  it("server prefs useEffect gates on prefs.updatedAt > 0", () => {
+    const dashboard = readFileSync(join(repoRoot, "src/components/dashboard.tsx"), "utf8");
+    expect(dashboard).toContain("prefs.updatedAt > 0");
+  });
+
+  it("server prefs useEffect sets serverPrefsLoaded on non-ok response", () => {
+    const dashboard = readFileSync(join(repoRoot, "src/components/dashboard.tsx"), "utf8");
+    expect(dashboard).toContain("if (!res.ok) {");
+    expect(dashboard).toContain("setServerPrefsLoaded(true)");
+  });
+
+  it("server prefs only overwrites dismissedAlertIds when updatedAt > 0", () => {
+    const dashboard = readFileSync(join(repoRoot, "src/components/dashboard.tsx"), "utf8");
+    const dismissedPattern = /setDismissedAlertIds\(fromServerDismissed\)/g;
+    const matches = dashboard.match(dismissedPattern);
+    expect(matches).not.toBeNull();
+    expect(matches!.length).toBe(1);
+  });
+
+  it("Alert Center 'Open Action Center' still works", () => {
+    const dashboard = readFileSync(join(repoRoot, "src/components/dashboard.tsx"), "utf8");
+    expect(dashboard).toContain("Open Action Center");
+    expect(dashboard).toContain("handleActionCenterOpen");
+  });
+
+  it("Settings reset controls still present", () => {
+    const dashboard = readFileSync(join(repoRoot, "src/components/dashboard.tsx"), "utf8");
+    expect(dashboard).toContain("Clear dismissed");
+    expect(dashboard).toContain("Clear snoozed");
+    expect(dashboard).toContain("Clear all");
+  });
+
+  it("handleClearDismissed calls clearDismissedLocalStorage and syncs to server", () => {
+    const dashboard = readFileSync(join(repoRoot, "src/components/dashboard.tsx"), "utf8");
+    expect(dashboard).toContain("clearDismissedLocalStorage()");
+    expect(dashboard).toContain("syncClearToServer");
+  });
+
+  it("handleClearSnoozed calls clearSnoozedLocalStorage", () => {
+    const dashboard = readFileSync(join(repoRoot, "src/components/dashboard.tsx"), "utf8");
+    expect(dashboard).toContain("clearSnoozedLocalStorage()");
+  });
+
+  it("server localStorage sync only happens inside updatedAt > 0 guard", () => {
+    const dashboard = readFileSync(join(repoRoot, "src/components/dashboard.tsx"), "utf8");
+    const guardBlock = dashboard.match(/if \(prefs\.updatedAt > 0\) \{[\s\S]*?\n        \}/);
+    expect(guardBlock).not.toBeNull();
+    expect(guardBlock![0]).toContain("localStorage.setItem");
+    expect(guardBlock![0]).toContain("gh-tracker-alert-dismissed");
+  });
+
+  it("preferences route GET returns updatedAt field", () => {
+    const route = readFileSync(join(repoRoot, "src/app/api/alerts/preferences/route.ts"), "utf8");
+    expect(route).toContain("updatedAt");
+  });
+
+  it("buildAlertId is stable for same inputs", () => {
+    const id1 = buildAlertId("repo-x", "nuc1", "dirty files");
+    const id2 = buildAlertId("repo-x", "nuc1", "dirty files");
+    expect(id1).toBe(id2);
+  });
+
+  it("Phase 9A version polish still intact in dashboard", () => {
+    const dashboard = readFileSync(join(repoRoot, "src/components/dashboard.tsx"), "utf8");
+    expect(dashboard).toContain('import { APP_RELEASE_TAG } from "@/lib/app-version"');
+    expect(dashboard).not.toContain(STALE_VERSION);
+  });
+
+  it("no execute/push/delete controls in hard refresh fix", () => {
+    const dashboard = readFileSync(join(repoRoot, "src/components/dashboard.tsx"), "utf8");
+    expect(dashboard).not.toContain("git push");
     expect(dashboard).not.toContain("deleteRepo");
     expect(dashboard).not.toContain("executeCommand");
   });

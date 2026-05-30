@@ -187,21 +187,26 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
     (async () => {
       try {
         const res = await fetch("/api/alerts/preferences");
-        if (!res.ok) return;
+        if (!res.ok) {
+          if (!cancelled) setServerPrefsLoaded(true);
+          return;
+        }
         const prefs: AlertPreferences = await res.json();
         if (cancelled) return;
-        const fromServerDismissed = new Set(prefs.dismissedAlertIds);
-        const fromServerSnoozed = new Set(
-          Object.entries(prefs.snoozedUntilByAlertId)
-            .filter(([, until]) => Date.now() < until)
-            .map(([id]) => id),
-        );
-        setDismissedAlertIds(fromServerDismissed);
-        setSnoozedAlertIds(fromServerSnoozed);
-        try {
-          localStorage.setItem("gh-tracker-alert-dismissed", JSON.stringify(Array.from(fromServerDismissed)));
-          localStorage.setItem("gh-tracker-alert-snoozed", JSON.stringify(Array.from(fromServerSnoozed)));
-        } catch {
+        if (prefs.updatedAt > 0) {
+          const fromServerDismissed = new Set(prefs.dismissedAlertIds);
+          const fromServerSnoozed = new Set(
+            Object.entries(prefs.snoozedUntilByAlertId)
+              .filter(([, until]) => Date.now() < until)
+              .map(([id]) => id),
+          );
+          setDismissedAlertIds(fromServerDismissed);
+          setSnoozedAlertIds(fromServerSnoozed);
+          try {
+            localStorage.setItem("gh-tracker-alert-dismissed", JSON.stringify(Array.from(fromServerDismissed)));
+            localStorage.setItem("gh-tracker-alert-snoozed", JSON.stringify(Array.from(fromServerSnoozed)));
+          } catch {
+          }
         }
         setServerPrefsLoaded(true);
       } catch {

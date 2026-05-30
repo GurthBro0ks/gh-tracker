@@ -171,4 +171,61 @@ describe("alert preferences storage", () => {
     expect(prefs.updatedAt).toBe(0);
     expect(existsSync(RUNTIME_FILE)).toBe(false);
   });
+
+  it("updatedAt=0 means never written - client should keep localStorage fallback", async () => {
+    const { readAlertPreferences, writeAlertPreferences } = await import("../alert-preferences");
+    const neverWritten = await readAlertPreferences();
+    expect(neverWritten.updatedAt).toBe(0);
+    expect(neverWritten.dismissedAlertIds).toEqual([]);
+
+    const localStorageDismissed = new Set(["alert_from_browser", "alert_another"]);
+    const localStorageSnoozed = new Set(["alert_snoozed_local"]);
+
+    const shouldUseLocalStorage = neverWritten.updatedAt === 0;
+    expect(shouldUseLocalStorage).toBe(true);
+
+    const finalDismissed = shouldUseLocalStorage
+      ? localStorageDismissed
+      : new Set(neverWritten.dismissedAlertIds);
+    const finalSnoozed = shouldUseLocalStorage
+      ? localStorageSnoozed
+      : new Set(Object.keys(neverWritten.snoozedUntilByAlertId));
+
+    expect(finalDismissed.has("alert_from_browser")).toBe(true);
+    expect(finalDismissed.has("alert_another")).toBe(true);
+    expect(finalSnoozed.has("alert_snoozed_local")).toBe(true);
+
+    await writeAlertPreferences({
+      dismissedAlertIds: ["alert_from_browser", "alert_another"],
+      snoozedUntilByAlertId: { "alert_snoozed_local": Date.now() + 3600000 },
+      updatedAt: Date.now(),
+    });
+    const afterFirstWrite = await readAlertPreferences();
+    expect(afterFirstWrite.updatedAt).toBeGreaterThan(0);
+    expect(afterFirstWrite.dismissedAlertIds).toContain("alert_from_browser");
+  });
+
+  it("updatedAt>0 means server is source of truth even when localStorage has stale data", async () => {
+    const { readAlertPreferences, writeAlertPreferences } = await import("../alert-preferences");
+    const serverPref = {
+      dismissedAlertIds: ["alert_server_only"],
+      snoozedUntilByAlertId: {},
+      updatedAt: Date.now(),
+    };
+    await writeAlertPreferences(serverPref);
+
+    const localStorageDismissed = new Set(["alert_stale_local"]);
+    const serverState = await readAlertPreferences();
+    expect(serverState.updatedAt).toBeGreaterThan(0);
+
+    const shouldUseServer = serverState.updatedAt > 0;
+    expect(shouldUseServer).toBe(true);
+
+    const finalDismissed = shouldUseServer
+      ? new Set(serverState.dismissedAlertIds)
+      : localStorageDismissed;
+
+    expect(finalDismissed.has("alert_server_only")).toBe(true);
+    expect(finalDismissed.has("alert_stale_local")).toBe(false);
+  });
 });
