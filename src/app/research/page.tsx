@@ -5,9 +5,11 @@ import {
   computeResearchStats,
   bucketFromStatus,
   buildArtifactUrl,
+  readQueuedTopics,
   type ResearchIndexItem,
 } from "@/lib/research-farm";
 import { getSession, requireOwner } from "@/lib/auth/session";
+import { QuestBoard } from "@/components/quest-board";
 
 export const dynamic = "force-dynamic";
 
@@ -151,6 +153,8 @@ export default async function ResearchFarmPage() {
 
   const items = getResearchItems();
   const stats = computeResearchStats(items);
+  const queuedTopics = readQueuedTopics();
+  const seedCount = queuedTopics.filter((t) => t.status === "queued").length;
 
   return (
     <main className="mx-auto w-full max-w-[1500px] px-3 pb-6 sm:px-4 md:px-8" style={{ paddingTop: "max(1rem, env(safe-area-inset-top))" }}>
@@ -167,7 +171,7 @@ export default async function ResearchFarmPage() {
             </h1>
             <p className="mt-0.5 text-xs text-violet-100/80 sm:mt-1 sm:text-sm">
               A habitat for deep research quests, foraging runs, and harvested almanacs.
-              Read-only view of the SlimyAI Knowledge Base research pipeline.
+              Plant seeds on the Quest Board and create planned runs.
             </p>
           </div>
           <Link
@@ -180,13 +184,17 @@ export default async function ResearchFarmPage() {
       </header>
 
       <section className="mb-4 grid grid-cols-2 gap-2 sm:mb-6 sm:grid-cols-3 sm:gap-4 lg:grid-cols-6">
+        <StatCard label="Seeds" value={seedCount} color="text-amber-200" />
         <StatCard label="Quest Board" value={stats.queued} color="text-amber-200" />
         <StatCard label="Foraging" value={stats.running} color="text-cyan-200" />
         <StatCard label="Harvest" value={stats.complete} color="text-lime-300" />
         <StatCard label="Planned" value={stats.planned} color="text-violet-200" />
         <StatCard label="Almanacs" value={stats.almanacsAvailable} color="text-fuchsia-200" />
-        <StatCard label="Total" value={stats.total} color="text-white" />
       </section>
+
+      <div className="mb-6">
+        <QuestBoard topics={queuedTopics} />
+      </div>
 
       {items.length === 0 ? (
         <section className="neon-panel rounded-xl p-6 text-center">

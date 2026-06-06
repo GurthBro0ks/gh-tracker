@@ -5,6 +5,9 @@ import {
   bucketFromStatus,
   computeResearchStats,
   findItemByRunId,
+  sanitizeSlug,
+  isValidSlug,
+  validateTopicSeed,
   type ResearchIndexItem,
 } from "../research-farm";
 
@@ -133,5 +136,96 @@ describe("findItemByRunId", () => {
 
   it("returns null for missing run", () => {
     expect(findItemByRunId([], "nonexistent")).toBeNull();
+  });
+});
+
+describe("sanitizeSlug", () => {
+  it("lowercases and hyphenates", () => {
+    expect(sanitizeSlug("My Research Topic")).toBe("my-research-topic");
+  });
+
+  it("removes special characters", () => {
+    expect(sanitizeSlug("hello@world!.test#123")).toBe("hello-world-test-123");
+  });
+
+  it("collapses multiple hyphens", () => {
+    expect(sanitizeSlug("foo   ---   bar")).toBe("foo-bar");
+  });
+
+  it("trims leading/trailing hyphens", () => {
+    expect(sanitizeSlug("--foo-bar--")).toBe("foo-bar");
+  });
+
+  it("handles empty string", () => {
+    expect(sanitizeSlug("")).toBe("");
+  });
+});
+
+describe("isValidSlug", () => {
+  it("accepts valid slugs", () => {
+    expect(isValidSlug("my-research-topic")).toBe(true);
+    expect(isValidSlug("self-hosted-deep-research-agent")).toBe(true);
+    expect(isValidSlug("a1")).toBe(true);
+  });
+
+  it("rejects too short", () => {
+    expect(isValidSlug("a")).toBe(false);
+  });
+
+  it("rejects too long", () => {
+    expect(isValidSlug("a".repeat(121))).toBe(false);
+  });
+
+  it("rejects traversal attempts", () => {
+    expect(isValidSlug("../../etc/passwd")).toBe(false);
+    expect(isValidSlug("foo/../bar")).toBe(false);
+  });
+
+  it("rejects slugs with dots", () => {
+    expect(isValidSlug("foo.bar")).toBe(false);
+  });
+
+  it("rejects slugs with slashes", () => {
+    expect(isValidSlug("foo/bar")).toBe(false);
+  });
+
+  it("rejects slashes and double dots", () => {
+    expect(isValidSlug("foo/..")).toBe(false);
+    expect(isValidSlug("..")).toBe(false);
+  });
+});
+
+describe("validateTopicSeed", () => {
+  it("accepts valid seed", () => {
+    const result = validateTopicSeed({
+      title: "Test Topic",
+      question: "What is the answer?",
+      depth: "deep",
+      priority: "normal",
+    });
+    expect(result.valid).toBe(true);
+    expect(result.errors).toHaveLength(0);
+  });
+
+  it("rejects short title", () => {
+    const result = validateTopicSeed({ title: "AB", question: "What?" });
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.includes("title"))).toBe(true);
+  });
+
+  it("rejects short question", () => {
+    const result = validateTopicSeed({ title: "Test", question: "Hi" });
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.includes("question"))).toBe(true);
+  });
+
+  it("rejects invalid depth", () => {
+    const result = validateTopicSeed({ title: "Test", question: "What?", depth: "mega" });
+    expect(result.valid).toBe(false);
+  });
+
+  it("rejects invalid priority", () => {
+    const result = validateTopicSeed({ title: "Test", question: "What?", priority: "critical" });
+    expect(result.valid).toBe(false);
   });
 });
