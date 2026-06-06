@@ -16,6 +16,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import Link from "next/link";
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import type { CanonicalRepoView, DashboardData, DashboardDataMode, DashboardGithubRepoHealth } from "@/lib/dashboard-adapter";
 import type { RepoHealth, RepoHealthBucket, RepoPet } from "@/lib/contracts";
@@ -486,6 +487,12 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
             >
               Alerts{activeAlerts.length > 0 ? `: ${activeAlerts.length}` : ""}
             </button>
+            <Link
+              href="/research"
+              className="rounded border border-lime-300/40 bg-black/30 px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-lime-200 hover:bg-lime-400/10 sm:px-3 sm:text-xs sm:tracking-[0.15em]"
+            >
+              Research Farm
+            </Link>
             <button
               type="button"
               className="rounded border border-fuchsia-400/50 bg-black/30 px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-violet-200 sm:px-3 sm:text-xs sm:tracking-[0.15em]"
