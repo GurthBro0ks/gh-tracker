@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession, requireOwner } from "@/lib/auth/session";
-import { habitatOpsFixture } from "../../lib/harness-ops-fixtures";
+import { loadHabitatOpsSnapshot } from "@/lib/harness-ops-snapshot";
 
 export const dynamic = "force-dynamic";
 
@@ -58,7 +58,11 @@ export default async function HabitatOpsPage() {
     redirect("/login");
   }
 
-  const fixture = habitatOpsFixture;
+  const snapshot = await loadHabitatOpsSnapshot();
+  const data = snapshot.data;
+  const safetyLabels = ["READ ONLY", "DRY RUN ONLY", "NO LIVE MUTATION"];
+  const modeLabels = snapshot.mode === "snapshot" ? ["SNAPSHOT MODE"] : ["FIXTURE ONLY"];
+  const stateLabels = snapshot.snapshotState === "fresh" ? [] : [snapshot.stateLabel];
 
   return (
     <main className="mx-auto w-full max-w-[1400px] overflow-x-hidden px-3 pb-6 sm:px-4 md:px-8" style={{ paddingTop: "max(1rem, env(safe-area-inset-top))" }}>
@@ -74,9 +78,8 @@ export default async function HabitatOpsPage() {
               Habitat /ops
             </h1>
             <p className="mt-1 max-w-3xl text-sm text-violet-100/80">
-              Fixture-only operator surface for accepted Harness Ops concepts. This page does not
-              connect to live runtime commands and cannot mutate schedule, timer, session, or
-              notification state.
+              {snapshot.stateMessage} This page reads sanitized snapshot data only and cannot mutate
+              schedule, timer, session, or notification state.
             </p>
           </div>
           <Link
@@ -87,78 +90,86 @@ export default async function HabitatOpsPage() {
           </Link>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
-          {fixture.safetyLabels.map((label) => (
+          {[...safetyLabels, ...modeLabels, ...stateLabels].map((label) => (
             <SafetyBadge key={label} label={label} />
           ))}
         </div>
       </header>
 
       <section className="mb-4 grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <Card title="Adapter Status">
+          <p>{snapshot.stateMessage}</p>
+          <p>Snapshot path: <span className="inline-block max-w-full font-mono text-cyan-200 break-words [overflow-wrap:anywhere]">{snapshot.snapshotPath}</span></p>
+          <p>Freshness: {snapshot.freshnessMessage}</p>
+          <p>Redaction: {snapshot.redactionMessage}</p>
+          {snapshot.generatedAt && <p>Generated: {snapshot.generatedAt}</p>}
+        </Card>
+
         <Card title="Notification Status">
-          <p>{fixture.notification.discordSend}</p>
-          <p>{fixture.notification.dedupeStatus}</p>
-          <p>Report URL: {fixture.notification.reportUrl}</p>
-          <p>{fixture.notification.redactionNote}</p>
-          <p className="text-violet-300/75">{fixture.notification.transportNote}</p>
+          <p>{data.notification.discordSend}</p>
+          <p>{data.notification.dedupeStatus}</p>
+          <p>Report URL: {data.notification.reportUrl}</p>
+          <p>{data.notification.redactionNote}</p>
+          <p className="text-violet-300/75">{data.notification.transportNote}</p>
         </Card>
 
         <Card title="Schedule Inventory">
-          <p>{fixture.scheduleInventory.userCrontabSummary}</p>
-          <p>{fixture.scheduleInventory.systemTimersSummary}</p>
-          <p>{fixture.scheduleInventory.readOnlyTargetCount}</p>
-          <FixtureList lines={fixture.scheduleInventory.lines} />
-          <p className="text-violet-300/75">{fixture.scheduleInventory.noMutationNote}</p>
+          <p>{data.scheduleInventory.userCrontabSummary}</p>
+          <p>{data.scheduleInventory.systemTimersSummary}</p>
+          <p>{data.scheduleInventory.readOnlyTargetCount}</p>
+          <FixtureList lines={data.scheduleInventory.lines} />
+          <p className="text-violet-300/75">{data.scheduleInventory.noMutationNote}</p>
         </Card>
 
         <Card title="Schedule Dry-Run">
-          <p>Sample plan target: <span className="inline-block max-w-full font-mono text-lime-300 break-words [overflow-wrap:anywhere]">{fixture.scheduleDryRun.samplePlanTarget}</span></p>
-          <PreviewBlock lines={fixture.scheduleDryRun.planLines} />
+          <p>Sample plan target: <span className="inline-block max-w-full font-mono text-lime-300 break-words [overflow-wrap:anywhere]">{data.scheduleDryRun.samplePlanTarget}</span></p>
+          <PreviewBlock lines={data.scheduleDryRun.planLines} />
           <div>
             <p className="mb-2 text-[10px] uppercase tracking-[0.14em] text-violet-300/75">Enable Preview</p>
-            <PreviewBlock lines={fixture.scheduleDryRun.enablePreview} />
+            <PreviewBlock lines={data.scheduleDryRun.enablePreview} />
           </div>
           <div>
             <p className="mb-2 text-[10px] uppercase tracking-[0.14em] text-violet-300/75">Disable Preview</p>
-            <PreviewBlock lines={fixture.scheduleDryRun.disablePreview} />
+            <PreviewBlock lines={data.scheduleDryRun.disablePreview} />
           </div>
           <div>
             <p className="mb-2 text-[10px] uppercase tracking-[0.14em] text-violet-300/75">Run-Once Preview</p>
-            <PreviewBlock lines={fixture.scheduleDryRun.runOncePreview} />
+            <PreviewBlock lines={data.scheduleDryRun.runOncePreview} />
           </div>
         </Card>
 
         <Card title="Tmux Inventory">
-          <p>{fixture.tmuxInventory.sessionCount}</p>
-          <p>{fixture.tmuxInventory.windowCount}</p>
-          <p>{fixture.tmuxInventory.paneCount}</p>
-          <FixtureList lines={fixture.tmuxInventory.lines} />
-          <p>{fixture.tmuxInventory.metadataOnlyNote}</p>
-          <p className="text-violet-300/75">{fixture.tmuxInventory.noCaptureNote}</p>
+          <p>{data.tmuxInventory.sessionCount}</p>
+          <p>{data.tmuxInventory.windowCount}</p>
+          <p>{data.tmuxInventory.paneCount}</p>
+          <FixtureList lines={data.tmuxInventory.lines} />
+          <p>{data.tmuxInventory.metadataOnlyNote}</p>
+          <p className="text-violet-300/75">{data.tmuxInventory.noCaptureNote}</p>
         </Card>
 
         <Card title="Workspace Dry-Run">
           <p>
-            Canonical preview session: <span className="inline-block max-w-full font-mono text-lime-300 break-words [overflow-wrap:anywhere]">{fixture.workspaceDryRun.canonicalSessionPreview}</span>
+            Canonical preview session: <span className="inline-block max-w-full font-mono text-lime-300 break-words [overflow-wrap:anywhere]">{data.workspaceDryRun.canonicalSessionPreview}</span>
           </p>
-          <PreviewBlock lines={fixture.workspaceDryRun.previewLines} />
+          <PreviewBlock lines={data.workspaceDryRun.previewLines} />
           <div>
             <p className="mb-2 text-[10px] uppercase tracking-[0.14em] text-violet-300/75">Copy-Only Guidance</p>
-            <PreviewBlock lines={fixture.workspaceDryRun.copyOnlyLines} />
+            <PreviewBlock lines={data.workspaceDryRun.copyOnlyLines} />
           </div>
-          <p className="text-violet-300/75">{fixture.workspaceDryRun.noCreateReuseNote}</p>
+          <p className="text-violet-300/75">{data.workspaceDryRun.noCreateReuseNote}</p>
         </Card>
 
         <Card title="Reports">
-          <p>{fixture.reports.latestReport}</p>
-          <p>Expected future URL style: <span className="inline-block max-w-full font-mono text-cyan-200 break-words [overflow-wrap:anywhere]">{fixture.reports.expectedUrlPattern}</span></p>
-          <p className="text-violet-300/75">{fixture.reports.adapterStatus}</p>
+          <p>{data.reports.latestReport}</p>
+          <p>Expected future URL style: <span className="inline-block max-w-full font-mono text-cyan-200 break-words [overflow-wrap:anywhere]">{data.reports.expectedUrlPattern}</span></p>
+          <p className="text-violet-300/75">{data.reports.adapterStatus}</p>
         </Card>
       </section>
 
       <section className="neon-panel min-w-0 overflow-hidden rounded-xl p-4">
         <h2 className="font-sans text-sm uppercase tracking-[0.12em] text-fuchsia-200">Safety Summary</h2>
         <ul className="mt-3 space-y-2 text-sm text-violet-100/90">
-          {fixture.footerSummary.map((line) => (
+          {data.footerSummary.map((line) => (
             <li key={line}>{line}</li>
           ))}
         </ul>
