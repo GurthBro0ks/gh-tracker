@@ -95,3 +95,5 @@ Current implementation is intentionally local and safe: git metadata from local 
 - `docs/COLLECTOR_CONTRACTS.md`
 - `docs/VISUAL_STYLE.md`
 - `docs/HARNESS_RULES.md`
+- `docs/HABITAT_OPS_READ_ONLY_UI_PLAN.md`
+- `docs/HABITAT_OPS_READ_ONLY_UI_FIXTURES_PLAN.md`
