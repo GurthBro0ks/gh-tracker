@@ -92,6 +92,23 @@ export const collectorRunSchema = z.object({
   errors: z.array(z.string()),
 });
 
+export const aggregateStatsSchema = z.object({
+  totalMachines: z.number().int().nonnegative(),
+  activeMachines: z.number().int().nonnegative(),
+  totalRepos: z.number().int().nonnegative(),
+  uniqueRepos: z.number().int().nonnegative(),
+  dirtyRepos: z.number().int().nonnegative(),
+  unpushedRepos: z.number().int().nonnegative(),
+  behindRepos: z.number().int().nonnegative(),
+  commitsToday: z.number().int().nonnegative(),
+  commitsLast7Days: z.number().int().nonnegative(),
+  commitsLast30Days: z.number().int().nonnegative(),
+  additionsToday: z.number().int().nonnegative(),
+  deletionsToday: z.number().int().nonnegative(),
+  additionsLast7Days: z.number().int().nonnegative(),
+  deletionsLast7Days: z.number().int().nonnegative(),
+});
+
 export const snapshotEnvelopeSchema = z.object({
   schemaVersion: z.literal("1.0.0"),
   createdAt: isoDate,
@@ -102,6 +119,7 @@ export const snapshotEnvelopeSchema = z.object({
   activityEvents: z.array(activityEventSchema),
   dailyRepoStats: z.array(dailyRepoStatsSchema),
   dailyMachineStats: z.array(dailyMachineStatsSchema),
+  aggregateStats: aggregateStatsSchema.optional(),
 });
 
 export type SnapshotEnvelopeParsed = z.infer<typeof snapshotEnvelopeSchema>;

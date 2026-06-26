@@ -89,6 +89,23 @@ export type CollectorRun = {
   errors: string[];
 };
 
+export type AggregateStats = {
+  totalMachines: number;
+  activeMachines: number;
+  totalRepos: number;
+  uniqueRepos: number;
+  dirtyRepos: number;
+  unpushedRepos: number;
+  behindRepos: number;
+  commitsToday: number;
+  commitsLast7Days: number;
+  commitsLast30Days: number;
+  additionsToday: number;
+  deletionsToday: number;
+  additionsLast7Days: number;
+  deletionsLast7Days: number;
+};
+
 export type SnapshotEnvelope = {
   schemaVersion: string;
   createdAt: string;
@@ -99,6 +116,7 @@ export type SnapshotEnvelope = {
   activityEvents: ActivityEvent[];
   dailyRepoStats: DailyRepoStats[];
   dailyMachineStats: DailyMachineStats[];
+  aggregateStats?: AggregateStats;
 };
 
 export type RepoHealthBucket = "legendary" | "healthy" | "needs_care" | "stressed" | "sick";

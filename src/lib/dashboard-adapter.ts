@@ -313,7 +313,9 @@ export function buildDashboardDataFromSnapshot(snapshot: SnapshotEnvelope): Dash
   const mostActiveMachine = machineCards.sort((a, b) => b.commitsToday - a.commitsToday)[0]?.label ?? "n/a";
 
   const todayStats = snapshot.dailyMachineStats.filter((entry) => entry.date === todayIso);
-  const totalCommitsToday = todayStats.reduce((sum, entry) => sum + entry.commits, 0);
+  const totalCommitsToday = isAggregate && snapshot.aggregateStats
+    ? snapshot.aggregateStats.commitsToday
+    : todayStats.reduce((sum, entry) => sum + entry.commits, 0);
   const pushesToday = todayStats.reduce((sum, entry) => sum + entry.pushes, 0);
 
   const loadedMachineIds = Array.from(new Set(snapshot.repoLocations.map((l) => l.machineId)));
