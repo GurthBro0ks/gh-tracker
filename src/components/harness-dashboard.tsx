@@ -1,0 +1,252 @@
+import type { ReactNode } from "react";
+import Link from "next/link";
+import type { HarnessSessionIndexView, HarnessSessionView } from "@/lib/harness-session-index";
+
+type HarnessDashboardProps = {
+  index: HarnessSessionIndexView;
+  session: { email: string; role: string };
+};
+
+const statusTone: Record<string, string> = {
+  ready: "border-lime-300/50 bg-lime-400/10 text-lime-100",
+  empty: "border-amber-300/50 bg-amber-400/10 text-amber-100",
+  missing: "border-amber-300/50 bg-amber-400/10 text-amber-100",
+  invalid_json: "border-rose-300/55 bg-rose-400/10 text-rose-100",
+  schema_mismatch: "border-rose-300/55 bg-rose-400/10 text-rose-100",
+};
+
+export default function HarnessDashboard({ index, session }: HarnessDashboardProps) {
+  return (
+    <main className="dashboard-shell mx-auto w-full max-w-[1500px] px-3 pb-8 sm:px-4 md:px-8" style={{ paddingTop: "max(1rem, env(safe-area-inset-top))", paddingBottom: "max(5.5rem, calc(env(safe-area-inset-bottom) + 2rem))" }}>
+      <header className="neon-panel mb-4 rounded-xl px-3 py-3 sm:mb-6 sm:px-5 sm:py-4">
+        <p className="text-[10px] uppercase tracking-[0.25em] text-fuchsia-200/80 sm:text-xs">Habitat Harness</p>
+        <div className="mt-1 flex flex-wrap items-end justify-between gap-3 sm:mt-2 sm:gap-4">
+          <div className="min-w-0">
+            <h1 className="font-sans text-xl uppercase tracking-[0.08em] text-white sm:text-3xl md:text-4xl">Harness Dashboard</h1>
+            <p className="mt-1 max-w-3xl text-xs text-violet-100/80 sm:text-sm">
+              Read-only operator view over the safe harness session index. Mission-control remains the canonical full report viewer.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link className="rounded border border-cyan-300/45 bg-cyan-400/10 px-3 py-2 text-[10px] uppercase tracking-[0.12em] text-cyan-100 sm:text-xs" href="/">
+              Repo Dashboard
+            </Link>
+            <a className="rounded border border-lime-300/45 bg-lime-400/10 px-3 py-2 text-[10px] uppercase tracking-[0.12em] text-lime-100 sm:text-xs" href={index.canonicalReportsUrl} target="_blank" rel="noreferrer">
+              Mission-Control Reports
+            </a>
+          </div>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2 text-[10px] text-violet-200/80 sm:text-xs">
+          <span className="rounded border border-white/10 bg-black/25 px-2 py-1">Signed in: {session.email}</span>
+          <span className="rounded border border-white/10 bg-black/25 px-2 py-1">Role: {session.role}</span>
+          <span className="rounded border border-white/10 bg-black/25 px-2 py-1">Canonical UI: mission-control</span>
+        </div>
+      </header>
+
+      <section className={`mb-4 rounded-xl border p-3 sm:mb-6 sm:p-4 ${statusTone[index.status] ?? statusTone.ready}`}>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-sans text-sm uppercase tracking-[0.12em] sm:text-lg">Data Source Status</h2>
+            <p className="mt-1 text-xs opacity-90 sm:text-sm">{index.message}</p>
+          </div>
+          <span className="rounded border border-white/20 bg-black/25 px-2 py-1 text-[10px] uppercase tracking-[0.12em] sm:text-xs">{index.status.replace("_", " ")}</span>
+        </div>
+        <div className="mt-3 grid gap-2 text-[10px] sm:grid-cols-2 sm:text-xs xl:grid-cols-4">
+          <Status label="Live index" value={index.dataSource} mono />
+          <Status label="Schema" value={index.schemaVersion ?? "unavailable"} />
+          <Status label="Generated" value={index.generatedAt ? `${formatDateTime(index.generatedAt)} (${formatAge(index.ageMinutes)})` : "unavailable"} />
+          <Status label="Source machine" value={index.sourceMachine ?? "unavailable"} />
+          <Status label="File size" value={index.fileSizeBytes === null ? "unavailable" : `${index.fileSizeBytes.toLocaleString()} bytes`} />
+          <Status label="Freshness" value={index.isStale ? "stale" : index.generatedAt ? "fresh enough" : "unknown"} />
+          <Status label="Sessions" value={`${index.summary.totalSessions}`} />
+          <Status label="Report links" value={`${index.summary.reportLinkCount}`} />
+        </div>
+      </section>
+
+      <section className="mb-4 grid grid-cols-2 gap-2 sm:mb-6 sm:grid-cols-3 xl:grid-cols-6">
+        <Metric label="Sessions" value={`${index.summary.totalSessions}`} />
+        <Metric label="Passed/accepted" value={`${index.summary.passCount}`} />
+        <Metric label="Warn" value={`${index.summary.warnCount}`} warning />
+        <Metric label="Fail/error" value={`${index.summary.failCount}`} danger />
+        <Metric label="Blocked" value={`${index.summary.blockedCount}`} danger />
+        <Metric label="Manual QA pending" value={`${index.summary.manualQaPendingCount}`} warning />
+      </section>
+
+      <section className="mb-4 grid gap-4 lg:grid-cols-2">
+        <Panel title="Safety Status / Change Controls">
+          <div className="grid gap-2 text-[10px] sm:grid-cols-2 sm:text-xs">
+            <Status label="Dashboard mode" value="read-only metadata" />
+            <Status label="Execution buttons" value="absent" />
+            <Status label="Harness runtime" value="not modified" />
+            <Status label="Control actions" value="not implemented" />
+            <Status label="Safety flags in index" value={`${index.summary.safetyFlagCount}`} />
+            <Status label="Discord/notifier actions" value="not available here" />
+          </div>
+          <p className="mt-3 rounded border border-cyan-300/25 bg-black/25 px-2 py-1 text-[10px] text-cyan-100 sm:text-xs">
+            This page renders safe index fields only. It does not read proof contents, raw reports, raw logs, raw diffs, or environment files.
+          </p>
+        </Panel>
+
+        <Panel title="Manual QA / Closeout Status">
+          <div className="grid gap-2 text-[10px] sm:grid-cols-2 sm:text-xs">
+            <Status label="Pending/unknown QA" value={`${index.summary.manualQaPendingCount}`} />
+            <Status label="Closeout-like sessions" value={`${index.summary.closeoutCount}`} />
+            <Status label="Warning arrays" value={`${index.summary.warningSessionCount}`} />
+            <Status label="Failure arrays" value={`${index.summary.failureSessionCount}`} />
+          </div>
+          <div className="mt-3 space-y-2">
+            {index.manualQaSessions.length === 0 ? (
+              <p className="rounded border border-white/10 bg-black/25 px-2 py-1 text-xs text-violet-200">No pending manual QA sessions found in the safe index.</p>
+            ) : (
+              index.manualQaSessions.slice(0, 5).map((sessionRow) => <CompactSessionRow key={`qa:${sessionRow.sourceReport}:${sessionRow.id}`} session={sessionRow} />)
+            )}
+          </div>
+        </Panel>
+      </section>
+
+      <Panel title="Warn / Fail / Blocked Sessions">
+        {index.warningSessions.length === 0 ? (
+          <EmptyState text="No warning, failed, or blocked sessions found in the safe index." />
+        ) : (
+          <div className="grid gap-3 lg:grid-cols-2">
+            {index.warningSessions.map((sessionRow) => <SessionCard key={`attention:${sessionRow.sourceReport}:${sessionRow.id}`} session={sessionRow} attention />)}
+          </div>
+        )}
+      </Panel>
+
+      <Panel title="Latest Sessions">
+        {index.latestSessions.length === 0 ? (
+          <EmptyState text="No sessions are available yet. The safe index is readable, but it contains no session rows." />
+        ) : (
+          <div className="grid gap-3 lg:grid-cols-2">
+            {index.latestSessions.map((sessionRow) => <SessionCard key={`latest:${sessionRow.sourceReport}:${sessionRow.id}`} session={sessionRow} />)}
+          </div>
+        )}
+      </Panel>
+
+      <Panel title="Report Links">
+        <div className="grid gap-2 text-xs sm:grid-cols-2">
+          <a className="rounded border border-lime-300/35 bg-lime-400/10 px-3 py-2 text-lime-100" href={index.canonicalReportsUrl} target="_blank" rel="noreferrer">
+            Canonical report index: {index.canonicalReportsUrl}
+          </a>
+          <p className="rounded border border-white/10 bg-black/25 px-3 py-2 text-violet-100">
+            Session rows link to mission-control using `report_url` when safe, otherwise `/reports/sessions/&lt;source_report&gt;`.
+          </p>
+        </div>
+      </Panel>
+    </main>
+  );
+}
+
+function Panel({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="neon-panel mb-4 rounded-xl p-3 sm:mb-6 sm:p-4">
+      <h2 className="mb-3 font-sans text-sm uppercase tracking-[0.12em] text-fuchsia-200 sm:text-lg">{title}</h2>
+      {children}
+    </section>
+  );
+}
+
+function Metric({ label, value, danger = false, warning = false }: { label: string; value: string; danger?: boolean; warning?: boolean }) {
+  const color = danger ? "text-rose-300" : warning ? "text-amber-200" : "text-lime-300";
+  return (
+    <article className="neon-panel rounded-xl p-3">
+      <p className="text-[10px] uppercase tracking-[0.14em] text-violet-200/80 sm:text-xs">{label}</p>
+      <p className={`metric-glow mt-1 text-xl sm:text-2xl ${color}`}>{value}</p>
+    </article>
+  );
+}
+
+function Status({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <p className="min-w-0 rounded border border-white/10 bg-black/25 px-2 py-1">
+      <span className="block uppercase tracking-[0.12em] text-violet-300/75">{label}</span>
+      <span className={`block break-words text-violet-100 ${mono ? "font-mono" : ""}`}>{value}</span>
+    </p>
+  );
+}
+
+function SessionCard({ session, attention = false }: { session: HarnessSessionView; attention?: boolean }) {
+  const tone = session.isFail || session.isBlocked ? "border-rose-300/35" : session.isWarn || attention ? "border-amber-300/35" : "border-white/10";
+  return (
+    <article className={`rounded-xl border ${tone} bg-black/30 p-3`}>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="font-sans text-xs uppercase tracking-[0.08em] text-white break-words sm:text-sm">{session.project ?? session.featureId ?? session.id}</p>
+          <p className="mt-0.5 text-[10px] text-violet-300 sm:text-xs">{session.timestamp ? formatDateTime(session.timestamp) : "No timestamp"} · {session.nuc ?? session.machine ?? "machine unknown"}</p>
+        </div>
+        <Badge session={session} />
+      </div>
+      <div className="mt-2 grid gap-1.5 text-[10px] text-violet-100 sm:grid-cols-2 sm:text-xs">
+        <Line label="Feature" value={session.featureId} />
+        <Line label="Session" value={session.id} />
+        <Line label="Result" value={session.result ?? session.status} />
+        <Line label="Manual QA" value={session.manualQaStatus} />
+        <Line label="Commit" value={session.commit} />
+        <Line label="Pushed" value={formatBoolean(session.pushed)} />
+        <Line label="Proof dir" value={session.proofDir} mono />
+        <Line label="Source report" value={session.sourceReport} mono />
+      </div>
+      {session.warnings.length > 0 || session.failures.length > 0 || session.safetyFlags.length > 0 ? (
+        <ul className="mt-2 space-y-1 text-[10px] sm:text-xs">
+          {session.failures.map((failure) => <li key={`f:${failure}`} className="rounded border border-rose-300/25 bg-rose-400/10 px-2 py-1 text-rose-100">Failure: {failure}</li>)}
+          {session.warnings.map((warning) => <li key={`w:${warning}`} className="rounded border border-amber-300/25 bg-amber-400/10 px-2 py-1 text-amber-100">Warning: {warning}</li>)}
+          {session.safetyFlags.map((flag) => <li key={`s:${flag}`} className="rounded border border-rose-300/25 bg-black/25 px-2 py-1 text-rose-100">Safety flag: {flag}</li>)}
+        </ul>
+      ) : null}
+      <div className="mt-3 flex flex-wrap gap-2 text-[10px] sm:text-xs">
+        <a className="rounded border border-lime-300/35 bg-lime-400/10 px-2 py-1 text-lime-100" href={session.reportUrl} target="_blank" rel="noreferrer">
+          Mission-control report
+        </a>
+        {session.nextAction ? <span className="rounded border border-cyan-300/25 bg-cyan-400/10 px-2 py-1 text-cyan-100">Next: {session.nextAction}</span> : null}
+      </div>
+    </article>
+  );
+}
+
+function CompactSessionRow({ session }: { session: HarnessSessionView }) {
+  return (
+    <a className="block rounded border border-white/10 bg-black/25 px-2 py-1 text-[10px] text-violet-100 sm:text-xs" href={session.reportUrl} target="_blank" rel="noreferrer">
+      <span className="font-sans uppercase tracking-[0.08em] text-white">{session.project ?? session.id}</span>
+      <span className="ml-2 text-violet-300">{session.manualQaStatus ?? "unknown"} · {session.timestamp ? formatDateTime(session.timestamp) : "No timestamp"}</span>
+    </a>
+  );
+}
+
+function Line({ label, value, mono = false }: { label: string; value: string | null; mono?: boolean }) {
+  return (
+    <p className="min-w-0 rounded border border-white/10 bg-black/20 px-2 py-1">
+      <span className="text-violet-300/75">{label}: </span>
+      <span className={`break-words ${mono ? "font-mono" : ""}`}>{value ?? "unknown"}</span>
+    </p>
+  );
+}
+
+function Badge({ session }: { session: HarnessSessionView }) {
+  if (session.isFail || session.isBlocked) return <span className="rounded border border-rose-300/50 bg-rose-400/10 px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-rose-100">Attention</span>;
+  if (session.isWarn) return <span className="rounded border border-amber-300/50 bg-amber-400/10 px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-amber-100">Warn</span>;
+  return <span className="rounded border border-lime-300/50 bg-lime-400/10 px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-lime-100">Read-only</span>;
+}
+
+function EmptyState({ text }: { text: string }) {
+  return <p className="rounded border border-white/10 bg-black/25 px-3 py-4 text-center text-xs text-violet-200">{text}</p>;
+}
+
+function formatDateTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toISOString().replace("T", " ").replace(".000Z", "Z");
+}
+
+function formatAge(minutes: number | null) {
+  if (minutes === null) return "age unknown";
+  if (minutes < 60) return `${minutes}m old`;
+  if (minutes < 1440) return `${Math.floor(minutes / 60)}h ${minutes % 60}m old`;
+  return `${Math.floor(minutes / 1440)}d ${Math.floor((minutes % 1440) / 60)}h old`;
+}
+
+function formatBoolean(value: boolean | null) {
+  if (value === true) return "yes";
+  if (value === false) return "no";
+  return "unknown";
+}
