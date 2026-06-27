@@ -19,6 +19,9 @@ export const harnessSessionSummarySchema = z.object({
   pushed: harnessSafeValueSchema.optional().default(null),
   proof_dir: harnessSafeValueSchema.optional().default(null),
   report_url: harnessSafeValueSchema.optional().default(null),
+  created_at: harnessSafeValueSchema.optional().default(null),
+  archived_at: harnessSafeValueSchema.optional().default(null),
+  reported_at: harnessSafeValueSchema.optional().default(null),
   timestamp: harnessSafeValueSchema.optional().default(null),
   started_at: harnessSafeValueSchema.optional().default(null),
   finished_at: harnessSafeValueSchema.optional().default(null),
@@ -41,10 +44,19 @@ export const harnessSessionSummarySchema = z.object({
   source_report: z.string().min(1).optional().default("unknown-source-report.json"),
 }).passthrough();
 
+const harnessSessionIndexVersionSchema = z
+  .literal("harness-session-index/v1")
+  .optional()
+  .nullable()
+  .default(null);
+
 export const harnessSessionIndexSchema = z.object({
-  schema_version: z.literal("harness-session-index/v1"),
-  generated_at: z.string().min(1),
-  source_machine: z.string().min(1),
+  schema_version: harnessSessionIndexVersionSchema,
+  schema: harnessSessionIndexVersionSchema,
+  generated_at: z.string().min(1).optional().nullable().default(null),
+  generated_by: z.string().min(1).optional().nullable().default(null),
+  source_machine: z.string().min(1).optional().nullable().default(null),
+  session_count: z.number().int().nonnegative().optional().nullable().default(null),
   sessions: z.array(harnessSessionSummarySchema).default([]),
 }).passthrough();
 

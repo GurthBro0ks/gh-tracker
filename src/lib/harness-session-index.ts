@@ -62,8 +62,12 @@ export type HarnessSessionIndexView = {
   dataSource: string;
   canonicalReportsUrl: string;
   generatedAt: string | null;
+  generatedBy: string | null;
   sourceMachine: string | null;
   schemaVersion: string | null;
+  declaredSessionCount: number | null;
+  maxSessionTimestamp: string | null;
+  maxSessionAgeMinutes: number | null;
   fileSizeBytes: number | null;
   isStale: boolean;
   ageMinutes: number | null;
@@ -103,27 +107,30 @@ export async function loadHarnessSessionIndex(indexPath = HARNESS_SESSION_INDEX_
     return emptyIndexView("schema_mismatch", indexPath, formatSchemaMessage(validated.error), fileSizeBytes);
   }
 
-  const generatedAt = validated.data.generated_at;
+  const generatedAt = safeString(validated.data.generated_at);
   const ageMinutes = minutesSince(generatedAt, now);
   const isStale = ageMinutes !== null && ageMinutes > STALE_AFTER_HOURS * 60;
   const sessions = validated.data.sessions
     .map(normalizeSession)
     .sort((a, b) => b.sortTime - a.sortTime || a.id.localeCompare(b.id));
+  const maxSessionTimestamp = newestSessionTimestamp(sessions);
+  const maxSessionAgeMinutes = minutesSince(maxSessionTimestamp, now);
+  const schemaVersion = validated.data.schema_version ?? validated.data.schema ?? null;
 
   const status: HarnessIndexStatus = sessions.length > 0 ? "ready" : "empty";
-  const message = status === "empty"
-    ? "Live harness session index is valid but has zero sessions."
-    : isStale
-      ? `Live harness session index is older than ${STALE_AFTER_HOURS} hours.`
-      : "Live harness session index loaded from safe metadata.";
+  const message = indexMessage(status, isStale, generatedAt, maxSessionTimestamp);
 
   return {
     status,
     dataSource: indexPath,
     canonicalReportsUrl: MISSION_CONTROL_REPORTS_URL,
     generatedAt,
-    sourceMachine: validated.data.source_machine,
-    schemaVersion: validated.data.schema_version,
+    generatedBy: safeString(validated.data.generated_by),
+    sourceMachine: safeString(validated.data.source_machine),
+    schemaVersion,
+    declaredSessionCount: validated.data.session_count ?? null,
+    maxSessionTimestamp,
+    maxSessionAgeMinutes,
     fileSizeBytes,
     isStale,
     ageMinutes,
@@ -142,8 +149,12 @@ function emptyIndexView(status: HarnessIndexStatus, dataSource: string, message:
     dataSource,
     canonicalReportsUrl: MISSION_CONTROL_REPORTS_URL,
     generatedAt: null,
+    generatedBy: null,
     sourceMachine: null,
     schemaVersion: null,
+    declaredSessionCount: null,
+    maxSessionTimestamp: null,
+    maxSessionAgeMinutes: null,
     fileSizeBytes,
     isStale: false,
     ageMinutes: null,
@@ -156,11 +167,19 @@ function emptyIndexView(status: HarnessIndexStatus, dataSource: string, message:
   };
 }
 
+function indexMessage(status: HarnessIndexStatus, isStale: boolean, generatedAt: string | null, maxSessionTimestamp: string | null) {
+  if (status === "empty") return "Live harness session index is valid but has zero sessions.";
+  if (isStale) return `Live harness session index is older than ${STALE_AFTER_HOURS} hours.`;
+  if (generatedAt) return "Live harness session index loaded from safe metadata.";
+  if (maxSessionTimestamp) return "Live harness session index loaded; generated freshness is unknown, using safe session dates.";
+  return "Live harness session index loaded; freshness unknown because no safe date fields are available.";
+}
+
 function normalizeSession(raw: HarnessSessionSummaryRaw, index: number): HarnessSessionView {
   const sourceReport = safeString(raw.source_report) ?? `unknown-source-report-${index}.json`;
   const reportUrl = safeUrl(raw.report_url) ?? `${MISSION_CONTROL_REPORTS_URL}/sessions/${encodeURIComponent(sourceReport)}`;
   const reportUrlSource = safeUrl(raw.report_url) ? "report_url" : "source_report";
-  const timestamp = firstSafeString(raw.timestamp, raw.finished_at, raw.started_at);
+  const timestamp = firstSafeString(raw.created_at, raw.archived_at, raw.reported_at, raw.timestamp, raw.finished_at, raw.started_at);
   const result = safeString(raw.result);
   const status = safeString(raw.status);
   const phase = safeString(raw.phase);
@@ -218,6 +237,11 @@ function buildSummary(sessions: HarnessSessionView[]): HarnessIndexSummary {
     safetyFlagCount: sessions.reduce((sum, session) => sum + session.safetyFlags.length, 0),
     reportLinkCount: sessions.filter((session) => Boolean(session.reportUrl)).length,
   };
+}
+
+function newestSessionTimestamp(sessions: HarnessSessionView[]): string | null {
+  const newest = sessions.find((session) => session.sortTime > 0 && session.timestamp);
+  return newest?.timestamp ?? null;
 }
 
 function buildSafetyFlags(raw: HarnessSessionSummaryRaw): string[] {
