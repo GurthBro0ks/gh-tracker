@@ -25,12 +25,12 @@ describe("auth hardening static checks", () => {
     expect(proxyFile).not.toContain("/reset-password");
   });
 
-  it("settings keeps auth source and outer gate wording", () => {
+  it("settings keeps auth source and owner login gate wording", () => {
     const dashboard = readFileSync(join(repoRoot, "src/components/dashboard.tsx"), "utf8");
     expect(dashboard).toContain("Auth source");
     expect(dashboard).toContain("Slimy owner email/password");
-    expect(dashboard).toContain("Outer gate");
-    expect(dashboard).toContain("Basic Auth still enabled");
+    expect(dashboard).toContain("Access gate");
+    expect(dashboard).toContain("Owner Login active");
   });
 
   it("does not include nousearch hermes marker", () => {

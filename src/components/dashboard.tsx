@@ -1232,8 +1232,8 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
                 </div>
 
                 <div className="rounded border border-white/10 bg-black/30 px-3 py-2">
-                  <p className="text-violet-300">Outer gate</p>
-                  <p className="text-violet-100">Basic Auth still enabled</p>
+                  <p className="text-violet-300">Access gate</p>
+                  <p className="text-violet-100">Owner Login active</p>
                 </div>
 
                 <div className="rounded border border-white/10 bg-black/30 px-3 py-2">

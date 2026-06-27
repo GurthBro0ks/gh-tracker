@@ -111,7 +111,7 @@ export default function LoginPage() {
 
         <div className="rounded-md bg-slate-900/50 border border-slate-800 px-3 py-2 text-xs text-slate-500 space-y-1">
           <p>Auth source: Slimy owner email/password</p>
-          <p>Outer gate: Basic Auth still enabled</p>
+          <p>Access gate: Owner Login active</p>
         </div>
       </div>
     </div>
