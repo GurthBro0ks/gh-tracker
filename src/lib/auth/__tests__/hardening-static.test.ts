@@ -33,6 +33,21 @@ describe("auth hardening static checks", () => {
     expect(dashboard).toContain("Owner Login active");
   });
 
+  it("routes sign out through Harness Reports logout to clear report session cookies", () => {
+    const dashboard = readFileSync(join(repoRoot, "src/components/dashboard.tsx"), "utf8");
+    expect(dashboard).toContain("REPORTS_LOGOUT_URL");
+    expect(dashboard).toContain("https://harness.slimyai.xyz/api/session/logout");
+    expect(dashboard).toContain("returnTo=https%3A%2F%2Fhabitat.slimyai.xyz%2Flogin");
+    expect(dashboard).toContain("window.location.href = REPORTS_LOGOUT_URL");
+  });
+
+  it("keeps Harness report links same-tab from the Habitat dashboard", () => {
+    const harnessDashboard = readFileSync(join(repoRoot, "src/components/harness-dashboard.tsx"), "utf8");
+    expect(harnessDashboard).toContain("Mission-Control Reports");
+    expect(harnessDashboard).not.toContain('target="_blank"');
+    expect(harnessDashboard).not.toContain("rel=\"noreferrer\"");
+  });
+
   it("does not include nousearch hermes marker", () => {
     const files = [
       readFileSync(join(repoRoot, "src/components/dashboard.tsx"), "utf8"),

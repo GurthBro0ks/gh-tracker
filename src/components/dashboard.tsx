@@ -31,6 +31,7 @@ import type { AlertPreferences } from "@/lib/alert-preferences";
 import { APP_RELEASE_TAG } from "@/lib/app-version";
 
 const PIE_COLORS = ["#d717ff", "#97ff4c", "#53b4ff", "#ff74ae", "#ffc44d", "#a98dff"];
+const REPORTS_LOGOUT_URL = "https://harness.slimyai.xyz/api/session/logout?returnTo=https%3A%2F%2Fhabitat.slimyai.xyz%2Flogin";
 
 function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number; color: string }>; label?: string }) {
   if (!active || !payload || payload.length === 0) return null;
@@ -1294,8 +1295,11 @@ export default function Dashboard({ demoData, localData, session }: DashboardPro
                 <button
                   type="button"
                   onClick={async () => {
-                    await fetch("/api/auth/logout", { method: "POST" });
-                    window.location.href = "/login";
+                    try {
+                      await fetch("/api/auth/logout", { method: "POST" });
+                    } finally {
+                      window.location.href = REPORTS_LOGOUT_URL;
+                    }
                   }}
                   className="w-full rounded border border-rose-400/50 bg-rose-950/30 px-3 py-2 text-xs font-medium text-rose-200 hover:bg-rose-900/40"
                 >

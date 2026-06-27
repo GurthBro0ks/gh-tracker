@@ -31,7 +31,7 @@ export default function HarnessDashboard({ index, session }: HarnessDashboardPro
             <Link className="rounded border border-cyan-300/45 bg-cyan-400/10 px-3 py-2 text-[10px] uppercase tracking-[0.12em] text-cyan-100 sm:text-xs" href="/">
               Repo Dashboard
             </Link>
-            <a className="rounded border border-lime-300/45 bg-lime-400/10 px-3 py-2 text-[10px] uppercase tracking-[0.12em] text-lime-100 sm:text-xs" href={index.canonicalReportsUrl} target="_blank" rel="noreferrer">
+            <a className="rounded border border-lime-300/45 bg-lime-400/10 px-3 py-2 text-[10px] uppercase tracking-[0.12em] text-lime-100 sm:text-xs" href={index.canonicalReportsUrl}>
               Mission-Control Reports
             </a>
           </div>
@@ -129,7 +129,7 @@ export default function HarnessDashboard({ index, session }: HarnessDashboardPro
 
       <Panel title="Report Links">
         <div className="grid gap-2 text-xs sm:grid-cols-2">
-          <a className="rounded border border-lime-300/35 bg-lime-400/10 px-3 py-2 text-lime-100" href={index.canonicalReportsUrl} target="_blank" rel="noreferrer">
+          <a className="rounded border border-lime-300/35 bg-lime-400/10 px-3 py-2 text-lime-100" href={index.canonicalReportsUrl}>
             Canonical report index: {index.canonicalReportsUrl}
           </a>
           <p className="rounded border border-white/10 bg-black/25 px-3 py-2 text-violet-100">
@@ -198,7 +198,7 @@ function SessionCard({ session, attention = false }: { session: HarnessSessionVi
         </ul>
       ) : null}
       <div className="mt-3 flex flex-wrap gap-2 text-[10px] sm:text-xs">
-        <a className="rounded border border-lime-300/35 bg-lime-400/10 px-2 py-1 text-lime-100" href={session.reportUrl} target="_blank" rel="noreferrer">
+        <a className="rounded border border-lime-300/35 bg-lime-400/10 px-2 py-1 text-lime-100" href={session.reportUrl}>
           Mission-control report
         </a>
         {session.nextAction ? <span className="rounded border border-cyan-300/25 bg-cyan-400/10 px-2 py-1 text-cyan-100">Next: {session.nextAction}</span> : null}
@@ -209,7 +209,7 @@ function SessionCard({ session, attention = false }: { session: HarnessSessionVi
 
 function CompactSessionRow({ session }: { session: HarnessSessionView }) {
   return (
-    <a className="block rounded border border-white/10 bg-black/25 px-2 py-1 text-[10px] text-violet-100 sm:text-xs" href={session.reportUrl} target="_blank" rel="noreferrer">
+    <a className="block rounded border border-white/10 bg-black/25 px-2 py-1 text-[10px] text-violet-100 sm:text-xs" href={session.reportUrl}>
       <span className="font-sans uppercase tracking-[0.08em] text-white">{session.project ?? session.id}</span>
       <span className="ml-2 text-violet-300">{session.manualQaStatus ?? "unknown"} · {session.timestamp ? formatDateTime(session.timestamp) : "No timestamp"}</span>
     </a>
