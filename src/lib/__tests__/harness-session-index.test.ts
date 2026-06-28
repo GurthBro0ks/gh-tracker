@@ -4,7 +4,11 @@ import { tmpdir } from "node:os";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import HarnessDashboard from "../../components/harness-dashboard";
-import { loadHarnessSessionIndex, MISSION_CONTROL_REPORTS_URL } from "../harness-session-index";
+import {
+  loadHarnessSessionIndex,
+  REPORTS_SSO_BRIDGE_PATH,
+  toReportsSsoBridgeUrl,
+} from "../harness-session-index";
 
 const now = new Date("2026-06-13T12:00:00Z");
 
@@ -76,8 +80,9 @@ describe("harness session index loader", () => {
       expect(view.maxSessionTimestamp).toBe("2026-06-13T10:00:00Z");
       expect(view.maxSessionAgeMinutes).toBe(120);
       expect(view.summary.reportLinkCount).toBe(2);
-      expect(view.latestSessions[0].reportUrl).toBe("https://harness.slimyai.xyz/reports/sessions/newer.json");
-      expect(view.latestSessions[1].reportUrl).toBe(`${MISSION_CONTROL_REPORTS_URL}/sessions/older.json`);
+      expect(view.canonicalReportsUrl).toBe(`${REPORTS_SSO_BRIDGE_PATH}?returnTo=%2Freports`);
+      expect(view.latestSessions[0].reportUrl).toBe(`${REPORTS_SSO_BRIDGE_PATH}?returnTo=%2Freports%2Fsessions%2Fnewer.json`);
+      expect(view.latestSessions[1].reportUrl).toBe(`${REPORTS_SSO_BRIDGE_PATH}?returnTo=%2Freports%2Fsessions%2Folder.json`);
     });
   });
 
@@ -145,5 +150,14 @@ describe("harness session index loader", () => {
       expect(markup).toContain("absent");
       expect(markup).not.toMatch(/\b(Run|Execute|Restart|Deploy)\b/);
     });
+  });
+
+  it("builds report links through the owner-gated SSO bridge", () => {
+    expect(toReportsSsoBridgeUrl("https://harness.slimyai.xyz/reports/sessions/example.json")).toBe(
+      `${REPORTS_SSO_BRIDGE_PATH}?returnTo=%2Freports%2Fsessions%2Fexample.json`,
+    );
+    expect(toReportsSsoBridgeUrl("https://evil.example/reports/sessions/example.json")).toBe(
+      `${REPORTS_SSO_BRIDGE_PATH}?returnTo=%2Freports`,
+    );
   });
 });

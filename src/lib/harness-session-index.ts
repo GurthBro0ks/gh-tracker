@@ -4,6 +4,7 @@ import { harnessSessionIndexSchema, type HarnessSafeValue, type HarnessSessionSu
 
 export const HARNESS_SESSION_INDEX_PATH = "/home/slimy/slimy-kb/raw/sessions/harness-session-index.json";
 export const MISSION_CONTROL_REPORTS_URL = "https://harness.slimyai.xyz/reports";
+export const REPORTS_SSO_BRIDGE_PATH = "/reports/sso-bridge";
 
 const STALE_AFTER_HOURS = 24;
 const MAX_SAFE_TEXT_LENGTH = 220;
@@ -123,7 +124,7 @@ export async function loadHarnessSessionIndex(indexPath = HARNESS_SESSION_INDEX_
   return {
     status,
     dataSource: indexPath,
-    canonicalReportsUrl: MISSION_CONTROL_REPORTS_URL,
+    canonicalReportsUrl: toReportsSsoBridgeUrl(MISSION_CONTROL_REPORTS_URL),
     generatedAt,
     generatedBy: safeString(validated.data.generated_by),
     sourceMachine: safeString(validated.data.source_machine),
@@ -147,7 +148,7 @@ function emptyIndexView(status: HarnessIndexStatus, dataSource: string, message:
   return {
     status,
     dataSource,
-    canonicalReportsUrl: MISSION_CONTROL_REPORTS_URL,
+    canonicalReportsUrl: toReportsSsoBridgeUrl(MISSION_CONTROL_REPORTS_URL),
     generatedAt: null,
     generatedBy: null,
     sourceMachine: null,
@@ -177,7 +178,8 @@ function indexMessage(status: HarnessIndexStatus, isStale: boolean, generatedAt:
 
 function normalizeSession(raw: HarnessSessionSummaryRaw, index: number): HarnessSessionView {
   const sourceReport = safeString(raw.source_report) ?? `unknown-source-report-${index}.json`;
-  const reportUrl = safeUrl(raw.report_url) ?? `${MISSION_CONTROL_REPORTS_URL}/sessions/${encodeURIComponent(sourceReport)}`;
+  const rawReportUrl = safeUrl(raw.report_url) ?? `${MISSION_CONTROL_REPORTS_URL}/sessions/${encodeURIComponent(sourceReport)}`;
+  const reportUrl = toReportsSsoBridgeUrl(rawReportUrl);
   const reportUrlSource = safeUrl(raw.report_url) ? "report_url" : "source_report";
   const timestamp = firstSafeString(raw.created_at, raw.archived_at, raw.reported_at, raw.timestamp, raw.finished_at, raw.started_at);
   const result = safeString(raw.result);
@@ -221,6 +223,22 @@ function normalizeSession(raw: HarnessSessionSummaryRaw, index: number): Harness
     isManualQaPending: isManualQaPending(manualQaStatus),
     sortTime: timestamp ? Date.parse(timestamp) || 0 : 0,
   };
+}
+
+export function toReportsSsoBridgeUrl(reportUrl: string): string {
+  const target = getReportsReturnPath(reportUrl) ?? "/reports";
+  return `${REPORTS_SSO_BRIDGE_PATH}?returnTo=${encodeURIComponent(target)}`;
+}
+
+function getReportsReturnPath(reportUrl: string): string | null {
+  try {
+    const url = new URL(reportUrl);
+    if (url.hostname !== "harness.slimyai.xyz") return null;
+    if (!url.pathname.startsWith("/reports")) return null;
+    return `${url.pathname}${url.search}`;
+  } catch {
+    return null;
+  }
 }
 
 function buildSummary(sessions: HarnessSessionView[]): HarnessIndexSummary {

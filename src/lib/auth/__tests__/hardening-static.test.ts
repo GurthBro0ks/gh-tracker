@@ -65,7 +65,16 @@ describe("auth hardening static checks", () => {
 
   it("keeps Harness report links same-tab from the Habitat dashboard", () => {
     const harnessDashboard = readFileSync(join(repoRoot, "src/components/harness-dashboard.tsx"), "utf8");
+    const harnessIndex = readFileSync(join(repoRoot, "src/lib/harness-session-index.ts"), "utf8");
+    const bridgeRoute = readFileSync(join(repoRoot, "src/app/reports/sso-bridge/route.ts"), "utf8");
     expect(harnessDashboard).toContain("Mission-Control Reports");
+    expect(harnessIndex).toContain('REPORTS_SSO_BRIDGE_PATH = "/reports/sso-bridge"');
+    expect(harnessIndex).toContain("toReportsSsoBridgeUrl");
+    expect(bridgeRoute).toContain("requireOwner(session)");
+    expect(bridgeRoute).toContain("response.cookies.set(SESSION_COOKIE");
+    expect(bridgeRoute).toContain("domain: getSecureSharedSessionCookieDomain");
+    expect(bridgeRoute).toContain("secure: true");
+    expect(bridgeRoute).toContain('sameSite: "lax"');
     expect(harnessDashboard).not.toContain('target="_blank"');
     expect(harnessDashboard).not.toContain("rel=\"noreferrer\"");
   });
