@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { verifySessionToken } from "./src/lib/auth/token";
-
-const SESSION_COOKIE = "habitat_session";
+import {
+  getSharedSessionCookieDomain,
+  SESSION_COOKIE,
+  SESSION_MAX_AGE_SECONDS,
+} from "./src/lib/auth/cookie-domain";
 
 function isPublicPath(pathname: string): boolean {
   return (
@@ -32,7 +35,23 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  return NextResponse.next();
+  const response = NextResponse.next();
+  const isSecure = request.headers.get("x-forwarded-proto") === "https";
+  const sharedDomain = isSecure
+    ? getSharedSessionCookieDomain(request.headers.get("x-forwarded-host") || request.headers.get("host"))
+    : null;
+  if (sharedDomain && token) {
+    response.cookies.set(SESSION_COOKIE, token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "lax",
+      path: "/",
+      domain: sharedDomain,
+      maxAge: SESSION_MAX_AGE_SECONDS,
+    });
+  }
+
+  return response;
 }
 
 export const config = {

@@ -41,6 +41,24 @@ describe("auth hardening static checks", () => {
     expect(dashboard).toContain("window.location.href = REPORTS_LOGOUT_URL");
   });
 
+  it("issues and clears the shared Habitat owner cookie for Reports SSO", () => {
+    const cookieDomain = readFileSync(join(repoRoot, "src/lib/auth/cookie-domain.ts"), "utf8");
+    const session = readFileSync(join(repoRoot, "src/lib/auth/session.ts"), "utf8");
+    const loginRoute = readFileSync(join(repoRoot, "src/app/api/auth/login/route.ts"), "utf8");
+    const logoutRoute = readFileSync(join(repoRoot, "src/app/api/auth/logout/route.ts"), "utf8");
+    const proxyFile = readFileSync(join(repoRoot, "proxy.ts"), "utf8");
+
+    expect(cookieDomain).toContain('SESSION_COOKIE = "habitat_session"');
+    expect(cookieDomain).toContain('SHARED_SESSION_DOMAIN = ".slimyai.xyz"');
+    expect(session).toContain("domain: sharedDomain");
+    expect(loginRoute).toContain("getSharedSessionCookieDomain");
+    expect(logoutRoute).toContain("getSharedSessionCookieDomain");
+    expect(logoutRoute).toContain("clearSessionCookie(isSecure, sharedDomain)");
+    expect(proxyFile).toContain("verifySessionToken(token)");
+    expect(proxyFile).toContain("response.cookies.set(SESSION_COOKIE, token");
+    expect(proxyFile).toContain("domain: sharedDomain");
+  });
+
   it("keeps Harness report links same-tab from the Habitat dashboard", () => {
     const harnessDashboard = readFileSync(join(repoRoot, "src/components/harness-dashboard.tsx"), "utf8");
     expect(harnessDashboard).toContain("Mission-Control Reports");

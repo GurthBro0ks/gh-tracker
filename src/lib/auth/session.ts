@@ -1,13 +1,13 @@
 import { cookies } from "next/headers";
+import {
+  SESSION_COOKIE,
+  SESSION_MAX_AGE_SECONDS,
+  SHARED_SESSION_DOMAIN,
+} from "./cookie-domain";
 import { createSessionToken, verifySessionToken, type HabitatSession } from "./token";
 
 export { createSessionToken, verifySessionToken, type HabitatSession } from "./token";
-
-const SESSION_COOKIE = "habitat_session";
-const SESSION_MAX_AGE_SECONDS = parseInt(
-  process.env.HABITAT_SESSION_MAX_AGE_SECONDS || "86400",
-  10
-);
+export { SESSION_COOKIE, SESSION_MAX_AGE_SECONDS, SHARED_SESSION_DOMAIN };
 
 export async function getSession(): Promise<HabitatSession | null> {
   try {
@@ -23,29 +23,47 @@ export async function getSession(): Promise<HabitatSession | null> {
 
 export async function setSessionCookie(
   session: HabitatSession,
-  isSecure: boolean
+  isSecure: boolean,
+  sharedDomain?: string | null
 ): Promise<void> {
   const token = createSessionToken(session);
   const cookieStore = await cookies();
-  cookieStore.set(SESSION_COOKIE, token, {
+  const options = {
     httpOnly: true,
     secure: isSecure,
     sameSite: "lax",
     path: "/",
     maxAge: SESSION_MAX_AGE_SECONDS,
-  });
+  } as const;
+  cookieStore.set(SESSION_COOKIE, token, options);
+  if (sharedDomain) {
+    cookieStore.set(SESSION_COOKIE, token, {
+      ...options,
+      domain: sharedDomain,
+    });
+  }
 }
 
-export async function clearSessionCookie(isSecure: boolean): Promise<void> {
+export async function clearSessionCookie(
+  isSecure: boolean,
+  sharedDomain?: string | null
+): Promise<void> {
   const cookieStore = await cookies();
-  cookieStore.set(SESSION_COOKIE, "", {
+  const options = {
     httpOnly: true,
     secure: isSecure,
     sameSite: "lax",
     path: "/",
     expires: new Date(0),
     maxAge: 0,
-  });
+  } as const;
+  cookieStore.set(SESSION_COOKIE, "", options);
+  if (sharedDomain) {
+    cookieStore.set(SESSION_COOKIE, "", {
+      ...options,
+      domain: sharedDomain,
+    });
+  }
 }
 
 export function requireOwner(session: HabitatSession | null): HabitatSession {
