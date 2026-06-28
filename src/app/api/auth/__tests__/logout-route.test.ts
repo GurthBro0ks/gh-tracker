@@ -1,11 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { NextRequest } from "next/server";
-
-const clearSessionCookie = vi.fn();
-
-vi.mock("@/lib/auth/session", () => ({
-  clearSessionCookie,
-}));
 
 describe("POST /api/auth/logout", () => {
   it("clears session cookie", async () => {
@@ -15,7 +9,7 @@ describe("POST /api/auth/logout", () => {
     });
     const response = await POST(request);
     expect(response.status).toBe(200);
-    expect(clearSessionCookie).toHaveBeenCalledTimes(1);
+    expect(response.headers.get("set-cookie")).toContain("habitat_session=");
   });
 
   it("clears the shared parent-domain cookies for secure proxied requests", async () => {
@@ -28,7 +22,14 @@ describe("POST /api/auth/logout", () => {
     });
 
     const response = await POST(request);
+    const setCookie = response.headers.get("set-cookie") || "";
     expect(response.status).toBe(200);
-    expect(clearSessionCookie).toHaveBeenCalledWith(true, ".slimyai.xyz");
+    expect(setCookie).toContain("habitat_session=");
+    expect(setCookie).toContain("slimy_session=");
+    expect(setCookie).toContain("Domain=.slimyai.xyz");
+    expect(setCookie).toContain("Max-Age=0");
+    expect(setCookie).toContain("HttpOnly");
+    expect(setCookie).toContain("Secure");
+    expect(setCookie).toMatch(/SameSite=Lax/i);
   });
 });

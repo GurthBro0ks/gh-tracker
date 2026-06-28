@@ -40,4 +40,17 @@ describe("auth cookie clearing", () => {
       expect.objectContaining({ domain: ".slimyai.xyz", httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: 0 }),
     );
   });
+
+  it("serializes explicit clear headers for host-only and shared parent-domain variants", async () => {
+    const { getSessionCookieClearTargets, serializeClearSessionCookie } = await import("../session");
+    const headers = getSessionCookieClearTargets(".slimyai.xyz").map((target) =>
+      serializeClearSessionCookie(target.name, true, target.domain),
+    );
+
+    expect(headers).toHaveLength(4);
+    expect(headers).toContain("habitat_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0; Secure; HttpOnly; SameSite=Lax");
+    expect(headers).toContain("habitat_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0; Domain=.slimyai.xyz; Secure; HttpOnly; SameSite=Lax");
+    expect(headers).toContain("slimy_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0; Secure; HttpOnly; SameSite=Lax");
+    expect(headers).toContain("slimy_session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0; Domain=.slimyai.xyz; Secure; HttpOnly; SameSite=Lax");
+  });
 });

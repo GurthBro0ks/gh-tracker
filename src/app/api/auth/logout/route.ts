@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { clearSessionCookie } from "@/lib/auth/session";
+import { getSessionCookieClearTargets, serializeClearSessionCookie } from "../../../../lib/auth/session";
 import { getSecureSharedSessionCookieDomain } from "../../../../lib/auth/cookie-domain";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +14,9 @@ export async function POST(request: NextRequest) {
   const sharedDomain = isSecure
     ? getSecureSharedSessionCookieDomain(request.headers.get("x-forwarded-host") || request.headers.get("host"))
     : null;
-  await clearSessionCookie(isSecure, sharedDomain);
-  return NextResponse.json({ success: true });
+  const response = NextResponse.json({ success: true });
+  for (const target of getSessionCookieClearTargets(sharedDomain)) {
+    response.headers.append("Set-Cookie", serializeClearSessionCookie(target.name, isSecure, target.domain));
+  }
+  return response;
 }

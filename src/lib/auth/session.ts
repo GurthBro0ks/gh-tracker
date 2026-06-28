@@ -50,7 +50,16 @@ export async function clearSessionCookie(
   sharedDomain?: string | null
 ): Promise<void> {
   const cookieStore = await cookies();
-  const options = {
+  for (const { name, domain } of getSessionCookieClearTargets(sharedDomain)) {
+    cookieStore.set(name, "", {
+      ...getClearCookieOptions(isSecure),
+      ...(domain ? { domain } : {}),
+    });
+  }
+}
+
+function getClearCookieOptions(isSecure: boolean) {
+  return {
     httpOnly: true,
     secure: isSecure,
     sameSite: "lax",
@@ -58,15 +67,29 @@ export async function clearSessionCookie(
     expires: new Date(0),
     maxAge: 0,
   } as const;
+}
+
+export function getSessionCookieClearTargets(sharedDomain?: string | null): Array<{ name: string; domain?: string }> {
+  const targets: Array<{ name: string; domain?: string }> = [];
   for (const name of [SESSION_COOKIE, REPORT_SESSION_COOKIE]) {
-    cookieStore.set(name, "", options);
-    if (sharedDomain) {
-      cookieStore.set(name, "", {
-        ...options,
-        domain: sharedDomain,
-      });
-    }
+    targets.push({ name });
+    if (sharedDomain) targets.push({ name, domain: sharedDomain });
   }
+  return targets;
+}
+
+export function serializeClearSessionCookie(name: string, isSecure: boolean, domain?: string): string {
+  const attrs = [
+    `${name}=`,
+    "Path=/",
+    "Expires=Thu, 01 Jan 1970 00:00:00 GMT",
+    "Max-Age=0",
+    domain ? `Domain=${domain}` : null,
+    isSecure ? "Secure" : null,
+    "HttpOnly",
+    "SameSite=Lax",
+  ];
+  return attrs.filter(Boolean).join("; ");
 }
 
 export function requireOwner(session: HabitatSession | null): HabitatSession {

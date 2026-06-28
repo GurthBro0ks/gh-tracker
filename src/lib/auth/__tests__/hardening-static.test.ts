@@ -56,7 +56,8 @@ describe("auth hardening static checks", () => {
     expect(session).toContain("REPORT_SESSION_COOKIE");
     expect(loginRoute).toContain("getSecureSharedSessionCookieDomain");
     expect(logoutRoute).toContain("getSecureSharedSessionCookieDomain");
-    expect(logoutRoute).toContain("clearSessionCookie(isSecure, sharedDomain)");
+    expect(logoutRoute).toContain("getSessionCookieClearTargets(sharedDomain)");
+    expect(logoutRoute).toContain('response.headers.append("Set-Cookie"');
     expect(proxyFile).toContain("verifySessionToken(token)");
     expect(proxyFile).toContain("response.cookies.set(SESSION_COOKIE, token");
     expect(proxyFile).toContain("domain: sharedDomain");
