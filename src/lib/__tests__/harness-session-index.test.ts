@@ -80,9 +80,10 @@ describe("harness session index loader", () => {
       expect(view.maxSessionTimestamp).toBe("2026-06-13T10:00:00Z");
       expect(view.maxSessionAgeMinutes).toBe(120);
       expect(view.summary.reportLinkCount).toBe(2);
-      expect(view.canonicalReportsUrl).toBe(`${REPORTS_SSO_BRIDGE_PATH}?returnTo=%2Freports`);
-      expect(view.latestSessions[0].reportUrl).toBe(`${REPORTS_SSO_BRIDGE_PATH}?returnTo=%2Freports%2Fsessions%2Fnewer.json`);
-      expect(view.latestSessions[1].reportUrl).toBe(`${REPORTS_SSO_BRIDGE_PATH}?returnTo=%2Freports%2Fsessions%2Folder.json`);
+      expect(view.canonicalReportsUrl).toBe(`${REPORTS_SSO_BRIDGE_PATH}?returnTo=https%3A%2F%2Fharness.slimyai.xyz%2Freports`);
+      expect(view.canonicalSessionsUrl).toBe(`${REPORTS_SSO_BRIDGE_PATH}?returnTo=https%3A%2F%2Fharness.slimyai.xyz%2Freports%2Fsessions`);
+      expect(view.latestSessions[0].reportUrl).toBe(`${REPORTS_SSO_BRIDGE_PATH}?returnTo=https%3A%2F%2Fharness.slimyai.xyz%2Freports%2Fsessions%2Fnewer.json`);
+      expect(view.latestSessions[1].reportUrl).toBe(`${REPORTS_SSO_BRIDGE_PATH}?returnTo=https%3A%2F%2Fharness.slimyai.xyz%2Freports%2Fsessions%2Folder.json`);
     });
   });
 
@@ -145,6 +146,8 @@ describe("harness session index loader", () => {
       expect(markup).toContain("Latest session");
       expect(markup).toContain("sequencer/export-session-index.sh");
       expect(markup).toContain("generated fresh enough");
+      expect(markup).toContain("Session index");
+      expect(markup).toContain("returnTo=https%3A%2F%2Fharness.slimyai.xyz%2Freports%2Fsessions");
       expect(markup).toContain("read-only metadata");
       expect(markup).toContain("Execution buttons");
       expect(markup).toContain("absent");
@@ -154,10 +157,10 @@ describe("harness session index loader", () => {
 
   it("builds report links through the owner-gated SSO bridge", () => {
     expect(toReportsSsoBridgeUrl("https://harness.slimyai.xyz/reports/sessions/example.json")).toBe(
-      `${REPORTS_SSO_BRIDGE_PATH}?returnTo=%2Freports%2Fsessions%2Fexample.json`,
+      `${REPORTS_SSO_BRIDGE_PATH}?returnTo=https%3A%2F%2Fharness.slimyai.xyz%2Freports%2Fsessions%2Fexample.json`,
     );
     expect(toReportsSsoBridgeUrl("https://evil.example/reports/sessions/example.json")).toBe(
-      `${REPORTS_SSO_BRIDGE_PATH}?returnTo=%2Freports`,
+      `${REPORTS_SSO_BRIDGE_PATH}?returnTo=https%3A%2F%2Fharness.slimyai.xyz%2Freports`,
     );
   });
 });

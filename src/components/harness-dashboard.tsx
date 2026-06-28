@@ -132,6 +132,9 @@ export default function HarnessDashboard({ index, session }: HarnessDashboardPro
           <a className="rounded border border-lime-300/35 bg-lime-400/10 px-3 py-2 text-lime-100" href={index.canonicalReportsUrl}>
             Canonical report index: {index.canonicalReportsUrl}
           </a>
+          <a className="rounded border border-cyan-300/35 bg-cyan-400/10 px-3 py-2 text-cyan-100" href={index.canonicalSessionsUrl}>
+            Session index: {index.canonicalSessionsUrl}
+          </a>
           <p className="rounded border border-white/10 bg-black/25 px-3 py-2 text-violet-100">
             Session rows link to mission-control using `report_url` when safe, otherwise `/reports/sessions/&lt;source_report&gt;`.
           </p>

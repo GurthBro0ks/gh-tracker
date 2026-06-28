@@ -62,6 +62,7 @@ export type HarnessSessionIndexView = {
   status: HarnessIndexStatus;
   dataSource: string;
   canonicalReportsUrl: string;
+  canonicalSessionsUrl: string;
   generatedAt: string | null;
   generatedBy: string | null;
   sourceMachine: string | null;
@@ -125,6 +126,7 @@ export async function loadHarnessSessionIndex(indexPath = HARNESS_SESSION_INDEX_
     status,
     dataSource: indexPath,
     canonicalReportsUrl: toReportsSsoBridgeUrl(MISSION_CONTROL_REPORTS_URL),
+    canonicalSessionsUrl: toReportsSsoBridgeUrl(`${MISSION_CONTROL_REPORTS_URL}/sessions`),
     generatedAt,
     generatedBy: safeString(validated.data.generated_by),
     sourceMachine: safeString(validated.data.source_machine),
@@ -149,6 +151,7 @@ function emptyIndexView(status: HarnessIndexStatus, dataSource: string, message:
     status,
     dataSource,
     canonicalReportsUrl: toReportsSsoBridgeUrl(MISSION_CONTROL_REPORTS_URL),
+    canonicalSessionsUrl: toReportsSsoBridgeUrl(`${MISSION_CONTROL_REPORTS_URL}/sessions`),
     generatedAt: null,
     generatedBy: null,
     sourceMachine: null,
@@ -226,16 +229,16 @@ function normalizeSession(raw: HarnessSessionSummaryRaw, index: number): Harness
 }
 
 export function toReportsSsoBridgeUrl(reportUrl: string): string {
-  const target = getReportsReturnPath(reportUrl) ?? "/reports";
+  const target = getReportsReturnUrl(reportUrl) ?? MISSION_CONTROL_REPORTS_URL;
   return `${REPORTS_SSO_BRIDGE_PATH}?returnTo=${encodeURIComponent(target)}`;
 }
 
-function getReportsReturnPath(reportUrl: string): string | null {
+function getReportsReturnUrl(reportUrl: string): string | null {
   try {
     const url = new URL(reportUrl);
     if (url.hostname !== "harness.slimyai.xyz") return null;
     if (!url.pathname.startsWith("/reports")) return null;
-    return `${url.pathname}${url.search}`;
+    return url.toString();
   } catch {
     return null;
   }

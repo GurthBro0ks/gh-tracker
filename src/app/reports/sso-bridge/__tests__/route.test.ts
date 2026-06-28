@@ -16,7 +16,7 @@ function ownerToken() {
 
 describe("GET /reports/sso-bridge", () => {
   it("redirects logged-out requests to Habitat login", async () => {
-    const request = new NextRequest("https://habitat.slimyai.xyz/reports/sso-bridge?returnTo=%2Freports");
+    const request = new NextRequest("https://habitat.slimyai.xyz/reports/sso-bridge?returnTo=https%3A%2F%2Fharness.slimyai.xyz%2Freports");
 
     const response = await GET(request);
 
@@ -27,7 +27,7 @@ describe("GET /reports/sso-bridge", () => {
 
   it("refreshes the shared parent-domain Habitat session cookie before redirecting to reports", async () => {
     const token = ownerToken();
-    const request = new NextRequest("https://habitat.slimyai.xyz/reports/sso-bridge?returnTo=%2Freports%2Fsessions", {
+    const request = new NextRequest("https://habitat.slimyai.xyz/reports/sso-bridge?returnTo=https%3A%2F%2Fharness.slimyai.xyz%2Freports%2Fsessions", {
       headers: {
         cookie: `habitat_session=${token}`,
         "x-forwarded-proto": "https",
@@ -50,9 +50,39 @@ describe("GET /reports/sso-bridge", () => {
     expect(setCookie).not.toContain("slimy_session=");
   });
 
+  it("allows Harness report descendants as return targets", async () => {
+    const token = ownerToken();
+    const request = new NextRequest("https://habitat.slimyai.xyz/reports/sso-bridge?returnTo=https%3A%2F%2Fharness.slimyai.xyz%2Freports%2Fsessions%2Freport-proof-sample.json%3Fview%3Dfull", {
+      headers: {
+        cookie: `habitat_session=${token}`,
+        "x-forwarded-proto": "https",
+        "x-forwarded-host": "habitat.slimyai.xyz",
+      },
+    });
+
+    const response = await GET(request);
+
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toBe("https://harness.slimyai.xyz/reports/sessions/report-proof-sample.json?view=full");
+  });
+
   it("falls back to the reports index for unsafe return targets", async () => {
     const token = ownerToken();
     const request = new NextRequest("https://habitat.slimyai.xyz/reports/sso-bridge?returnTo=https%3A%2F%2Fevil.example%2Freports", {
+      headers: {
+        cookie: `habitat_session=${token}`,
+        "x-forwarded-proto": "https",
+      },
+    });
+
+    const response = await GET(request);
+
+    expect(response.headers.get("location")).toBe("https://harness.slimyai.xyz/reports");
+  });
+
+  it("falls back to the reports index for non-report Harness targets", async () => {
+    const token = ownerToken();
+    const request = new NextRequest("https://habitat.slimyai.xyz/reports/sso-bridge?returnTo=https%3A%2F%2Fharness.slimyai.xyz%2Flogin", {
       headers: {
         cookie: `habitat_session=${token}`,
         "x-forwarded-proto": "https",

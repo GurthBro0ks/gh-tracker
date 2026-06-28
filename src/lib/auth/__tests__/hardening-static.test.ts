@@ -69,6 +69,8 @@ describe("auth hardening static checks", () => {
     const bridgeRoute = readFileSync(join(repoRoot, "src/app/reports/sso-bridge/route.ts"), "utf8");
     expect(harnessDashboard).toContain("Mission-Control Reports");
     expect(harnessIndex).toContain('REPORTS_SSO_BRIDGE_PATH = "/reports/sso-bridge"');
+    expect(harnessIndex).toContain("encodeURIComponent(target)");
+    expect(harnessIndex).toContain("url.toString()");
     expect(harnessIndex).toContain("toReportsSsoBridgeUrl");
     expect(bridgeRoute).toContain("requireOwner(session)");
     expect(bridgeRoute).toContain("response.cookies.set(SESSION_COOKIE");
