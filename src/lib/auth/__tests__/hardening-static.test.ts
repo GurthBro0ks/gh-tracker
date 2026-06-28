@@ -69,6 +69,7 @@ describe("auth hardening static checks", () => {
     const bridgeRoute = readFileSync(join(repoRoot, "src/app/reports/sso-bridge/route.ts"), "utf8");
     const ticket = readFileSync(join(repoRoot, "src/lib/auth/reports-sso-ticket.ts"), "utf8");
     const verifyRoute = readFileSync(join(repoRoot, "src/app/api/reports/sso-ticket/verify/route.ts"), "utf8");
+    const breadcrumb = readFileSync(join(repoRoot, "src/lib/auth/reports-sso-breadcrumb.ts"), "utf8");
     expect(harnessDashboard).toContain("Mission-Control Reports");
     expect(harnessIndex).toContain('REPORTS_SSO_BRIDGE_PATH = "/reports/sso-bridge"');
     expect(harnessIndex).toContain("encodeURIComponent(target)");
@@ -76,6 +77,9 @@ describe("auth hardening static checks", () => {
     expect(harnessIndex).toContain("toReportsSsoBridgeUrl");
     expect(bridgeRoute).toContain("requireOwner(session)");
     expect(bridgeRoute).toContain("issueReportsSsoTicket");
+    expect(bridgeRoute).toContain("logReportsSsoBreadcrumb");
+    expect(bridgeRoute).toContain("bridge_owner_verified");
+    expect(bridgeRoute).toContain("bridge_ticket_issued");
     expect(bridgeRoute).toContain('new URL("/api/session/consume-sso", REPORTS_ORIGIN)');
     expect(bridgeRoute).toContain('consumeUrl.searchParams.set("ticket"');
     expect(bridgeRoute).toContain('consumeUrl.searchParams.set("returnTo"');
@@ -86,7 +90,12 @@ describe("auth hardening static checks", () => {
     expect(ticket).not.toContain("console.log");
     expect(ticket).not.toContain("console.error");
     expect(verifyRoute).toContain("verifyReportsSsoTicket");
+    expect(verifyRoute).toContain("logReportsSsoBreadcrumb");
+    expect(verifyRoute).toContain("verify_ticket_seen");
+    expect(verifyRoute).toContain("verify_ticket_valid");
     expect(verifyRoute).not.toContain("ticket:");
+    expect(breadcrumb).toContain("LONG_SECRET_SHAPED_VALUE");
+    expect(breadcrumb).toContain("[redacted]");
     expect(harnessDashboard).not.toContain('target="_blank"');
     expect(harnessDashboard).not.toContain("rel=\"noreferrer\"");
   });

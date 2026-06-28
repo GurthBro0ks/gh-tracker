@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { GET } from "../route";
 import { createSessionToken } from "../../../../lib/auth/session";
@@ -18,9 +18,11 @@ function ownerToken() {
 describe("GET /reports/sso-bridge", () => {
   afterEach(() => {
     clearReportsSsoTicketsForTests();
+    vi.restoreAllMocks();
   });
 
   it("redirects logged-out requests to Habitat login", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
     const request = new NextRequest("https://habitat.slimyai.xyz/reports/sso-bridge?returnTo=https%3A%2F%2Fharness.slimyai.xyz%2Freports");
 
     const response = await GET(request);
@@ -28,9 +30,18 @@ describe("GET /reports/sso-bridge", () => {
     expect(response.status).toBe(302);
     expect(response.headers.get("location")).toContain("https://habitat.slimyai.xyz/login");
     expect(response.headers.get("set-cookie")).toBeNull();
+    expect(info).toHaveBeenCalledWith(
+      "[reports-sso]",
+      expect.stringContaining('"bridge_owner_verified":"no"'),
+    );
+    expect(info).toHaveBeenCalledWith(
+      "[reports-sso]",
+      expect.stringContaining('"bridge_ticket_issued":"no"'),
+    );
   });
 
   it("issues a one-time Reports SSO ticket before redirecting to Mission-Control consume", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
     const token = ownerToken();
     const request = new NextRequest("https://habitat.slimyai.xyz/reports/sso-bridge?returnTo=https%3A%2F%2Fharness.slimyai.xyz%2Freports%2Fsessions", {
       headers: {
@@ -63,6 +74,15 @@ describe("GET /reports/sso-bridge", () => {
       returnToAllowed: true,
     });
     expect(verifyReportsSsoTicket(consumeUrl.searchParams.get("ticket"), consumeUrl.searchParams.get("returnTo")).redeemed).toBe(true);
+    expect(info).toHaveBeenCalledWith(
+      "[reports-sso]",
+      expect.stringContaining('"bridge_owner_verified":"yes"'),
+    );
+    expect(info).toHaveBeenCalledWith(
+      "[reports-sso]",
+      expect.stringContaining('"bridge_ticket_issued":"yes"'),
+    );
+    expect(info.mock.calls.map((call) => String(call[1])).join("\n")).not.toContain(consumeUrl.searchParams.get("ticket") || "missing");
   });
 
   it("allows Harness report descendants as return targets", async () => {

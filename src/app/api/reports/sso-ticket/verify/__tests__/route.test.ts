@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { POST } from "../route";
 import {
@@ -26,9 +26,11 @@ function request(body: unknown) {
 describe("POST /api/reports/sso-ticket/verify", () => {
   afterEach(() => {
     clearReportsSsoTicketsForTests();
+    vi.restoreAllMocks();
   });
 
   it("verifies valid owner tickets and returns only safe booleans", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
     const issued = issueReportsSsoTicket(ownerSession, "https://harness.slimyai.xyz/reports/sessions");
 
     const response = await POST(request({ ticket: issued.ticket, returnTo: issued.returnTo }));
@@ -43,9 +45,15 @@ describe("POST /api/reports/sso-ticket/verify", () => {
       returnToAllowed: true,
     });
     expect(JSON.stringify(body)).not.toContain(issued.ticket);
+    expect(info).toHaveBeenCalledWith(
+      "[reports-sso]",
+      expect.stringContaining('"verify_ticket_valid":"yes"'),
+    );
+    expect(info.mock.calls.map((call) => String(call[1])).join("\n")).not.toContain(issued.ticket);
   });
 
   it("rejects replayed tickets", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => undefined);
     const issued = issueReportsSsoTicket(ownerSession, "/reports");
     await POST(request({ ticket: issued.ticket, returnTo: issued.returnTo }));
 
@@ -58,6 +66,7 @@ describe("POST /api/reports/sso-ticket/verify", () => {
   });
 
   it("rejects missing and return-target-mismatched tickets", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
     const issued = issueReportsSsoTicket(ownerSession, "https://harness.slimyai.xyz/reports/sessions/a.json");
 
     const missing = await POST(request({ returnTo: issued.returnTo }));
@@ -72,5 +81,13 @@ describe("POST /api/reports/sso-ticket/verify", () => {
     expect(mismatched.status).toBe(401);
     expect(body.valid).toBe(false);
     expect(body.returnToAllowed).toBe(false);
+    expect(info).toHaveBeenCalledWith(
+      "[reports-sso]",
+      expect.stringContaining('"verify_reason":"missing"'),
+    );
+    expect(info).toHaveBeenCalledWith(
+      "[reports-sso]",
+      expect.stringContaining('"verify_reason":"return_to_mismatch"'),
+    );
   });
 });

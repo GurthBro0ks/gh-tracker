@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SESSION_COOKIE } from "../../../lib/auth/cookie-domain";
-import { issueReportsSsoTicket, normalizeReportsReturnTo } from "../../../lib/auth/reports-sso-ticket";
+import { logReportsSsoBreadcrumb } from "../../../lib/auth/reports-sso-breadcrumb";
+import {
+  issueReportsSsoTicket,
+  normalizeReportsReturnTo,
+  REPORTS_SSO_TICKET_TTL_SECONDS,
+} from "../../../lib/auth/reports-sso-ticket";
 import { requireOwner, verifySessionToken } from "../../../lib/auth/session";
 
 export const dynamic = "force-dynamic";
@@ -27,19 +32,34 @@ export async function GET(request: NextRequest) {
   const token = request.cookies.get(SESSION_COOKIE)?.value;
   const session = token ? verifySessionToken(token) : null;
   const rawReturnTo = request.nextUrl.searchParams.get("returnTo");
+  const normalizedReturnTo = normalizeReportsReturnTo(rawReturnTo);
   let ownerSession: ReturnType<typeof requireOwner>;
 
   try {
     ownerSession = requireOwner(session);
   } catch {
+    logReportsSsoBreadcrumb("bridge", {
+      bridge_route_hit: "yes",
+      bridge_owner_verified: "no",
+      bridge_ticket_issued: "no",
+      bridge_redirect_target_class: "habitat_login",
+      return_to_class: "reports_allowlisted",
+    });
     const loginUrl = new URL("/login", getHabitatPublicOrigin(request));
     loginUrl.searchParams.set("returnTo", `${request.nextUrl.pathname}${request.nextUrl.search}`);
     return NextResponse.redirect(loginUrl, { status: 302 });
   }
 
-  const issued = issueReportsSsoTicket(ownerSession, normalizeReportsReturnTo(rawReturnTo));
+  const issued = issueReportsSsoTicket(ownerSession, normalizedReturnTo);
   const consumeUrl = new URL("/api/session/consume-sso", REPORTS_ORIGIN);
   consumeUrl.searchParams.set("ticket", issued.ticket);
   consumeUrl.searchParams.set("returnTo", issued.returnTo);
+  logReportsSsoBreadcrumb("bridge", {
+    bridge_route_hit: "yes",
+    bridge_owner_verified: "yes",
+    bridge_ticket_issued: "yes",
+    bridge_redirect_target_class: "reports_allowlisted",
+    ticket_ttl_seconds: REPORTS_SSO_TICKET_TTL_SECONDS,
+  });
   return NextResponse.redirect(consumeUrl, { status: 302 });
 }
