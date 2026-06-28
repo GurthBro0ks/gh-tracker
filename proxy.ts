@@ -10,8 +10,10 @@ import {
 function isPublicPath(pathname: string): boolean {
   return (
     pathname.startsWith("/login") ||
+    pathname.startsWith("/reports/sso-bridge") ||
     pathname.startsWith("/api/auth/login") ||
     pathname.startsWith("/api/auth/logout") ||
+    pathname.startsWith("/api/reports/sso-ticket/verify") ||
     pathname.startsWith("/forgot") ||
     pathname.startsWith("/reset") ||
     pathname.startsWith("/_next") ||

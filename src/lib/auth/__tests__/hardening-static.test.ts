@@ -41,7 +41,7 @@ describe("auth hardening static checks", () => {
     expect(dashboard).toContain("window.location.href = REPORTS_LOGOUT_URL");
   });
 
-  it("issues and clears the shared Habitat owner cookie for Reports SSO", () => {
+  it("keeps Habitat owner cookies scoped to Habitat auth and logout cleanup", () => {
     const cookieDomain = readFileSync(join(repoRoot, "src/lib/auth/cookie-domain.ts"), "utf8");
     const session = readFileSync(join(repoRoot, "src/lib/auth/session.ts"), "utf8");
     const loginRoute = readFileSync(join(repoRoot, "src/app/api/auth/login/route.ts"), "utf8");
@@ -67,16 +67,26 @@ describe("auth hardening static checks", () => {
     const harnessDashboard = readFileSync(join(repoRoot, "src/components/harness-dashboard.tsx"), "utf8");
     const harnessIndex = readFileSync(join(repoRoot, "src/lib/harness-session-index.ts"), "utf8");
     const bridgeRoute = readFileSync(join(repoRoot, "src/app/reports/sso-bridge/route.ts"), "utf8");
+    const ticket = readFileSync(join(repoRoot, "src/lib/auth/reports-sso-ticket.ts"), "utf8");
+    const verifyRoute = readFileSync(join(repoRoot, "src/app/api/reports/sso-ticket/verify/route.ts"), "utf8");
     expect(harnessDashboard).toContain("Mission-Control Reports");
     expect(harnessIndex).toContain('REPORTS_SSO_BRIDGE_PATH = "/reports/sso-bridge"');
     expect(harnessIndex).toContain("encodeURIComponent(target)");
     expect(harnessIndex).toContain("url.toString()");
     expect(harnessIndex).toContain("toReportsSsoBridgeUrl");
     expect(bridgeRoute).toContain("requireOwner(session)");
-    expect(bridgeRoute).toContain("response.cookies.set(SESSION_COOKIE");
-    expect(bridgeRoute).toContain("domain: getSecureSharedSessionCookieDomain");
-    expect(bridgeRoute).toContain("secure: true");
-    expect(bridgeRoute).toContain('sameSite: "lax"');
+    expect(bridgeRoute).toContain("issueReportsSsoTicket");
+    expect(bridgeRoute).toContain('new URL("/api/session/consume-sso", REPORTS_ORIGIN)');
+    expect(bridgeRoute).toContain('consumeUrl.searchParams.set("ticket"');
+    expect(bridgeRoute).toContain('consumeUrl.searchParams.set("returnTo"');
+    expect(ticket).toContain("REPORTS_SSO_TICKET_TTL_SECONDS");
+    expect(ticket).toContain("Math.min(parsed, DEFAULT_TICKET_TTL_SECONDS)");
+    expect(ticket).toContain("issuedTickets.delete(hash)");
+    expect(ticket).toContain("redeemedTickets.set(hash");
+    expect(ticket).not.toContain("console.log");
+    expect(ticket).not.toContain("console.error");
+    expect(verifyRoute).toContain("verifyReportsSsoTicket");
+    expect(verifyRoute).not.toContain("ticket:");
     expect(harnessDashboard).not.toContain('target="_blank"');
     expect(harnessDashboard).not.toContain("rel=\"noreferrer\"");
   });

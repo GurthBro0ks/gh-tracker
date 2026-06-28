@@ -18,6 +18,20 @@ describe("proxy auth route protection", () => {
     expect(response.headers.get("location")).toBeNull();
   });
 
+  it("allows the SSO bridge route to perform its own owner check", () => {
+    const request = new NextRequest("http://127.0.0.1:5055/reports/sso-bridge?returnTo=https%3A%2F%2Fharness.slimyai.xyz%2Freports");
+    const response = proxy(request);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
+  });
+
+  it("allows the server-to-server Reports SSO ticket verifier without a browser session", () => {
+    const request = new NextRequest("http://127.0.0.1:5055/api/reports/sso-ticket/verify");
+    const response = proxy(request);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
+  });
+
   it("redirects protected API route without session", () => {
     const request = new NextRequest("http://127.0.0.1:5055/api/aggregate");
     const response = proxy(request);
