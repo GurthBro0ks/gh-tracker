@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySlimyCredentials } from "@/lib/auth/bridge";
 import { setSessionCookie } from "@/lib/auth/session";
-import { getSharedSessionCookieDomain } from "../../../../lib/auth/cookie-domain";
+import { getSecureSharedSessionCookieDomain } from "../../../../lib/auth/cookie-domain";
 
 export const dynamic = "force-dynamic";
 
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
 
     const isSecure = request.headers.get("x-forwarded-proto") === "https";
     const sharedDomain = isSecure
-      ? getSharedSessionCookieDomain(request.headers.get("x-forwarded-host") || request.headers.get("host"))
+      ? getSecureSharedSessionCookieDomain(request.headers.get("x-forwarded-host") || request.headers.get("host"))
       : null;
     await setSessionCookie(session, isSecure, sharedDomain);
 

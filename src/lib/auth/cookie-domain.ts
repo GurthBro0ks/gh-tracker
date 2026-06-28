@@ -1,5 +1,6 @@
 export const SHARED_SESSION_DOMAIN = ".slimyai.xyz";
 export const SESSION_COOKIE = "habitat_session";
+export const REPORT_SESSION_COOKIE = "slimy_session";
 export const SESSION_MAX_AGE_SECONDS = parseInt(
   process.env.HABITAT_SESSION_MAX_AGE_SECONDS || "86400",
   10
@@ -11,4 +12,8 @@ export function getSharedSessionCookieDomain(host: string | null): string | null
     return SHARED_SESSION_DOMAIN;
   }
   return null;
+}
+
+export function getSecureSharedSessionCookieDomain(host: string | null): string {
+  return getSharedSessionCookieDomain(host) || SHARED_SESSION_DOMAIN;
 }

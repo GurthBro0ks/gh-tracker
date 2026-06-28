@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import {
+  REPORT_SESSION_COOKIE,
   SESSION_COOKIE,
   SESSION_MAX_AGE_SECONDS,
   SHARED_SESSION_DOMAIN,
@@ -7,7 +8,7 @@ import {
 import { createSessionToken, verifySessionToken, type HabitatSession } from "./token";
 
 export { createSessionToken, verifySessionToken, type HabitatSession } from "./token";
-export { SESSION_COOKIE, SESSION_MAX_AGE_SECONDS, SHARED_SESSION_DOMAIN };
+export { REPORT_SESSION_COOKIE, SESSION_COOKIE, SESSION_MAX_AGE_SECONDS, SHARED_SESSION_DOMAIN };
 
 export async function getSession(): Promise<HabitatSession | null> {
   try {
@@ -57,12 +58,14 @@ export async function clearSessionCookie(
     expires: new Date(0),
     maxAge: 0,
   } as const;
-  cookieStore.set(SESSION_COOKIE, "", options);
-  if (sharedDomain) {
-    cookieStore.set(SESSION_COOKIE, "", {
-      ...options,
-      domain: sharedDomain,
-    });
+  for (const name of [SESSION_COOKIE, REPORT_SESSION_COOKIE]) {
+    cookieStore.set(name, "", options);
+    if (sharedDomain) {
+      cookieStore.set(name, "", {
+        ...options,
+        domain: sharedDomain,
+      });
+    }
   }
 }
 

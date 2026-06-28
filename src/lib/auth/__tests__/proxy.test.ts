@@ -54,6 +54,34 @@ describe("proxy auth route protection", () => {
     expect(response.headers.get("location")).toBeNull();
   });
 
+  it("refreshes the owner session on the shared parent domain for secure proxied requests", () => {
+    const now = Math.floor(Date.now() / 1000);
+    const token = createSessionToken({
+      sub: "owner-1",
+      email: "owner@example.com",
+      role: "owner",
+      iat: now,
+      exp: now + 3600,
+    });
+    const request = new NextRequest("http://127.0.0.1:5055/", {
+      headers: {
+        cookie: `habitat_session=${token}`,
+        "x-forwarded-proto": "https",
+      },
+    });
+
+    const response = proxy(request);
+    const setCookie = response.headers.get("set-cookie") || "";
+    expect(response.status).toBe(200);
+    expect(setCookie).toContain("habitat_session=");
+    expect(setCookie).toContain("Domain=.slimyai.xyz");
+    expect(setCookie).toContain("Path=/");
+    expect(setCookie).toContain("Max-Age=");
+    expect(setCookie).toContain("HttpOnly");
+    expect(setCookie).toContain("Secure");
+    expect(setCookie).toMatch(/SameSite=Lax/i);
+  });
+
   it("redirects when session is expired", () => {
     const now = Math.floor(Date.now() / 1000);
     const token = createSessionToken({

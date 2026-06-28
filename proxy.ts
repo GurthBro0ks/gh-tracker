@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { verifySessionToken } from "./src/lib/auth/token";
 import {
-  getSharedSessionCookieDomain,
+  getSecureSharedSessionCookieDomain,
   SESSION_COOKIE,
   SESSION_MAX_AGE_SECONDS,
 } from "./src/lib/auth/cookie-domain";
@@ -38,7 +38,7 @@ export function proxy(request: NextRequest) {
   const response = NextResponse.next();
   const isSecure = request.headers.get("x-forwarded-proto") === "https";
   const sharedDomain = isSecure
-    ? getSharedSessionCookieDomain(request.headers.get("x-forwarded-host") || request.headers.get("host"))
+    ? getSecureSharedSessionCookieDomain(request.headers.get("x-forwarded-host") || request.headers.get("host"))
     : null;
   if (sharedDomain && token) {
     response.cookies.set(SESSION_COOKIE, token, {

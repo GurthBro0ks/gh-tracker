@@ -34,6 +34,30 @@ describe("POST /api/auth/login", () => {
     expect(setSessionCookie).toHaveBeenCalledTimes(1);
   });
 
+  it("uses the shared parent domain for secure proxied Habitat login even if proxy host is internal", async () => {
+    verifySlimyCredentials.mockResolvedValue({
+      ok: true,
+      user: { id: "u1", email: "owner@example.com", username: "owner", role: "owner" },
+    });
+    const { POST } = await import("../login/route");
+    const request = new NextRequest("http://127.0.0.1:5055/api/auth/login", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-forwarded-proto": "https",
+      },
+      body: JSON.stringify({ email: "owner@example.com", password: "mock-password" }),
+    });
+
+    const response = await POST(request);
+    expect(response.status).toBe(200);
+    expect(setSessionCookie).toHaveBeenCalledWith(
+      expect.objectContaining({ email: "owner@example.com", role: "owner" }),
+      true,
+      ".slimyai.xyz",
+    );
+  });
+
   it("denies non-owner from Slimy auth bridge", async () => {
     verifySlimyCredentials.mockResolvedValue({
       ok: true,

@@ -49,10 +49,13 @@ describe("auth hardening static checks", () => {
     const proxyFile = readFileSync(join(repoRoot, "proxy.ts"), "utf8");
 
     expect(cookieDomain).toContain('SESSION_COOKIE = "habitat_session"');
+    expect(cookieDomain).toContain('REPORT_SESSION_COOKIE = "slimy_session"');
     expect(cookieDomain).toContain('SHARED_SESSION_DOMAIN = ".slimyai.xyz"');
+    expect(cookieDomain).toContain("getSecureSharedSessionCookieDomain");
     expect(session).toContain("domain: sharedDomain");
-    expect(loginRoute).toContain("getSharedSessionCookieDomain");
-    expect(logoutRoute).toContain("getSharedSessionCookieDomain");
+    expect(session).toContain("REPORT_SESSION_COOKIE");
+    expect(loginRoute).toContain("getSecureSharedSessionCookieDomain");
+    expect(logoutRoute).toContain("getSecureSharedSessionCookieDomain");
     expect(logoutRoute).toContain("clearSessionCookie(isSecure, sharedDomain)");
     expect(proxyFile).toContain("verifySessionToken(token)");
     expect(proxyFile).toContain("response.cookies.set(SESSION_COOKIE, token");
