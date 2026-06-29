@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import HarnessDashboard from "@/components/harness-dashboard";
 import { getSession, requireOwner } from "@/lib/auth/session";
+import { loadHarnessCleanroomStatus } from "@/lib/harness-cleanroom-status";
 import { loadHarnessSessionIndex } from "@/lib/harness-session-index";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +19,10 @@ export default async function HarnessPage() {
     redirect("/login");
   }
 
-  const index = await loadHarnessSessionIndex();
+  const [index, cleanroomStatus] = await Promise.all([
+    loadHarnessSessionIndex(),
+    loadHarnessCleanroomStatus(),
+  ]);
 
-  return <HarnessDashboard index={index} session={{ email: session.email, role: session.role }} />;
+  return <HarnessDashboard index={index} cleanroomStatus={cleanroomStatus} session={{ email: session.email, role: session.role }} />;
 }
