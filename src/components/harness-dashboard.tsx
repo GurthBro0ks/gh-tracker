@@ -1,9 +1,11 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import type { CleanroomGoalView, CleanroomProofView, CleanroomStatusView } from "@/lib/harness-cleanroom-status";
 import type { HarnessSessionIndexView, HarnessSessionView } from "@/lib/harness-session-index";
 
 type HarnessDashboardProps = {
   index: HarnessSessionIndexView;
+  cleanroomStatus?: CleanroomStatusView;
   session: { email: string; role: string };
 };
 
@@ -15,7 +17,31 @@ const statusTone: Record<string, string> = {
   schema_mismatch: "border-rose-300/55 bg-rose-400/10 text-rose-100",
 };
 
-export default function HarnessDashboard({ index, session }: HarnessDashboardProps) {
+const missingCleanroomStatus: CleanroomStatusView = {
+  proofIndex: {
+    status: "missing",
+    dataSource: "unavailable",
+    message: "Clean-room proof index was not supplied to this dashboard render.",
+    generatedAt: null,
+    fileSizeBytes: null,
+    proofCount: 0,
+    proofs: [],
+    latestProof: null,
+  },
+  goalRecord: {
+    status: "missing",
+    dataSource: "unavailable",
+    message: "Clean-room goal record was not supplied to this dashboard render.",
+    fileSizeBytes: null,
+    eventCount: 0,
+    latestGoals: [],
+    activeGoal: null,
+  },
+};
+
+export default function HarnessDashboard({ index, cleanroomStatus, session }: HarnessDashboardProps) {
+  const resolvedCleanroomStatus = cleanroomStatus ?? missingCleanroomStatus;
+
   return (
     <main className="dashboard-shell mx-auto w-full max-w-[1500px] px-3 pb-8 sm:px-4 md:px-8" style={{ paddingTop: "max(1rem, env(safe-area-inset-top))", paddingBottom: "max(5.5rem, calc(env(safe-area-inset-bottom) + 2rem))" }}>
       <header className="neon-panel mb-4 rounded-xl px-3 py-3 sm:mb-6 sm:px-5 sm:py-4">
@@ -73,6 +99,11 @@ export default function HarnessDashboard({ index, session }: HarnessDashboardPro
         <Metric label="Fail/error" value={`${index.summary.failCount}`} danger />
         <Metric label="Blocked" value={`${index.summary.blockedCount}`} danger />
         <Metric label="Manual QA pending" value={`${index.summary.manualQaPendingCount}`} warning />
+      </section>
+
+      <section className="mb-4 grid gap-4 lg:grid-cols-2">
+        <CleanroomGoalPanel goalRecord={resolvedCleanroomStatus.goalRecord} />
+        <CleanroomProofPanel proofIndex={resolvedCleanroomStatus.proofIndex} />
       </section>
 
       <section className="mb-4 grid gap-4 lg:grid-cols-2">
@@ -141,6 +172,90 @@ export default function HarnessDashboard({ index, session }: HarnessDashboardPro
         </div>
       </Panel>
     </main>
+  );
+}
+
+function CleanroomGoalPanel({ goalRecord }: { goalRecord: CleanroomStatusView["goalRecord"] }) {
+  const activeGoal = goalRecord.activeGoal;
+  return (
+    <Panel title="Active Goal Record">
+      <div className={`mb-3 rounded border p-2 text-xs ${statusTone[goalRecord.status] ?? statusTone.missing}`}>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span>{goalRecord.message}</span>
+          <span className="rounded border border-white/20 bg-black/25 px-2 py-1 uppercase tracking-[0.12em]">{goalRecord.status.replace("_", " ")}</span>
+        </div>
+      </div>
+      <div className="grid gap-2 text-[10px] sm:grid-cols-2 sm:text-xs">
+        <Status label="Goal record" value={goalRecord.dataSource} mono />
+        <Status label="Events" value={`${goalRecord.eventCount}`} />
+        <Status label="Active goal" value={activeGoal?.goalId ?? "none"} />
+        <Status label="State" value={activeGoal?.state ?? "unavailable"} />
+      </div>
+      {activeGoal ? <GoalDetails goal={activeGoal} /> : <EmptyState text="No active clean-room goal is present in the generated record." />}
+    </Panel>
+  );
+}
+
+function CleanroomProofPanel({ proofIndex }: { proofIndex: CleanroomStatusView["proofIndex"] }) {
+  const latestProof = proofIndex.latestProof;
+  return (
+    <Panel title="Latest Proof Directory">
+      <div className={`mb-3 rounded border p-2 text-xs ${statusTone[proofIndex.status] ?? statusTone.missing}`}>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span>{proofIndex.message}</span>
+          <span className="rounded border border-white/20 bg-black/25 px-2 py-1 uppercase tracking-[0.12em]">{proofIndex.status.replace("_", " ")}</span>
+        </div>
+      </div>
+      <div className="grid gap-2 text-[10px] sm:grid-cols-2 sm:text-xs">
+        <Status label="Proof index" value={proofIndex.dataSource} mono />
+        <Status label="Generated" value={proofIndex.generatedAt ? formatDateTime(proofIndex.generatedAt) : "unavailable"} />
+        <Status label="Proofs" value={`${proofIndex.proofCount}`} />
+        <Status label="Latest result" value={latestProof?.result ?? "unavailable"} />
+      </div>
+      {latestProof ? <ProofDetails proof={latestProof} /> : <EmptyState text="No clean-room proof rows are present in the generated index." />}
+    </Panel>
+  );
+}
+
+function GoalDetails({ goal }: { goal: CleanroomGoalView }) {
+  return (
+    <div className="mt-3 grid gap-1.5 text-[10px] text-violet-100 sm:grid-cols-2 sm:text-xs">
+      <Line label="Phase" value={goal.phase} />
+      <Line label="Reason" value={goal.reason} />
+      <Line label="Manual QA" value={goal.manualQaStatus} />
+      <Line label="Blocker" value={goal.blocker} />
+      <Line label="Target machine" value={goal.targetMachine} />
+      <Line label="Target repo" value={goal.targetRepo} />
+      <Line label="Proof dir" value={goal.proofDir} mono />
+      <Line label="Updated" value={formatDateTime(goal.timestamp)} />
+      {goal.reportUrl ? (
+        <a className="rounded border border-lime-300/35 bg-lime-400/10 px-2 py-1 text-lime-100" href={goal.reportUrl}>
+          Goal report
+        </a>
+      ) : null}
+    </div>
+  );
+}
+
+function ProofDetails({ proof }: { proof: CleanroomProofView }) {
+  return (
+    <div className="mt-3 grid gap-1.5 text-[10px] text-violet-100 sm:grid-cols-2 sm:text-xs">
+      <Line label="Phase" value={proof.phase} />
+      <Line label="Manual QA" value={proof.manualQaStatus} />
+      <Line label="Target machine" value={proof.targetMachine} />
+      <Line label="Target repo" value={proof.targetRepo} />
+      <Line label="Proof dir" value={proof.proofDir} mono />
+      <Line label="Validation" value={proof.validationSummary} />
+      <Line label="Discord" value={proof.discordStatus} />
+      <Line label="Pushed" value={formatBoolean(proof.pushed)} />
+      <Line label="Commit" value={proof.commitSha} />
+      <Line label="Risk flags" value={proof.riskFlags.length > 0 ? proof.riskFlags.join(", ") : "none"} />
+      {proof.reportUrl ? (
+        <a className="rounded border border-lime-300/35 bg-lime-400/10 px-2 py-1 text-lime-100" href={proof.reportUrl}>
+          Proof report
+        </a>
+      ) : null}
+    </div>
   );
 }
 
