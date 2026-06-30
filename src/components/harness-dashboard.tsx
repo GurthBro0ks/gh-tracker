@@ -5,7 +5,7 @@ import type { HarnessSessionIndexView, HarnessSessionView } from "@/lib/harness-
 
 type HarnessDashboardProps = {
   index: HarnessSessionIndexView;
-  cleanroomStatus: CleanroomStatusView;
+  cleanroomStatus?: CleanroomStatusView;
   session: { email: string; role: string };
 };
 
@@ -17,7 +17,31 @@ const statusTone: Record<string, string> = {
   schema_mismatch: "border-rose-300/55 bg-rose-400/10 text-rose-100",
 };
 
+const missingCleanroomStatus: CleanroomStatusView = {
+  proofIndex: {
+    status: "missing",
+    dataSource: "unavailable",
+    message: "Clean-room proof index was not supplied to this dashboard render.",
+    generatedAt: null,
+    fileSizeBytes: null,
+    proofCount: 0,
+    proofs: [],
+    latestProof: null,
+  },
+  goalRecord: {
+    status: "missing",
+    dataSource: "unavailable",
+    message: "Clean-room goal record was not supplied to this dashboard render.",
+    fileSizeBytes: null,
+    eventCount: 0,
+    latestGoals: [],
+    activeGoal: null,
+  },
+};
+
 export default function HarnessDashboard({ index, cleanroomStatus, session }: HarnessDashboardProps) {
+  const resolvedCleanroomStatus = cleanroomStatus ?? missingCleanroomStatus;
+
   return (
     <main className="dashboard-shell mx-auto w-full max-w-[1500px] px-3 pb-8 sm:px-4 md:px-8" style={{ paddingTop: "max(1rem, env(safe-area-inset-top))", paddingBottom: "max(5.5rem, calc(env(safe-area-inset-bottom) + 2rem))" }}>
       <header className="neon-panel mb-4 rounded-xl px-3 py-3 sm:mb-6 sm:px-5 sm:py-4">
@@ -78,8 +102,8 @@ export default function HarnessDashboard({ index, cleanroomStatus, session }: Ha
       </section>
 
       <section className="mb-4 grid gap-4 lg:grid-cols-2">
-        <CleanroomGoalPanel goalRecord={cleanroomStatus.goalRecord} />
-        <CleanroomProofPanel proofIndex={cleanroomStatus.proofIndex} />
+        <CleanroomGoalPanel goalRecord={resolvedCleanroomStatus.goalRecord} />
+        <CleanroomProofPanel proofIndex={resolvedCleanroomStatus.proofIndex} />
       </section>
 
       <section className="mb-4 grid gap-4 lg:grid-cols-2">
@@ -205,7 +229,7 @@ function GoalDetails({ goal }: { goal: CleanroomGoalView }) {
       <Line label="Proof dir" value={goal.proofDir} mono />
       <Line label="Updated" value={formatDateTime(goal.timestamp)} />
       {goal.reportUrl ? (
-        <a className="rounded border border-lime-300/35 bg-lime-400/10 px-2 py-1 text-lime-100" href={goal.reportUrl} target="_blank" rel="noreferrer">
+        <a className="rounded border border-lime-300/35 bg-lime-400/10 px-2 py-1 text-lime-100" href={goal.reportUrl}>
           Goal report
         </a>
       ) : null}
@@ -227,7 +251,7 @@ function ProofDetails({ proof }: { proof: CleanroomProofView }) {
       <Line label="Commit" value={proof.commitSha} />
       <Line label="Risk flags" value={proof.riskFlags.length > 0 ? proof.riskFlags.join(", ") : "none"} />
       {proof.reportUrl ? (
-        <a className="rounded border border-lime-300/35 bg-lime-400/10 px-2 py-1 text-lime-100" href={proof.reportUrl} target="_blank" rel="noreferrer">
+        <a className="rounded border border-lime-300/35 bg-lime-400/10 px-2 py-1 text-lime-100" href={proof.reportUrl}>
           Proof report
         </a>
       ) : null}
