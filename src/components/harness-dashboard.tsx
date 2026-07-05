@@ -57,6 +57,9 @@ export default function HarnessDashboard({ index, cleanroomStatus, session }: Ha
             <Link className="rounded border border-cyan-300/45 bg-cyan-400/10 px-3 py-2 text-[10px] uppercase tracking-[0.12em] text-cyan-100 sm:text-xs" href="/">
               Repo Dashboard
             </Link>
+            <Link className="rounded border border-amber-300/45 bg-amber-400/10 px-3 py-2 text-[10px] uppercase tracking-[0.12em] text-amber-100 sm:text-xs" href="/harness/loop">
+              Loop Status
+            </Link>
             <a className="rounded border border-lime-300/45 bg-lime-400/10 px-3 py-2 text-[10px] uppercase tracking-[0.12em] text-lime-100 sm:text-xs" href={index.canonicalReportsUrl}>
               Mission-Control Reports
             </a>
