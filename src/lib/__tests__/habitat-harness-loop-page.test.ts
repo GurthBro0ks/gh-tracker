@@ -94,6 +94,7 @@ describe("Habitat /harness/loop fixture-only page", () => {
     expect(html).toContain("Sample ready-for-owner-QA item");
     expect(html).toContain("Sample blocked reason for fixture-only preview.");
     expect(html).toContain("Shell execution is not present in this route.");
+    expect(html).not.toContain("Refreshing this snapshot is manual-only");
   });
 
   it("renders snapshot mode when a valid snapshot exists", async () => {
@@ -110,9 +111,10 @@ describe("Habitat /harness/loop fixture-only page", () => {
     expect(html).toContain("SNAPSHOT MODE");
     expect(html).not.toContain("FIXTURE ONLY");
     expect(html).toContain("Sanitized loop-status snapshot data is active.");
+    expect(html).not.toContain("Refreshing this snapshot is manual-only");
   });
 
-  it("renders a stale snapshot warning", async () => {
+  it("renders a stale snapshot warning with a manual-refresh runbook pointer", async () => {
     loadHabitatLoopStatusSnapshot.mockResolvedValue(makeSnapshotResult({
       mode: "snapshot",
       snapshotState: "stale",
@@ -124,6 +126,8 @@ describe("Habitat /harness/loop fixture-only page", () => {
 
     expect(html).toContain("STALE SNAPSHOT");
     expect(html).toContain("Sanitized loop-status snapshot data is stale but still safe to display.");
+    expect(html).toContain("Refreshing this snapshot is manual-only");
+    expect(html).toContain("manual-loop-status-snapshot-workflow.md");
   });
 
   it("renders a safe invalid snapshot failure", async () => {
@@ -137,6 +141,7 @@ describe("Habitat /harness/loop fixture-only page", () => {
 
     expect(html).toContain("SNAPSHOT INVALID");
     expect(html).toContain("Fixture fallback is active.");
+    expect(html).not.toContain("Refreshing this snapshot is manual-only");
   });
 
   it("renders an empty state when there are no items", async () => {

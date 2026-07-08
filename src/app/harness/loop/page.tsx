@@ -132,6 +132,16 @@ export default async function HabitatLoopStatusPage() {
           <p>{snapshot.stateMessage}</p>
           <p>Snapshot path: <span className="inline-block max-w-full font-mono text-cyan-200 break-words [overflow-wrap:anywhere]">{snapshot.snapshotPath}</span></p>
           {snapshot.generatedAt && <p>Generated: {snapshot.generatedAt}</p>}
+          {snapshot.snapshotState === "stale" && (
+            <p>
+              Refreshing this snapshot is manual-only and requires separate live operator
+              approval; see{" "}
+              <span className="inline-block max-w-full font-mono text-cyan-200 break-words [overflow-wrap:anywhere]">
+                docs/manual-loop-status-snapshot-workflow.md
+              </span>{" "}
+              in slimy-harness.
+            </p>
+          )}
         </Card>
 
         <Card title="Summary">
