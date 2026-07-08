@@ -134,8 +134,8 @@ export default async function HabitatLoopStatusPage() {
           {snapshot.generatedAt && <p>Generated: {snapshot.generatedAt}</p>}
           {snapshot.snapshotState === "stale" && (
             <p>
-              Refreshing this snapshot is manual-only and requires separate live operator
-              approval; see{" "}
+              Stale data is expected until a separate live-approved manual refresh occurs
+              through the approved loop-status snapshot workflow in{" "}
               <span className="inline-block max-w-full font-mono text-cyan-200 break-words [overflow-wrap:anywhere]">
                 docs/manual-loop-status-snapshot-workflow.md
               </span>{" "}

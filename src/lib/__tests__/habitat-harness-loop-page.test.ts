@@ -94,7 +94,7 @@ describe("Habitat /harness/loop fixture-only page", () => {
     expect(html).toContain("Sample ready-for-owner-QA item");
     expect(html).toContain("Sample blocked reason for fixture-only preview.");
     expect(html).toContain("Shell execution is not present in this route.");
-    expect(html).not.toContain("Refreshing this snapshot is manual-only");
+    expect(html).not.toContain("Stale data is expected until");
   });
 
   it("renders snapshot mode when a valid snapshot exists", async () => {
@@ -111,7 +111,7 @@ describe("Habitat /harness/loop fixture-only page", () => {
     expect(html).toContain("SNAPSHOT MODE");
     expect(html).not.toContain("FIXTURE ONLY");
     expect(html).toContain("Sanitized loop-status snapshot data is active.");
-    expect(html).not.toContain("Refreshing this snapshot is manual-only");
+    expect(html).not.toContain("Stale data is expected until");
   });
 
   it("renders a stale snapshot warning with a manual-refresh runbook pointer", async () => {
@@ -126,8 +126,11 @@ describe("Habitat /harness/loop fixture-only page", () => {
 
     expect(html).toContain("STALE SNAPSHOT");
     expect(html).toContain("Sanitized loop-status snapshot data is stale but still safe to display.");
-    expect(html).toContain("Refreshing this snapshot is manual-only");
+    expect(html).toContain("Stale data is expected until a separate live-approved manual refresh occurs");
+    expect(html).toContain("approved loop-status snapshot workflow");
     expect(html).toContain("manual-loop-status-snapshot-workflow.md");
+    expect(html).not.toContain("automatic refresh");
+    expect(html).not.toContain("Refresh now");
   });
 
   it("renders a safe invalid snapshot failure", async () => {
@@ -141,7 +144,7 @@ describe("Habitat /harness/loop fixture-only page", () => {
 
     expect(html).toContain("SNAPSHOT INVALID");
     expect(html).toContain("Fixture fallback is active.");
-    expect(html).not.toContain("Refreshing this snapshot is manual-only");
+    expect(html).not.toContain("Stale data is expected until");
   });
 
   it("renders an empty state when there are no items", async () => {
@@ -179,8 +182,12 @@ describe("Habitat /harness/loop fixture-only page", () => {
     expect(pageSource).not.toContain("Reject</");
     expect(pageSource).not.toContain("Re-run</");
     expect(pageSource).not.toContain("Rerun</");
+    expect(pageSource).not.toContain("Refresh now");
     expect(pageSource).not.toContain("Delete</");
     expect(pageSource).not.toContain("Apply</");
+    expect(pageSource).not.toContain("systemctl");
+    expect(pageSource).not.toContain("cron");
+    expect(pageSource).not.toContain("webhook");
   });
 
   it("introduces no shell execution imports, no request-time shell, and no disallowed raw fields", () => {
