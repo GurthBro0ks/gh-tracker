@@ -225,7 +225,7 @@ describe("read-only loader", () => {
     expect(existsSync(RUN_PROJECTION_ROOT)).toBe(productionRootExisted);
   });
 
-  it("does not create or read the production root in RW-0 tests", async () => {
+  it("does not create or read the production root in fixture-mode tests", async () => {
     expect(RUN_PROJECTION_ROOT).toBe("/home/slimy/harness-logs/run-projections/");
     expect(existsSync(RUN_PROJECTION_ROOT)).toBe(false);
     const root = await makeTempRoot();
@@ -237,10 +237,16 @@ describe("read-only loader", () => {
     expect(existsSync(RUN_PROJECTION_ROOT)).toBe(false);
   });
 
-  it("has no route usage, deep validator call, network path, or notification path", () => {
+  it("has no production route usage, deep validator call, network path, or notification path", () => {
     const source = readFileSync(join(repoRoot, "src/lib/run-projection.ts"), "utf8");
     const fixtureSource = readFileSync(join(repoRoot, "src/lib/run-projection-fixtures.ts"), "utf8");
-    expect(existsSync(join(repoRoot, "src/app/runs"))).toBe(false);
+    const routeSource = [
+      "src/app/runs/page.tsx",
+      "src/app/runs/[runId]/page.tsx",
+      "src/app/runs/_lib/fixtures.ts",
+    ].map((path) => readFileSync(join(repoRoot, path), "utf8")).join("\n");
+    expect(routeSource).not.toContain("loadRunProjection");
+    expect(routeSource).not.toContain("RUN_PROJECTION_ROOT");
     for (const forbidden of [
       "acceptance-ledger current",
       "acceptance_ledger",
