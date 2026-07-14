@@ -4,17 +4,29 @@ const MIN_PRODUCTION_SECRET_LENGTH = 32;
 const TEST_ONLY_SECRET = "gh-tracker-habitat-session-test-only-seed";
 
 export function resolveSessionSecret(
-  env: NodeJS.ProcessEnv = process.env,
+  env: Record<string, string | undefined> = process.env,
 ): string {
-  const dedicated = env.HABITAT_SESSION_SECRET;
+  const dedicated = env.HABITAT_SESSION_SECRET?.trim();
 
-  if (env.NODE_ENV === "production") {
-    if (!dedicated || dedicated.trim().length === 0) {
+  if (env.NODE_ENV === "test") {
+    return dedicated || TEST_ONLY_SECRET;
+  }
+
+  if (!dedicated) {
+    if (env.NODE_ENV === "production") {
       throw new Error(
         "HABITAT_SESSION_SECRET is required in production and must not be blank. " +
           "Refusing to sign or verify session tokens with an insecure fallback.",
       );
     }
+
+    throw new Error(
+      'HABITAT_SESSION_SECRET is required unless NODE_ENV is exactly "test" and must not be blank. ' +
+        "Refusing to sign or verify session tokens with an insecure fallback.",
+    );
+  }
+
+  if (env.NODE_ENV === "production") {
     if (dedicated.length < MIN_PRODUCTION_SECRET_LENGTH) {
       throw new Error(
         `HABITAT_SESSION_SECRET must be at least ${MIN_PRODUCTION_SECRET_LENGTH} characters ` +
@@ -22,14 +34,9 @@ export function resolveSessionSecret(
           "with a weak secret.",
       );
     }
-    return dedicated;
   }
 
-  // Non-production (test/development): use a dedicated secret if one is set,
-  // otherwise a fixed, clearly-labeled test-only seed. Never reachable when
-  // NODE_ENV=production -- there is no machine-identity or static-default
-  // fallback left in that path.
-  return dedicated && dedicated.trim().length > 0 ? dedicated : TEST_ONLY_SECRET;
+  return dedicated;
 }
 
 // Resolved lazily, on first actual sign/verify call, not at module import
