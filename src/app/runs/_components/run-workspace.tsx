@@ -2,7 +2,6 @@ import Link from "next/link";
 import { toReportsSsoBridgeUrl } from "../../../lib/harness-session-index";
 import type { RunProjection } from "../../../lib/run-projection";
 import {
-  INVALID_PROJECTION_FIXTURE_ID,
   buildContinuationText,
   type InvalidRunWorkspaceFixture,
   type RunWorkspaceFixture,
@@ -143,10 +142,6 @@ export function RunWorkspaceIndex({ fixtures }: { fixtures: RunWorkspaceFixture[
           );
         })}
 
-        <Link href={`/runs/${INVALID_PROJECTION_FIXTURE_ID}`} className="block min-h-11 rounded-xl border border-amber-300/35 bg-amber-400/10 p-4 text-amber-100 hover:bg-amber-400/15">
-          <h2 className="font-sans text-sm uppercase tracking-[0.08em]">Invalid projection fixture</h2>
-          <p className="mt-1 text-xs">Exercises the fail-closed schema refusal view without exposing raw invalid input.</p>
-        </Link>
       </section>
     </main>
   );
@@ -169,6 +164,12 @@ export function RunWorkspaceDetail({ fixture }: { fixture: RunWorkspaceFixture }
         </div>
         <h1 className="mt-2 font-sans text-xl uppercase tracking-[0.06em] text-white break-words [overflow-wrap:anywhere] sm:text-3xl">{projection.run.phase}</h1>
         <div className="mt-2"><CopyControl compact label={projection.run.run_id} value={projection.run.run_id} /></div>
+        <div aria-label="Run subject and repository summary" className="mt-3 min-w-0 rounded-lg border border-white/10 bg-black/25 px-3 py-2">
+          <p className="text-[10px] uppercase tracking-[0.14em] text-violet-300">Subject</p>
+          <p className="mt-1 text-sm text-violet-100 break-words [overflow-wrap:anywhere]">
+            <span className="text-cyan-200">{projection.run.subject_type}</span> · {projection.run.subject_id}
+          </p>
+        </div>
 
         <div className="mt-4"><FixtureBanner projection={projection} /></div>
         <div className="mt-4"><AxisGrid projection={projection} /></div>

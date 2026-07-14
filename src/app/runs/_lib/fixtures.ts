@@ -12,6 +12,7 @@ import {
 
 export const INVALID_PROJECTION_FIXTURE_ID =
   "run_20260714T140000000006Z_00000000000000000000000000000006";
+const CANONICAL_RUN_ID_PATTERN = /^run_[0-9]{8}T[0-9]{12}Z_[0-9a-f]{32}$/;
 
 const FIXTURE_ORDER: RunProjectionFixtureName[] = [
   "completed_with_continuation",
@@ -52,6 +53,10 @@ function asWorkspaceFixture(projection: RunProjection, nowMs = Date.now()): RunW
     freshnessLabel: freshness.freshnessLabel,
     terminal: freshness.terminal,
   };
+}
+
+export function isCanonicalRunId(runId: string): boolean {
+  return CANONICAL_RUN_ID_PATTERN.test(runId);
 }
 
 export function listRunWorkspaceFixtures(nowMs = Date.now()): RunWorkspaceFixture[] {

@@ -111,6 +111,13 @@ describe("run-projection.v1 schema and fixtures", () => {
     }
   });
 
+  it("keeps one safe synthetic route-backed report link in fixture parity", () => {
+    expect(RUN_PROJECTION_FIXTURES.completed_owner_qa_pending.links.report_url).toBe(
+      "https://harness.slimyai.xyz/reports/sessions/report-fixture-run-workspace-rw1.json",
+    );
+    expect(RUN_PROJECTION_FIXTURES.active.links.report_url).toBeNull();
+  });
+
   it("loads the synthetic continuation safely with non-transitive authorization", () => {
     const parsed = parseRunProjection(completedWithContinuationRunProjectionFixture);
     expect(parsed.continuation).not.toBeNull();

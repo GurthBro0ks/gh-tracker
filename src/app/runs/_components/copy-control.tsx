@@ -11,15 +11,16 @@ export function CopyControl({
   value: string;
   compact?: boolean;
 }) {
-  const [copied, setCopied] = useState(false);
+  const [status, setStatus] = useState<"idle" | "copied" | "failed">("idle");
 
   async function copy() {
+    setStatus("idle");
     try {
       await navigator.clipboard.writeText(value);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1600);
+      setStatus("copied");
+      window.setTimeout(() => setStatus("idle"), 1600);
     } catch {
-      setCopied(false);
+      setStatus("failed");
     }
   }
 
@@ -34,7 +35,7 @@ export function CopyControl({
       }`}
       aria-live="polite"
     >
-      {copied ? "Copied" : label}
+      {status === "copied" ? "Copied" : status === "failed" ? "Copy failed" : label}
     </button>
   );
 }

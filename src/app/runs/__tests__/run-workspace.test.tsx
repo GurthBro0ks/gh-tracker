@@ -19,8 +19,17 @@ import {
 
 const getSession = vi.fn();
 const requireOwner = vi.fn();
+const notFound = vi.hoisted(() =>
+  vi.fn((): never => {
+    throw new Error("NEXT_NOT_FOUND");
+  }),
+);
 
 vi.mock("@/lib/auth/session", () => ({ getSession, requireOwner }));
+vi.mock("next/navigation", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next/navigation")>()),
+  notFound,
+}));
 
 const ownerSession = {
   sub: "owner-1",
@@ -46,7 +55,8 @@ describe("fixture-only Run Workspace", () => {
     expect(html).toContain("Latest synthetic run-projection fixtures");
     expect(html).toContain("reads no production run data");
     expect(html).toContain("5 of 50");
-    expect(html).toContain("Invalid projection fixture");
+    expect(html).not.toContain("Invalid projection fixture");
+    expect(html).not.toContain(INVALID_PROJECTION_FIXTURE_ID);
     for (const projection of Object.values(RUN_PROJECTION_FIXTURES)) {
       expect(html).toContain(projection.run.run_id);
       expect(html).toContain(projection.run.phase);
@@ -86,7 +96,11 @@ describe("fixture-only Run Workspace", () => {
       expect(html).toContain("Continuation handoff");
       expect(html).toContain("Raw JSON");
       expect(html).toContain("Sanitized run-projection.v1 fixture only");
-      expect(html).toContain("Permanent report not yet available");
+      if (projection.links.report_url) {
+        expect(html).toContain("Permanent report");
+      } else {
+        expect(html).toContain("Permanent report not yet available");
+      }
     },
   );
 
@@ -113,14 +127,14 @@ describe("fixture-only Run Workspace", () => {
       Date.parse("2026-07-14T14:05:00Z"),
     );
     if (fixture.kind !== "valid") throw new Error("expected valid fixture");
-    const withReport = structuredClone(fixture);
-    withReport.projection.links.report_url =
-      "https://harness.slimyai.xyz/reports/sessions/synthetic-rw1-report.json";
-    const html = renderToStaticMarkup(<RunWorkspaceDetail fixture={withReport} />);
+    const html = renderToStaticMarkup(<RunWorkspaceDetail fixture={fixture} />);
 
+    expect(fixture.projection.links.report_url).toBe(
+      "https://harness.slimyai.xyz/reports/sessions/report-fixture-run-workspace-rw1.json",
+    );
     expect(html).toContain("Permanent report");
     expect(html).toContain(
-      "/reports/sso-bridge?returnTo=https%3A%2F%2Fharness.slimyai.xyz%2Freports%2Fsessions%2Fsynthetic-rw1-report.json",
+      "/reports/sso-bridge?returnTo=https%3A%2F%2Fharness.slimyai.xyz%2Freports%2Fsessions%2Freport-fixture-run-workspace-rw1.json",
     );
     expect(html).not.toContain('href="https://harness.slimyai.xyz/reports/sessions');
   });
@@ -176,6 +190,34 @@ describe("fixture-only Run Workspace", () => {
 
     await expect(RunsPage()).rejects.toBeTruthy();
     await expect(RunDetailPage({ params: Promise.resolve({ runId: RUN_PROJECTION_FIXTURES.active.run.run_id }) })).rejects.toBeTruthy();
+  });
+
+  it.each([
+    "not-a-canonical-run-id",
+    "run_20260714T235959999999Z_ffffffffffffffffffffffffffffffff",
+  ])("returns not found for an authenticated unknown or malformed ID: %s", async (runId) => {
+    const { default: RunDetailPage } = await import("../[runId]/page");
+
+    await expect(
+      RunDetailPage({ params: Promise.resolve({ runId }) }),
+    ).rejects.toThrow("NEXT_NOT_FOUND");
+    expect(notFound).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders validated subject identity in the above-fold header", () => {
+    const projection = RUN_PROJECTION_FIXTURES.active;
+    const fixture = getRunWorkspaceFixture(
+      projection.run.run_id,
+      Date.parse("2026-07-14T14:05:00Z"),
+    );
+    if (fixture.kind !== "valid") throw new Error("expected valid fixture");
+
+    const html = renderToStaticMarkup(<RunWorkspaceDetail fixture={fixture} />);
+    const header = html.split("</header>", 1)[0];
+    expect(header).toContain("Subject");
+    expect(header).toContain(projection.run.subject_type);
+    expect(header).toContain(projection.run.subject_id);
+    expect(header).toContain("[overflow-wrap:anywhere]");
   });
 
   it("keeps logged-out dynamic paths behind the default-deny proxy with no response body", () => {
