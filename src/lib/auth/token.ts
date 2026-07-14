@@ -1,10 +1,52 @@
 import { createHmac, timingSafeEqual } from "crypto";
 
-const SESSION_SECRET =
-  process.env.HABITAT_SESSION_SECRET ||
-  process.env.GH_TRACKER_SESSION_SEED ||
-  process.env.HOSTNAME ||
-  "gh-tracker-habitat-session-fallback-seed";
+const MIN_PRODUCTION_SECRET_LENGTH = 32;
+const TEST_ONLY_SECRET = "gh-tracker-habitat-session-test-only-seed";
+
+export function resolveSessionSecret(
+  env: NodeJS.ProcessEnv = process.env,
+): string {
+  const dedicated = env.HABITAT_SESSION_SECRET;
+
+  if (env.NODE_ENV === "production") {
+    if (!dedicated || dedicated.trim().length === 0) {
+      throw new Error(
+        "HABITAT_SESSION_SECRET is required in production and must not be blank. " +
+          "Refusing to sign or verify session tokens with an insecure fallback.",
+      );
+    }
+    if (dedicated.length < MIN_PRODUCTION_SECRET_LENGTH) {
+      throw new Error(
+        `HABITAT_SESSION_SECRET must be at least ${MIN_PRODUCTION_SECRET_LENGTH} characters ` +
+          `in production (got ${dedicated.length}). Refusing to sign or verify session tokens ` +
+          "with a weak secret.",
+      );
+    }
+    return dedicated;
+  }
+
+  // Non-production (test/development): use a dedicated secret if one is set,
+  // otherwise a fixed, clearly-labeled test-only seed. Never reachable when
+  // NODE_ENV=production -- there is no machine-identity or static-default
+  // fallback left in that path.
+  return dedicated && dedicated.trim().length > 0 ? dedicated : TEST_ONLY_SECRET;
+}
+
+// Resolved lazily, on first actual sign/verify call, not at module import
+// time -- Next.js's build-time page-data collection imports route modules
+// (which transitively import this one) without invoking their functions, so
+// an eager top-level throw here would make `next build` itself require
+// HABITAT_SESSION_SECRET. The real fail-closed boundary is the running
+// server: every authenticated request calls verifySessionToken via
+// proxy.ts, so a missing/weak secret still blocks all traffic immediately
+// once the process is actually serving requests.
+let cachedSecret: string | undefined;
+function getSessionSecret(): string {
+  if (cachedSecret === undefined) {
+    cachedSecret = resolveSessionSecret();
+  }
+  return cachedSecret;
+}
 
 export interface HabitatSession {
   sub: string;
@@ -23,7 +65,7 @@ function base64urlDecode(input: string): string {
 }
 
 function signPayload(payload: string): string {
-  const hmac = createHmac("sha256", SESSION_SECRET);
+  const hmac = createHmac("sha256", getSessionSecret());
   hmac.update(payload);
   return hmac.digest("base64url");
 }
