@@ -19,6 +19,47 @@ export type HabitatOpsSnapshotLoadResult = {
 };
 
 const riskSchema = z.enum(["low", "medium", "high", "unknown"]);
+const previewResultSchema = z.enum(["PASS", "WARN", "REFUSED", "FAIL", "UNKNOWN", "NOT_RUN"]);
+
+const scheduleDryRunTargetSchema = z.object({
+  scheduleId: z.string(),
+  targetMachine: z.string(),
+  risk: riskSchema,
+  managedMode: z.string(),
+  liveEnableAllowed: z.boolean(),
+  liveDisableAllowed: z.boolean(),
+  liveRunOnceAllowed: z.boolean(),
+  planResult: previewResultSchema,
+  planLines: z.array(z.string()),
+  enableResult: previewResultSchema,
+  enablePreview: z.array(z.string()),
+  disableResult: previewResultSchema,
+  disablePreview: z.array(z.string()),
+  runOnceResult: previewResultSchema,
+  runOncePreview: z.array(z.string()),
+  notes: z.array(z.string()),
+});
+
+const workspaceDryRunTargetSchema = z.object({
+  workspaceId: z.string(),
+  targetMachine: z.string(),
+  canonicalSessionPreview: z.string(),
+  planResult: previewResultSchema,
+  previewLines: z.array(z.string()),
+  copyOnlyLines: z.array(z.string()),
+  notes: z.array(z.string()),
+});
+
+const tmuxSessionSchema = z.object({
+  machine: z.string(),
+  sessionName: z.string(),
+  attached: z.boolean().nullable(),
+  windowCount: z.number().int().nonnegative(),
+  paneCount: z.number().int().nonnegative(),
+  canonical: z.boolean(),
+  workspaceId: z.string().nullable(),
+  notes: z.array(z.string()),
+});
 
 const snapshotSchema = z.object({
   schemaVersion: z.literal(1),
@@ -79,6 +120,7 @@ const snapshotSchema = z.object({
     disablePreview: z.array(z.string()),
     runOncePreview: z.array(z.string()),
   }),
+  scheduleDryRuns: z.array(scheduleDryRunTargetSchema).optional(),
   tmuxInventory: z.object({
     summary: z.object({
       sessionCount: z.number().int().nonnegative(),
@@ -91,12 +133,14 @@ const snapshotSchema = z.object({
       value: z.string(),
     })),
   }),
+  tmuxSessions: z.array(tmuxSessionSchema).optional(),
   workspaceDryRun: z.object({
     canonicalSessionPreview: z.string(),
     previewLines: z.array(z.string()),
     copyOnlyLines: z.array(z.string()),
     notes: z.array(z.string()),
   }),
+  workspaceDryRuns: z.array(workspaceDryRunTargetSchema).optional(),
   harnessReports: z.object({
     latest: z.array(z.object({
       label: z.string(),
@@ -129,6 +173,7 @@ function buildSnapshotFixture(snapshot: HabitatOpsSnapshot): HabitatOpsFixture {
   return {
     mode: "fixture_only",
     generatedAt: snapshot.generatedAt,
+    sourceMachine: snapshot.source.machine,
     safetyLabels: ["READ ONLY", "DRY RUN ONLY", "NO LIVE MUTATION", "SNAPSHOT MODE"],
     notification: {
       discordSend: `Snapshot delivery mode: ${snapshot.notificationStatus.deliveryMode}`,
@@ -151,6 +196,7 @@ function buildSnapshotFixture(snapshot: HabitatOpsSnapshot): HabitatOpsFixture {
       disablePreview: snapshot.scheduleDryRun.disablePreview,
       runOncePreview: snapshot.scheduleDryRun.runOncePreview,
     },
+    scheduleDryRuns: snapshot.scheduleDryRuns,
     tmuxInventory: {
       sessionCount: `${snapshot.tmuxInventory.summary.sessionCount} snapshot sessions`,
       windowCount: `${snapshot.tmuxInventory.summary.windowCount} snapshot windows`,
@@ -159,12 +205,14 @@ function buildSnapshotFixture(snapshot: HabitatOpsSnapshot): HabitatOpsFixture {
       noCaptureNote: snapshot.tmuxInventory.notes[1] ?? "Pane capture is not available.",
       lines: convertHighlights(snapshot.tmuxInventory.highlights),
     },
+    tmuxSessions: snapshot.tmuxSessions,
     workspaceDryRun: {
       canonicalSessionPreview: snapshot.workspaceDryRun.canonicalSessionPreview,
       previewLines: snapshot.workspaceDryRun.previewLines,
       copyOnlyLines: snapshot.workspaceDryRun.copyOnlyLines,
       noCreateReuseNote: summarizeNotes(snapshot.workspaceDryRun.notes, "Snapshot preview only."),
     },
+    workspaceDryRuns: snapshot.workspaceDryRuns,
     reports: {
       latestReport: snapshot.harnessReports.latest[0]?.label ?? snapshot.harnessReports.emptyMessage ?? "No reports in snapshot.",
       expectedUrlPattern: snapshot.harnessReports.latest[0]?.url ?? "https://harness.slimyai.xyz/reports/sessions/...",

@@ -14,6 +14,55 @@ async function makeTempFile(contents: string) {
   return filePath;
 }
 
+function makeScheduleTarget(scheduleId: string, overrides: Record<string, unknown> = {}) {
+  return {
+    scheduleId,
+    targetMachine: "nuc1",
+    risk: "medium",
+    managedMode: "managed_candidate",
+    liveEnableAllowed: false,
+    liveDisableAllowed: false,
+    liveRunOnceAllowed: false,
+    planResult: "PASS",
+    planLines: ["RESULT=PASS"],
+    enableResult: "PASS",
+    enablePreview: ["WOULD_RUN: enable fixture target"],
+    disableResult: "PASS",
+    disablePreview: ["WOULD_RUN: disable fixture target"],
+    runOnceResult: "PASS",
+    runOncePreview: ["WOULD_RUN: preview fixture target"],
+    notes: ["Read-only fixture metadata."],
+    ...overrides,
+  };
+}
+
+function makeWorkspaceTarget(workspaceId: string, overrides: Record<string, unknown> = {}) {
+  return {
+    workspaceId,
+    targetMachine: "nuc1",
+    canonicalSessionPreview: `ops6-${workspaceId}`,
+    planResult: "PASS",
+    previewLines: ["WOULD_RUN: prepare fixture workspace"],
+    copyOnlyLines: ["COPY_ONLY: inspect fixture workspace"],
+    notes: ["Read-only fixture metadata."],
+    ...overrides,
+  };
+}
+
+function makeTmuxSession(sessionName: string, overrides: Record<string, unknown> = {}) {
+  return {
+    machine: "nuc1",
+    sessionName,
+    attached: false,
+    windowCount: 1,
+    paneCount: 1,
+    canonical: false,
+    workspaceId: null,
+    notes: ["Metadata only."],
+    ...overrides,
+  };
+}
+
 function makeSnapshot(overrides: Record<string, unknown> = {}) {
   return {
     schemaVersion: 1,
@@ -113,6 +162,111 @@ describe("loadHabitatOpsSnapshot", () => {
     expect(result.snapshotState).toBe("fresh");
     expect(result.stateLabel).toBe("SNAPSHOT MODE");
     expect(result.data.safetyLabels).toContain("SNAPSHOT MODE");
+    expect(result.data.sourceMachine).toBe("nuc1");
+    expect(result.data.scheduleDryRun.samplePlanTarget).toBe("gh-tracker-local-snapshot-timer");
+    expect(result.data.workspaceDryRun.canonicalSessionPreview).toBe("ops6-gh-tracker");
+  });
+
+  it("keeps legacy-only schemaVersion 1 snapshots valid when additive arrays are absent", async () => {
+    const filePath = await makeTempFile(JSON.stringify(makeSnapshot()));
+    const result = await loadHabitatOpsSnapshot(filePath);
+
+    expect(result.mode).toBe("snapshot");
+    expect(result.data.scheduleDryRuns).toBeUndefined();
+    expect(result.data.workspaceDryRuns).toBeUndefined();
+    expect(result.data.tmuxSessions).toBeUndefined();
+    expect(result.data.scheduleDryRun.planLines).toEqual(["managed_mode: managed_candidate"]);
+    expect(result.data.workspaceDryRun.previewLines).toHaveLength(1);
+    expect(result.data.tmuxInventory.lines[0]?.value).toBe("ops6-gh-tracker");
+  });
+
+  it("validates B1 additive arrays and retains every item alongside legacy fields", async () => {
+    const scheduleDryRuns = Array.from({ length: 9 }, (_, index) => makeScheduleTarget(`schedule-${index}`));
+    scheduleDryRuns[7] = makeScheduleTarget("read-only-schedule", {
+      enableResult: "REFUSED",
+      enablePreview: ["RESULT=REFUSED"],
+    });
+    const workspaceDryRuns = Array.from({ length: 10 }, (_, index) => makeWorkspaceTarget(`workspace-${index}`));
+    const tmuxSessions = [
+      makeTmuxSession("ops6-workspace-0", { attached: true, canonical: true, workspaceId: "workspace-0" }),
+      makeTmuxSession("loose-session"),
+      makeTmuxSession("attachment-unknown", { attached: null }),
+    ];
+    const filePath = await makeTempFile(JSON.stringify(makeSnapshot({ scheduleDryRuns, workspaceDryRuns, tmuxSessions })));
+    const result = await loadHabitatOpsSnapshot(filePath);
+
+    expect(result.mode).toBe("snapshot");
+    expect(result.data.scheduleDryRuns).toHaveLength(9);
+    expect(result.data.workspaceDryRuns).toHaveLength(10);
+    expect(result.data.tmuxSessions).toHaveLength(3);
+    expect(result.data.scheduleDryRuns?.[7]?.enableResult).toBe("REFUSED");
+    expect(result.data.scheduleDryRuns?.[7]?.enableResult).not.toBe("FAIL");
+    expect(result.data.scheduleDryRun.samplePlanTarget).toBe("gh-tracker-local-snapshot-timer");
+    expect(result.data.workspaceDryRun.canonicalSessionPreview).toBe("ops6-gh-tracker");
+  });
+
+  it("retains empty additive arrays so the UI can apply the documented legacy fallbacks", async () => {
+    const filePath = await makeTempFile(JSON.stringify(makeSnapshot({
+      scheduleDryRuns: [],
+      workspaceDryRuns: [],
+      tmuxSessions: [],
+    })));
+    const result = await loadHabitatOpsSnapshot(filePath);
+
+    expect(result.mode).toBe("snapshot");
+    expect(result.data.scheduleDryRuns).toEqual([]);
+    expect(result.data.workspaceDryRuns).toEqual([]);
+    expect(result.data.tmuxSessions).toEqual([]);
+    expect(result.data.scheduleDryRun.samplePlanTarget).toBe("gh-tracker-local-snapshot-timer");
+  });
+
+  it("fails safe when an additive item shape is invalid or notes are missing", async () => {
+    const invalidShape = await makeTempFile(JSON.stringify(makeSnapshot({
+      scheduleDryRuns: [makeScheduleTarget("bad-shape", { liveEnableAllowed: "false" })],
+    })));
+    const missingNotesTarget: Record<string, unknown> = makeScheduleTarget("missing-notes");
+    delete missingNotesTarget.notes;
+    const missingNotes = await makeTempFile(JSON.stringify(makeSnapshot({
+      scheduleDryRuns: [missingNotesTarget],
+    })));
+
+    const invalidResult = await loadHabitatOpsSnapshot(invalidShape);
+    const missingNotesResult = await loadHabitatOpsSnapshot(missingNotes);
+
+    expect(invalidResult.mode).toBe("fixture");
+    expect(invalidResult.snapshotState).toBe("invalid");
+    expect(missingNotesResult.mode).toBe("fixture");
+    expect(missingNotesResult.snapshotState).toBe("invalid");
+  });
+
+  it("retains duplicate schedule and workspace IDs as inert ordered snapshot data", async () => {
+    const filePath = await makeTempFile(JSON.stringify(makeSnapshot({
+      scheduleDryRuns: [makeScheduleTarget("duplicate"), makeScheduleTarget("duplicate")],
+      workspaceDryRuns: [makeWorkspaceTarget("duplicate"), makeWorkspaceTarget("duplicate")],
+    })));
+    const result = await loadHabitatOpsSnapshot(filePath);
+
+    expect(result.mode).toBe("snapshot");
+    expect(result.data.scheduleDryRuns?.map((target) => target.scheduleId)).toEqual(["duplicate", "duplicate"]);
+    expect(result.data.workspaceDryRuns?.map((target) => target.workspaceId)).toEqual(["duplicate", "duplicate"]);
+  });
+
+  it("enforces literal safety fields for snapshots with additive arrays", async () => {
+    const filePath = await makeTempFile(JSON.stringify(makeSnapshot({
+      safety: {
+        readOnly: false,
+        dryRunOnly: true,
+        noLiveMutation: true,
+        snapshotMode: true,
+        backendAdapterConnected: false,
+        shellExecutionPresent: false,
+      },
+      scheduleDryRuns: [makeScheduleTarget("fixture")],
+    })));
+    const result = await loadHabitatOpsSnapshot(filePath);
+
+    expect(result.mode).toBe("fixture");
+    expect(result.snapshotState).toBe("invalid");
   });
 
   it("falls back safely when the snapshot is missing", async () => {

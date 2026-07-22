@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { readFileSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 import { renderToStaticMarkup } from "react-dom/server";
+import { habitatOpsFixture } from "../harness-ops-fixtures";
 
 const getSession = vi.fn();
 const requireOwner = vi.fn();
@@ -25,6 +26,7 @@ function makeSnapshotResult(overrides: Record<string, unknown> = {}) {
     data: {
       mode: "fixture_only",
       generatedAt: "2026-06-08T16:40:48Z",
+      sourceMachine: "nuc1-fixture",
       safetyLabels: ["READ ONLY", "DRY RUN ONLY", "NO LIVE MUTATION", "FIXTURE ONLY"],
       notification: {
         discordSend: "Disabled in fixture-only mode",
@@ -116,6 +118,7 @@ describe("Habitat /ops fixture-only page", () => {
       generatedAt: "2026-06-08T19:16:55Z",
       data: {
         ...makeSnapshotResult().data,
+        sourceMachine: "nuc1",
         safetyLabels: ["READ ONLY", "DRY RUN ONLY", "NO LIVE MUTATION", "SNAPSHOT MODE"],
         reports: {
           latestReport: "Latest sample report",
@@ -131,6 +134,167 @@ describe("Habitat /ops fixture-only page", () => {
     expect(html).not.toContain("FIXTURE ONLY");
     expect(html).toContain("Sanitized snapshot data is active.");
     expect(html).toContain("Redaction passed; rules v1; redacted 2 field(s).");
+    expect(html).toContain("Source machine (read-only)");
+    expect(html).toContain("nuc1");
+  });
+
+  it("renders every multi-target item and keeps status meanings distinct", async () => {
+    loadHabitatOpsSnapshot.mockResolvedValue(makeSnapshotResult({
+      mode: "snapshot",
+      snapshotState: "fresh",
+      stateLabel: "SNAPSHOT MODE",
+      data: {
+        ...makeSnapshotResult().data,
+        sourceMachine: "nuc1",
+        scheduleDryRuns: [
+          {
+            scheduleId: "schedule-pass",
+            targetMachine: "nuc1",
+            risk: "medium",
+            managedMode: "managed_candidate",
+            liveEnableAllowed: false,
+            liveDisableAllowed: false,
+            liveRunOnceAllowed: false,
+            planResult: "PASS",
+            planLines: ["RESULT=PASS"],
+            enableResult: "WARN",
+            enablePreview: ["RESULT=WARN"],
+            disableResult: "NOT_RUN",
+            disablePreview: [],
+            runOnceResult: "UNKNOWN",
+            runOncePreview: [],
+            notes: ["Read-only schedule."],
+          },
+          {
+            scheduleId: "schedule-refused",
+            targetMachine: "nuc2",
+            risk: "high",
+            managedMode: "read_only",
+            liveEnableAllowed: false,
+            liveDisableAllowed: false,
+            liveRunOnceAllowed: false,
+            planResult: "FAIL",
+            planLines: ["RESULT=FAIL"],
+            enableResult: "REFUSED",
+            enablePreview: ["RESULT=REFUSED"],
+            disableResult: "REFUSED",
+            disablePreview: ["RESULT=REFUSED"],
+            runOnceResult: "REFUSED",
+            runOncePreview: ["RESULT=REFUSED"],
+            notes: [],
+          },
+        ],
+        workspaceDryRuns: [
+          {
+            workspaceId: "workspace-one",
+            targetMachine: "nuc1",
+            canonicalSessionPreview: "ops6-workspace-one",
+            planResult: "PASS",
+            previewLines: ["WOULD_RUN: fixture workspace one"],
+            copyOnlyLines: ["COPY_ONLY: inspect workspace one"],
+            notes: ["Read-only workspace."],
+          },
+          {
+            workspaceId: "workspace-two",
+            targetMachine: "nuc1",
+            canonicalSessionPreview: "ops6-workspace-two",
+            planResult: "WARN",
+            previewLines: ["WOULD_RUN: fixture workspace two"],
+            copyOnlyLines: [],
+            notes: [],
+          },
+        ],
+        tmuxSessions: [
+          {
+            machine: "nuc1",
+            sessionName: "ops6-workspace-one",
+            attached: true,
+            windowCount: 2,
+            paneCount: 3,
+            canonical: true,
+            workspaceId: "workspace-one",
+            notes: ["Metadata only."],
+          },
+          {
+            machine: "nuc1",
+            sessionName: "ops6-workspace-one-similar",
+            attached: false,
+            windowCount: 1,
+            paneCount: 1,
+            canonical: false,
+            workspaceId: null,
+            notes: [],
+          },
+        ],
+      },
+    }));
+    const { default: HabitatOpsPage } = await import("../../app/ops/page");
+    const html = renderToStaticMarkup(await HabitatOpsPage());
+
+    expect(html).toContain("Total schedule targets: 2");
+    expect(html).toContain("schedule-pass");
+    expect(html).toContain("schedule-refused");
+    expect(html).toContain("PASS");
+    expect(html).toContain("WARN");
+    expect(html).toContain("REFUSED");
+    expect(html).toContain("FAIL");
+    expect(html).toContain("UNKNOWN");
+    expect(html).toContain("NOT_RUN");
+    expect(html).toContain("Total workspace targets: 2");
+    expect(html).toContain("workspace-one");
+    expect(html).toContain("workspace-two");
+    expect(html).toContain("ops6-workspace-one");
+    expect(html).toContain("ops6-workspace-one-similar");
+    expect(html).toContain("CANONICAL");
+    expect(html).toContain("NONCANONICAL");
+    expect(html).toContain("ATTACHED");
+    expect(html).toContain("DETACHED");
+    expect(html).toContain("Unassociated");
+    expect(html).toContain("Source machine (read-only)");
+  });
+
+  it("renders every ID and session from the bundled multi-target fixture", async () => {
+    const fixture = structuredClone(habitatOpsFixture);
+    const longPreview = `LONG_PREVIEW_${"x".repeat(500)}`;
+    fixture.scheduleDryRuns?.[0]?.planLines.push(longPreview);
+    loadHabitatOpsSnapshot.mockResolvedValue(makeSnapshotResult({ data: fixture }));
+    const { default: HabitatOpsPage } = await import("../../app/ops/page");
+    const html = renderToStaticMarkup(await HabitatOpsPage());
+
+    for (const target of fixture.scheduleDryRuns ?? []) {
+      expect(html).toContain(target.scheduleId);
+    }
+    for (const target of fixture.workspaceDryRuns ?? []) {
+      expect(html).toContain(target.workspaceId);
+    }
+    for (const session of fixture.tmuxSessions ?? []) {
+      expect(html).toContain(session.sessionName);
+    }
+    expect(html).toContain(longPreview);
+    expect(html).toContain("REFUSED");
+    expect(html).toContain("FAIL");
+    expect(html).toContain("UNKNOWN");
+    expect(html).toContain("NOT_RUN");
+  });
+
+  it("uses singular schedule and workspace fallbacks for absent or empty arrays", async () => {
+    loadHabitatOpsSnapshot.mockResolvedValue(makeSnapshotResult({
+      data: {
+        ...makeSnapshotResult().data,
+        scheduleDryRuns: [],
+        workspaceDryRuns: [],
+        tmuxSessions: [],
+      },
+    }));
+    const { default: HabitatOpsPage } = await import("../../app/ops/page");
+    const html = renderToStaticMarkup(await HabitatOpsPage());
+
+    expect(html).toContain("Sample plan target");
+    expect(html).toContain("gh-tracker-local-snapshot-timer");
+    expect(html).toContain("Canonical preview session");
+    expect(html).toContain("ops6-gh-tracker");
+    expect(html).toContain("Total structured sessions: 0");
+    expect(html).toContain("No structured tmux sessions reported.");
   });
 
   it("renders a stale snapshot warning", async () => {
@@ -197,6 +361,15 @@ describe("Habitat /ops fixture-only page", () => {
     expect(pageSource).not.toContain("Send</button>");
     expect(pageSource).not.toContain("Delete</button>");
     expect(pageSource).not.toContain("Apply</button>");
+    expect(pageSource).not.toContain('"use client"');
+    expect(pageSource).not.toContain("'use client'");
+    expect(pageSource).not.toContain('"use server"');
+    expect(pageSource).not.toContain("'use server'");
+    expect(pageSource).not.toContain('method="post"');
+    expect(pageSource).not.toContain("POST");
+    expect(existsSync(join(repoRoot, "src/app/api/ops"))).toBe(false);
+    expect(pageSource).toContain("<details");
+    expect(pageSource).toContain("<summary");
   });
 
   it("introduces no shell execution imports or live runtime hooks", () => {
@@ -212,9 +385,48 @@ describe("Habitat /ops fixture-only page", () => {
       expect(source).not.toContain("ops/harness-ops");
       expect(source).not.toContain("fetch(\"/api/ops");
       expect(source).not.toContain("fetch('/api/ops");
+      expect(source).not.toContain("capture-pane");
+      expect(source).not.toContain("paneContent");
+      expect(source).not.toContain("scrollbackLines");
     }
 
     expect(pageSource).toContain("overflow-x-hidden");
     expect(pageSource).toContain("overflow-x-auto");
+    expect(pageSource).toContain("min-w-0");
+    expect(pageSource).toContain("break-words");
+    expect(pageSource).toContain("[overflow-wrap:anywhere]");
+    expect(pageSource).toContain("flex-wrap");
+    expect(pageSource).toContain("focus-visible:outline");
+  });
+
+  it("keeps the owner gate before snapshot loading and fails closed", () => {
+    const pageSource = readFileSync(join(repoRoot, "src/app/ops/page.tsx"), "utf8");
+    const sessionIndex = pageSource.indexOf("await getSession()");
+    const ownerIndex = pageSource.indexOf("requireOwner(session)");
+    const loadIndex = pageSource.indexOf("await loadHabitatOpsSnapshot()");
+
+    expect(sessionIndex).toBeGreaterThan(-1);
+    expect(ownerIndex).toBeGreaterThan(sessionIndex);
+    expect(loadIndex).toBeGreaterThan(ownerIndex);
+    expect(pageSource).toContain('redirect("/login")');
+  });
+
+  it("does not read the snapshot when no session is present", async () => {
+    getSession.mockResolvedValue(null);
+    const { default: HabitatOpsPage } = await import("../../app/ops/page");
+
+    await expect(HabitatOpsPage()).rejects.toThrow();
+    expect(requireOwner).not.toHaveBeenCalled();
+    expect(loadHabitatOpsSnapshot).not.toHaveBeenCalled();
+  });
+
+  it("does not read the snapshot when the owner check fails", async () => {
+    requireOwner.mockImplementation(() => {
+      throw new Error("not owner");
+    });
+    const { default: HabitatOpsPage } = await import("../../app/ops/page");
+
+    await expect(HabitatOpsPage()).rejects.toThrow();
+    expect(loadHabitatOpsSnapshot).not.toHaveBeenCalled();
   });
 });
