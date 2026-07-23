@@ -152,9 +152,9 @@ describe("Habitat /ops fixture-only page", () => {
             targetMachine: "nuc1",
             risk: "medium",
             managedMode: "managed_candidate",
-            liveEnableAllowed: false,
-            liveDisableAllowed: false,
-            liveRunOnceAllowed: false,
+            liveEnableAllowed: true,
+            liveDisableAllowed: true,
+            liveRunOnceAllowed: true,
             planResult: "PASS",
             planLines: ["RESULT=PASS"],
             enableResult: "WARN",
@@ -225,6 +225,16 @@ describe("Habitat /ops fixture-only page", () => {
             workspaceId: null,
             notes: [],
           },
+          {
+            machine: "nuc1",
+            sessionName: "ops6-attachment-state-unavailable",
+            attached: null,
+            windowCount: 1,
+            paneCount: 1,
+            canonical: false,
+            workspaceId: null,
+            notes: ["Attachment state was not reported."],
+          },
         ],
       },
     }));
@@ -240,6 +250,8 @@ describe("Habitat /ops fixture-only page", () => {
     expect(html).toContain("FAIL");
     expect(html).toContain("UNKNOWN");
     expect(html).toContain("NOT_RUN");
+    expect(html.match(/>yes<\/dd>/g)).toHaveLength(3);
+    expect(html.match(/>no<\/dd>/g)).toHaveLength(3);
     expect(html).toContain("Total workspace targets: 2");
     expect(html).toContain("workspace-one");
     expect(html).toContain("workspace-two");
@@ -249,8 +261,26 @@ describe("Habitat /ops fixture-only page", () => {
     expect(html).toContain("NONCANONICAL");
     expect(html).toContain("ATTACHED");
     expect(html).toContain("DETACHED");
+    expect(html).toContain("ATTACHMENT UNKNOWN");
     expect(html).toContain("Unassociated");
     expect(html).toContain("Source machine (read-only)");
+  });
+
+  it("renders a safe fallback when the source machine is missing", async () => {
+    loadHabitatOpsSnapshot.mockResolvedValue(makeSnapshotResult({
+      data: {
+        ...makeSnapshotResult().data,
+        sourceMachine: null,
+      },
+    }));
+    const { default: HabitatOpsPage } = await import("../../app/ops/page");
+    const html = renderToStaticMarkup(await HabitatOpsPage());
+
+    expect(html).toContain("Source machine (read-only)");
+    expect(html).toContain("not reported");
+    expect(html).not.toContain("nuc1-fixture");
+    expect(html).not.toContain(">undefined<");
+    expect(html).not.toContain(">null<");
   });
 
   it("renders every ID and session from the bundled multi-target fixture", async () => {
